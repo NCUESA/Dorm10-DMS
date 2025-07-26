@@ -1,26 +1,252 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --header-height: 60px;
+  --transition-speed: 0.3s;
+  
+  /* 自定義顏色系統 */
+  --primary: #005A9C;
+  --primary-hover: #004875;
+  --secondary: #00A6D6;
+  --accent: #F7B538;
+  --background: #F8F9FA;
+  --surface: #FFFFFF;
+  --text: #343A40;
+  --text-muted: #6C757D;
+  --border: #DEE2E6;
+  --success: #28a745;
+  --error: #dc3545;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (min-width: 640px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --header-height: 70px;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+  font-family: var(--font-noto-sans), Arial, Helvetica, sans-serif;
+  padding-top: var(--header-height);
+}
+
+/* Header 固定和玻璃模糊效果 */
+.header-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: var(--header-height);
+  background: rgba(248, 249, 250, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+/* 當手機版選單展開時，隱藏 header 底部邊界 */
+.header-fixed.menu-open {
+  border-bottom: none;
+  box-shadow: none;
+}
+
+/* 底線延伸效果 */
+.underline-extend {
+  position: relative;
+}
+
+.underline-extend::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: var(--primary);
+  transition: all 0.3s ease-out;
+  transform: translateX(-50%);
+}
+
+.underline-extend:hover::after {
+  width: 100%;
+}
+
+/* Navbar 專用的底線效果 - 考慮 focus 狀態，使用較窄的底線 */
+.underline-extend.navbar-link:hover::after {
+  width: 75%;
+}
+
+/* 按鈕樣式 */
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (min-width: 640px) {
+  .btn-primary {
+    padding: 12px 24px;
+  }
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:focus {
+  outline: none;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (min-width: 640px) {
+  .btn-secondary {
+    padding: 12px 24px;
+  }
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-secondary:focus {
+  outline: none;
+}
+
+/* 輸入框樣式 */
+.input-field {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
+  color: var(--text);
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  .input-field {
+    padding: 12px 16px;
+  }
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+/* 卡片樣式 */
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 24px;
+  }
+}
+
+/* 導航連結樣式 */
+.nav-link {
+  color: var(--text-muted);
+  font-weight: 500;
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+@media (min-width: 768px) {
+  .nav-link {
+    padding: 8px 12px;
+  }
+}
+
+.nav-link:hover {
+  color: var(--primary);
+}
+
+.nav-link:focus {
+  outline: none;
+}
+
+/* 只在非 navbar 的 nav-link 上顯示 focus 樣式 */
+.nav-link:not(.navbar-link):focus {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+}
+
+.nav-link.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 表單樣式 */
+.form-group {
+  margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+  .form-group {
+    margin-bottom: 24px;
+  }
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  .form-label {
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+}
+
+.form-error {
+  color: var(--error);
+  font-size: 14px;
+  margin-top: 8px;
 }
