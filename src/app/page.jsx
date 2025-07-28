@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import AnnouncementList from "@/components/AnnouncementList";
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
@@ -55,6 +56,8 @@ export default function Home() {
             立即註冊
           </Link>
         </div>
+
+        <AnnouncementList />
       </main>
     </div>
   );

@@ -45,6 +45,8 @@ create table public.announcements (
   summary text,
   category text not null check (category in ('A', 'B', 'C', 'D', 'E')),
   application_deadline date,
+  -- 申請方式（如線上系統、郵寄等）
+  application_method text,
   announcement_deadline date,
   target_audience text,
   status text default 'draft' check (status in ('draft', 'published', 'archived')),

@@ -7,16 +7,17 @@ export default function CreateAnnouncementModal({ isOpen, onClose, onSuccess }) 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    summary: '',
-    category: '',
-    applicationDeadline: '',
-    announcementDeadline: '',
-    targetAudience: '',
-    status: 'draft'
-  });
+    const [formData, setFormData] = useState({
+      title: '',
+      content: '',
+      summary: '',
+      category: '',
+      applicationDeadline: '',
+      applicationMethod: '',
+      announcementDeadline: '',
+      targetAudience: '',
+      status: 'draft'
+    });
   const [sources, setSources] = useState({
     pdfFiles: [],
     externalUrls: '',
@@ -33,6 +34,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, onSuccess }) 
       summary: '',
       category: '',
       applicationDeadline: '',
+      applicationMethod: '',
       announcementDeadline: '',
       targetAudience: '',
       status: 'draft'
@@ -90,6 +92,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, onSuccess }) 
         `.trim(),
         category: 'C',
         applicationDeadline: '2025-07-23',
+        applicationMethod: '線上系統申請',
         targetAudience: `
 申請對象：
 1. 申請書（需家長及學生本人簽名，黏貼2吋大頭照1張，就讀年級請填寫14學年2年級）。
@@ -128,6 +131,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, onSuccess }) 
           summary: formData.summary,
           category: formData.category,
           application_deadline: formData.applicationDeadline || null,
+          application_method: formData.applicationMethod,
           announcement_deadline: formData.announcementDeadline || null,
           target_audience: formData.targetAudience,
           status: formData.status,
@@ -558,6 +562,16 @@ function Step3ReviewAndSave({ formData, setFormData, analysisResult, loading, on
                 type="date"
                 value={formData.applicationDeadline}
                 onChange={(e) => handleInputChange('applicationDeadline', e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">申請方式</label>
+              <input
+                type="text"
+                value={formData.applicationMethod}
+                onChange={(e) => handleInputChange('applicationMethod', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
