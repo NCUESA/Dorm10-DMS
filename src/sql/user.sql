@@ -4,5 +4,6 @@ create table public.profiles (
   student_id text,
   department text,
   year text,
+  role text default 'user' check (role in ('admin', 'user')),
   created_at timestamp with time zone default now()
 );

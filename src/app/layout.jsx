@@ -1,11 +1,8 @@
 import { Noto_Sans_TC } from 'next/font/google'
 import "./globals.css";
-import icon from "./assets/logo_b.png"
-import logo from "./assets/logo.png"
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-
-
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const notoSans = Noto_Sans_TC({
   subsets: ['latin'],
@@ -15,30 +12,25 @@ const notoSans = Noto_Sans_TC({
 
 export const metadata = {
   title: "NCUE 獎助學金資訊平台",
-  description: "",
-  icon:icon,
-  logo:logo
+  description: "彰化師範大學獎助學金資訊平台",
+  icons: {
+    icon: '/logo_b.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <>
-      <html lang="en" className={notoSans.variable}>
-        <head>
-            <meta charSet="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <link rel="icon" href={metadata.icon || "/favicon.ico"} />
-            <link rel="apple-touch-icon" href={metadata.logo} />
-            <title>{metadata.title}</title>
-        </head>
-        <body className={notoSans.className}>
+    <html lang="zh-TW" className={notoSans.variable}>
+      <body className={notoSans.className}>
+        <AuthProvider>
           <Header />
           <main>
             {children}
           </main>
           <Footer />
-        </body>
-      </html>
-    </>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

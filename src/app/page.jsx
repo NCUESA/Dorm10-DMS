@@ -1,7 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="font-sans min-h-screen">
       <main className="flex flex-col gap-8 items-center sm:items-start max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -38,7 +43,7 @@ export default function Home() {
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
-            href="/ai-assistant"
+            href={isAuthenticated ? "/ai-assistant" : "/login?redirect=/ai-assistant"}
             className="btn-primary"
           >
             開始使用 AI 助理
