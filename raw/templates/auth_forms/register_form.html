@@ -1,0 +1,57 @@
+<!-- /includes/auth_forms/register_form.html -->
+
+<form id="register-form" method="POST" action="#" novalidate>
+    <div class="mb-3">
+        <label for="reg-student-id" class="form-label">學號</label>
+        <input type="text" class="form-control" id="reg-student-id" name="student_id" placeholder="e.g. S1354000"
+            pattern="[a-zA-Z]\d{7}" required>
+        <div class="invalid-feedback">學號格式不正確 (應為1位英文字母+7位數字)。</div>
+    </div>
+    <div class="mb-3">
+        <label for="reg-username" class="form-label">姓名</label>
+        <input type="text" class="form-control" id="reg-username" name="username" required>
+        <div class="invalid-feedback">請輸入您的姓名。</div>
+    </div>
+    <div class="mb-3">
+        <label for="reg-email" class="form-label">電子信箱</label>
+        <input type="email" class="form-control" id="reg-email" name="email" required>
+        <div class="invalid-feedback">請輸入有效的電子信箱。</div>
+    </div>
+
+    <div class="mb-3">
+        <label for="reg-verification-code" class="form-label">信箱驗證碼</label>
+        <div class="input-group">
+            <input type="text" class="form-control" id="reg-verification-code" name="verification_code" required>
+            <button class="btn-modern secondary" type="button" id="send-verification-btn">發送驗證碼</button>
+        </div>
+        <small id="verification-msg" class="form-text text-muted"></small>
+        <div class="invalid-feedback">請輸入信箱收到的驗證碼。</div>
+    </div>
+
+    <div class="mb-3">
+        <label for="reg-password" class="form-label">密碼</label>
+        <div class="input-group">
+            <input type="password" class="form-control" id="reg-password" name="password" required minlength="8"
+                placeholder="至少 8 位混和字元">
+            <button class="btn btn-outline-secondary toggle-password" type="button"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="invalid-feedback">密碼長度至少為 8 位混合字元。</div>
+    </div>
+    <div class="mb-3">
+        <label for="reg-confirm-password" class="form-label">確認密碼</label>
+        <div class="input-group">
+            <input type="password" class="form-control" id="reg-confirm-password" name="confirm_password" required
+                minlength="6">
+            <button class="btn btn-outline-secondary toggle-password" type="button"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="invalid-feedback">兩次輸入的密碼不一致。</div>
+    </div>
+
+    <div class="modal-form-footer">
+        <button type="submit" class="btn-modern primary w-100 mb-3">註冊</button>
+        <div class="sub-links">
+            <span>已經有帳號了？</span>
+            <a href="#" id="switch-to-login-link">立即登入</a>
+        </div>
+    </div>
+</form>

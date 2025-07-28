@@ -1,0 +1,24 @@
+<form id="login-form" method="POST" action="#">
+    <!-- 用於顯示提示訊息的區塊 -->
+    <div id="login-prompt-message" class="alert alert-warning" style="display: none;"></div>
+
+    <div class="mb-3">
+        <label for="login-email" class="form-label">電子信箱</label>
+        <input type="email" class="form-control" id="login-email" name="email" required>
+    </div>
+    <div class="mb-3">
+        <label for="login-password" class="form-label">密碼</label>
+        <div class="input-group">
+            <input type="password" class="form-control" id="login-password" name="password" required>
+            <button class="btn btn-outline-secondary toggle-password" type="button"><i class="fas fa-eye"></i></button>
+        </div>
+    </div>
+
+    <div class="modal-form-footer">
+        <button type="submit" class="btn-modern primary w-100 mb-3">登入</button>
+        <div class="sub-links">
+            <a href="#" id="switch-to-forgot-password-link">忘記密碼？</a>
+            <a href="#" id="switch-to-register-link">建立新帳號</a>
+        </div>
+    </div>
+</form>

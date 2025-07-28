@@ -1,0 +1,7 @@
+{
+    "require": {
+        "smalot/pdfparser": "^2.12",
+        "phpmailer/phpmailer": "^6.10",
+        "erusev/parsedown": "^1.7"
+    }
+}
