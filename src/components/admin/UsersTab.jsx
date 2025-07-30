@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import EditUserModal from './EditUserModal';
 import Button from '@/components/ui/Button';
 
 // 模擬的使用者數據
@@ -13,12 +14,17 @@ const mockUsers = [
 export default function UsersTab() {
   const [users, setUsers] = useState(mockUsers);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleSaveUser = (updated) => {
+    setUsers(prev => prev.map(u => (u.id === updated.id ? updated : u)));
+  };
 
   return (
     <div>
@@ -79,7 +85,11 @@ export default function UsersTab() {
                   </td>
                   <td className="p-4 align-middle">
                     <div className="flex gap-2">
-                      <Button variant="link" className="text-indigo-600 p-0">
+                      <Button
+                        variant="link"
+                        className="text-indigo-600 p-0"
+                        onClick={() => setEditingUser(user)}
+                      >
                         編輯
                       </Button>
                       <Button variant="link" className="text-blue-600 p-0">
@@ -95,6 +105,13 @@ export default function UsersTab() {
       </div>
 
       {/* TODO: 分頁功能 */}
+
+      <EditUserModal
+        isOpen={!!editingUser}
+        user={editingUser}
+        onClose={() => setEditingUser(null)}
+        onSave={handleSaveUser}
+      />
     </div>
   );
 }
