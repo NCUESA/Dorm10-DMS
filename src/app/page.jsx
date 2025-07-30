@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
+import AnnouncementList from "@/components/AnnouncementList";
 
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
           這裡是您獲取獎助學金資訊的最佳平台，我們提供完整的獎學金查詢和申請服務。
         </p>
       </div>
+      <AnnouncementList />
     </main>
   </div>
 );

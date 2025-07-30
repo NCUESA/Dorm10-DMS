@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import QuillEditor from './QuillEditor'
+import AttachmentUploader from './AttachmentUploader'
 import Button from '@/components/ui/Button'
 
 // Toast 與 CreateAnnouncementModal 中相同
@@ -60,6 +61,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
 export default function UpdateAnnouncementModal({ isOpen, onClose, announcement, refreshAnnouncements }) {
   const [show, setShow] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [attachments, setAttachments] = useState([])
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
   const [formData, setFormData] = useState({
     title: '',
@@ -118,7 +120,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
     }
     setIsSaving(true)
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('announcements')
         .update({
           title: formData.title,
@@ -132,7 +134,26 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
           is_active: formData.status === '1'
         })
         .eq('id', announcement.id)
+        .select()
+        .single()
       if (error) throw error
+
+      for (const file of attachments) {
+        const path = `${updated.id}/${crypto.randomUUID()}-${file.name}`
+        const { error: upErr } = await supabase.storage
+          .from('attachments')
+          .upload(path, file)
+        if (upErr) throw upErr
+        const { error: insErr } = await supabase.from('attachments').insert({
+          announcement_id: updated.id,
+          file_name: file.name,
+          stored_file_path: path,
+          file_size: file.size,
+          mime_type: file.type
+        })
+        if (insErr) throw insErr
+      }
+
       showToast('公告已更新', 'success')
       if (refreshAnnouncements) refreshAnnouncements()
       handleClose()
@@ -149,6 +170,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
     setShow(false)
     setTimeout(() => {
       onClose()
+      setAttachments([])
     }, 300)
   }, [isSaving, onClose])
 
@@ -237,6 +259,10 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                   <div>
                     <label htmlFor="summary" className="block text-sm font-semibold text-gray-700 mb-2">公告摘要 (必填)</label>
                     <QuillEditor value={formData.summary} onChange={handleSummaryChange} disabled={isSaving} />
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件</label>
+                    <AttachmentUploader files={attachments} setFiles={setAttachments} disabled={isSaving} />
                   </div>
                 </div>
               </fieldset>
