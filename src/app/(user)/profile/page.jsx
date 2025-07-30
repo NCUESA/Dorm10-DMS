@@ -61,15 +61,16 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              個人資料
-            </h1>
-            <button
-              onClick={handleSignOut}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            >
-              登出
-            </button>
+            <h1 className="text-3xl font-bold text-gray-900">個人資料</h1>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => router.push('/profile/edit')}>編輯資料</Button>
+              <button
+                onClick={handleSignOut}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                登出
+              </button>
+            </div>
           </div>
 
           {profileData && (
