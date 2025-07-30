@@ -80,9 +80,7 @@ body {
 }
 
 /* 按鈕樣式 */
-.btn-primary {
-  background-color: var(--primary);
-  color: white;
+.btn {
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 500;
@@ -95,51 +93,36 @@ body {
   text-decoration: none;
 }
 
-@media (min-width: 640px) {
-  .btn-primary {
-    padding: 12px 24px;
-  }
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+}
+
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
 }
 
 .btn-primary:hover {
   background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-.btn-primary:focus {
-  outline: none;
 }
 
 .btn-secondary {
   background: transparent;
   color: var(--primary);
   border: 1px solid var(--primary);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
-
-@media (min-width: 640px) {
-  .btn-secondary {
-    padding: 12px 24px;
-  }
 }
 
 .btn-secondary:hover {
   background-color: var(--primary);
   color: white;
-  transform: translateY(-1px);
 }
 
-.btn-secondary:focus {
-  outline: none;
-}
 
 /* 輸入框樣式 */
 .input-field {

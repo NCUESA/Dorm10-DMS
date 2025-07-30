@@ -17,6 +17,10 @@ export default function AIAssistant() {
     }
   }, [isAuthenticated, loading, router]);
 
+  const handleStartAnalysis = () => {
+    router.push('/ai-assistant/chat');
+  };
+
   // 顯示載入狀態
   if (loading || isRedirecting) {
     return (
@@ -94,8 +98,12 @@ export default function AIAssistant() {
           </div>
 
           <div className="mt-8 text-center">
-            <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-              開始對話
+            <button
+              onClick={handleStartAnalysis}
+              disabled={loading || isRedirecting}
+              className={`btn btn-primary ${(loading || isRedirecting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              開始AI分析
             </button>
           </div>
 
