@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client'; // Direct access for profile creation
 import { authService } from '@/lib/supabase/auth';
 
 const AuthContext = createContext({});
@@ -19,45 +20,54 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // 初始化用戶狀態
-    const initializeAuth = async () => {
-      try {
-        const result = await authService.getCurrentUser();
-        if (result.success && result.user) {
-          setUser(result.user);
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+    // Fetches the user and their profile, setting the state.
+    const getAndSetUser = async () => {
+      const result = await authService.getCurrentUser();
+      if (result.success && result.user) {
+        setUser(result.user);
       }
+      setLoading(false);
     };
+    
+    getAndSetUser();
 
-    initializeAuth();
-
-    // 監聽認證狀態變化
+    // The core logic for handling auth state changes.
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        // 獲取完整的用戶資料包括profile
-        const result = await authService.getCurrentUser();
-        if (result.success) {
-          setUser(result.user);
-        } else {
-          setUser(session.user);
+        const currentUser = session.user;
+        
+        // Check if a profile exists for this user.
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', currentUser.id)
+          .single();
+
+        // If no profile exists and the registration metadata is present, it's a first-time sign-in.
+        if (!profile && currentUser.raw_user_meta_data?.name) {
+          // 1. Create the profile record.
+          await supabase.from('profiles').insert({
+            id: currentUser.id,
+            username: currentUser.raw_user_meta_data.name,
+            student_id: currentUser.raw_user_meta_data.student_id,
+            role: 'user',
+          });
+
+          // 2. Update the user's display_name in auth.users.
+          await supabase.auth.updateUser({
+            data: { display_name: currentUser.raw_user_meta_data.name },
+          });
         }
+        
+        // After any potential updates, fetch the complete user data again to ensure UI is consistent.
+        await getAndSetUser();
         setError(null);
+
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setError(null);
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        // 刷新時也需要獲取完整資料
-        const result = await authService.getCurrentUser();
-        if (result.success) {
-          setUser(result.user);
-        } else {
-          setUser(session.user);
-        }
       }
+      
       setLoading(false);
     });
 
@@ -68,6 +78,7 @@ export const AuthProvider = ({ children }) => {
 
   const signUp = async (email, password, userData = {}) => {
     setError(null);
+    // The signUp function is now simplified, as the onAuthStateChange handles the profile creation.
     const result = await authService.signUp(email, password, userData);
     if (!result.success) {
       setError(result.error);
@@ -78,19 +89,14 @@ export const AuthProvider = ({ children }) => {
   const signIn = async (email, password) => {
     setError(null);
     const result = await authService.signIn(email, password);
-    if (result.success) {
-      // 獲取完整的用戶資料包括profile
-      const userResult = await authService.getCurrentUser();
-      if (userResult.success) {
-        setUser(userResult.user);
-      } else {
-        setUser(result.data.user);
-      }
-    } else {
+    if (!result.success) {
       setError(result.error);
     }
+    // onAuthStateChange will handle setting the user state.
     return result;
   };
+
+
 
   const signOut = async () => {
     setError(null);

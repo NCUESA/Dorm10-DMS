@@ -1,8 +1,11 @@
+'use client'
+
 import { Noto_Sans_TC } from 'next/font/google'
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useState, useLayoutEffect, useRef } from 'react';
 
 const notoSans = Noto_Sans_TC({
   subsets: ['latin'],
@@ -10,22 +13,39 @@ const notoSans = Noto_Sans_TC({
   variable: '--font-noto-sans',
 })
 
-export const metadata = {
-  title: "NCUE 獎助學金資訊平台",
-  description: "彰化師範大學獎助學金資訊平台",
-  icons: {
-    icon: '/logo_b.png',
-    apple: '/logo.png',
-  },
-};
-
 export default function RootLayout({ children }) {
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+
+    // Initial height calculation
+    updateHeaderHeight();
+
+    // Observe header for resize changes
+    const resizeObserver = new ResizeObserver(updateHeaderHeight);
+    if (headerRef.current) {
+      resizeObserver.observe(headerRef.current);
+    }
+
+    return () => {
+      if (headerRef.current) {
+        resizeObserver.unobserve(headerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <html lang="zh-TW" className={notoSans.variable}>
       <body className={notoSans.className}>
         <AuthProvider>
-          <Header />
-          <main>
+          <Header ref={headerRef} />
+          <main style={{ paddingTop: `${headerHeight}px` }}>
             {children}
           </main>
           <Footer />

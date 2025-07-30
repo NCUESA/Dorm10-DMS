@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/app/assets/logo.png";
 
-export default function Header() {
+const Header = forwardRef((props, ref) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, loading, signOut, isAuthenticated, isAdmin } = useAuth();
 
@@ -33,7 +33,7 @@ export default function Header() {
   // 如果還在載入中，顯示載入狀態
   if (loading) {
     return (
-      <header className="header-fixed">
+      <header className="header-fixed" ref={ref}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full">
           <div className="flex items-center justify-between h-full">
             {/* Logo 區域 */}
@@ -52,8 +52,8 @@ export default function Header() {
                   priority
                 />
                 <h1 className="font-bold" style={{ color: 'var(--primary)' }}>
-                  <span className="text-sm sm:hidden">NCUE</span>
-                  <span className="text-base hidden sm:block lg:text-xl">NCUE 獎助學金資訊平台</span>
+                  <span className="text-sm lg:hidden">NCUE</span>
+                  <span className="text-base hidden lg:block xl:text-xl">NCUE 獎助學金資訊平台</span>
                 </h1>
               </Link>
             </div>
@@ -77,7 +77,7 @@ export default function Header() {
   }
 
   return (
-    <header className={`header-fixed ${isMenuOpen ? 'menu-open' : ''}`} onKeyDown={handleKeyDown}>
+    <header className={`header-fixed ${isMenuOpen ? 'menu-open' : ''}`} onKeyDown={handleKeyDown} ref={ref}>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full">
         <div className="flex items-center justify-between h-full">
           {/* Logo 區域 */}
@@ -96,8 +96,8 @@ export default function Header() {
                 priority
               />
               <h1 className="font-bold" style={{ color: 'var(--primary)' }}>
-                <span className="text-sm sm:hidden">NCUE</span>
-                <span className="text-base hidden sm:block lg:text-xl">NCUE 獎助學金資訊平台</span>
+                <span className="text-sm lg:hidden">NCUE</span>
+                <span className="text-base hidden lg:block xl:text-xl">NCUE 獎助學金資訊平台</span>
               </h1>
             </Link>
           </div>
@@ -148,7 +148,7 @@ export default function Header() {
                 )}
                 <div className="relative group">
                   <button 
-                    className="flex items-center space-x-2 nav-link navbar-link hover:text-primary focus:outline-none"
+                    className="flex flex-row items-center space-x-2 nav-link navbar-link hover:text-primary focus:outline-none"
                     aria-label="用戶選單"
                   >
                     <span>Hi, {user?.user_metadata?.name || user?.email || '使用者'}</span>
@@ -320,4 +320,7 @@ export default function Header() {
       </div>
     </header>
   );
-}
+});
+
+Header.displayName = 'Header';
+export default Header;

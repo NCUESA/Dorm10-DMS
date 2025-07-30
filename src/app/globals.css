@@ -28,7 +28,7 @@ body {
   background-color: var(--background);
   color: var(--text);
   font-family: var(--font-noto-sans), Arial, Helvetica, sans-serif;
-  padding-top: var(--header-height);
+  /* padding-top: var(--header-height); */ /* 已移除 */
 }
 
 /* Header 固定和玻璃模糊效果 */
@@ -192,7 +192,6 @@ body {
   padding: 6px 8px;
   border-radius: 8px;
   transition: all 0.3s ease;
-  display: inline-block;
 }
 
 @media (min-width: 768px) {
