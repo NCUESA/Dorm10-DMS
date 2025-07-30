@@ -127,6 +127,21 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
+  // 更新個人資料
+  const updateProfile = async (profileData) => {
+    setError(null);
+    const result = await authService.updateProfile(profileData);
+    if (result.success) {
+      const refreshed = await authService.getCurrentUser();
+      if (refreshed.success) {
+        setUser(refreshed.user);
+      }
+    } else {
+      setError(result.error);
+    }
+    return result;
+  };
+
   const verifyOtp = async (email, token, type = 'email') => {
     setError(null);
     const result = await authService.verifyOtp(email, token, type);
@@ -154,6 +169,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
     resetPassword,
     updatePassword,
+    updateProfile,
     verifyOtp,
     resendOtp,
     isAuthenticated: !!user,

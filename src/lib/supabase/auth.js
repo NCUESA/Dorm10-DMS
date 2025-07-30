@@ -135,10 +135,40 @@ export const authService = {
           const { error } = await supabase.auth.updateUser({
             password
           });
-          
+
           if (error) throw error;
           return { success: true };
         } catch (error) {
+          return { success: false, error: error.message };
+        }
+      },
+
+      // 更新使用者個人資料
+      async updateProfile({ name, student_id, department, year }) {
+        try {
+          const { data, error } = await supabase.auth.updateUser({
+            data: { name, student_id, department, year }
+          });
+
+          if (error) throw error;
+
+          const userId = data.user.id;
+
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              username: name,
+              student_id,
+              department,
+              year
+            })
+            .eq('id', userId);
+
+          if (profileError) throw profileError;
+
+          return { success: true, user: data.user };
+        } catch (error) {
+          console.error('更新個人資料失敗:', error);
           return { success: false, error: error.message };
         }
       },
