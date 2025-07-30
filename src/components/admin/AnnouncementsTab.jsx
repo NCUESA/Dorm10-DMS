@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import CreateAnnouncementModal from '@/components/CreateAnnouncementModal';
+import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
+import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import Button from '@/components/ui/Button';
 import IconButton from '@/components/ui/IconButton';
 
@@ -10,6 +12,8 @@ export default function AnnouncementsTab() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // 【新】從 Supabase 獲取公告資料
   const fetchAnnouncements = useCallback(async () => {
@@ -37,6 +41,10 @@ export default function AnnouncementsTab() {
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
+  const handleOpenEdit = (announcement) => setEditing(announcement);
+  const handleCloseEdit = () => setEditing(null);
+  const handleOpenDelete = (id) => setDeletingId(id);
+  const handleCloseDelete = () => setDeletingId(null);
 
   return (
     <div>
@@ -90,10 +98,10 @@ export default function AnnouncementsTab() {
                     <td className="p-4 align-middle text-gray-600">{new Date(announcement.created_at).toLocaleDateString()}</td>
                     <td className="p-4 align-middle">
                       <div className="flex gap-2">
-                        <Button variant="link" className="text-indigo-600 p-0">
+                        <Button variant="link" className="text-indigo-600 p-0" onClick={() => handleOpenEdit(announcement)}>
                           編輯
                         </Button>
-                        <Button variant="link" className="text-red-600 p-0">
+                        <Button variant="link" className="text-red-600 p-0" onClick={() => handleOpenDelete(announcement.id)}>
                           刪除
                         </Button>
                       </div>
@@ -106,10 +114,22 @@ export default function AnnouncementsTab() {
         </div>
       </div>
       
-      <CreateAnnouncementModal 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal} 
+      <CreateAnnouncementModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
         refreshAnnouncements={fetchAnnouncements} // 【重要】將刷新函式傳遞下去
+      />
+      <UpdateAnnouncementModal
+        isOpen={!!editing}
+        onClose={handleCloseEdit}
+        announcement={editing}
+        refreshAnnouncements={fetchAnnouncements}
+      />
+      <DeleteAnnouncementModal
+        isOpen={!!deletingId}
+        onClose={handleCloseDelete}
+        announcementId={deletingId}
+        refreshAnnouncements={fetchAnnouncements}
       />
     </div>
   );
