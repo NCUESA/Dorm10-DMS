@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
 
 export default function AIAssistant() {
   const { isAuthenticated, loading } = useAuth();
@@ -98,13 +99,13 @@ export default function AIAssistant() {
           </div>
 
           <div className="mt-8 text-center">
-            <button
+            <Button
               onClick={handleStartAnalysis}
               disabled={loading || isRedirecting}
-              className={`btn btn-primary ${(loading || isRedirecting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              size="lg"
             >
               開始AI分析
-            </button>
+            </Button>
           </div>
 
           <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

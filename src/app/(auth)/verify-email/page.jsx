@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import Button from "@/components/ui/Button";
+import LinkButton from "@/components/ui/LinkButton";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -125,9 +127,9 @@ function VerifyEmailContent() {
               正在跳轉到登入頁面...
             </p>
             
-            <Link href="/login" className="btn-primary w-full">
+            <LinkButton href="/login" className="w-full">
               立即登入
-            </Link>
+            </LinkButton>
           </div>
         </div>
       </div>
@@ -179,18 +181,19 @@ function VerifyEmailContent() {
 
             <div className="space-y-3">
               {email && (
-                <button
+                <Button
                   onClick={handleResendEmail}
                   disabled={resendCooldown > 0 || isResending}
-                  className="btn-primary w-full"
+                  loading={isResending}
+                  className="w-full"
                 >
                   {isResending ? "發送中..." : resendCooldown > 0 ? `重新發送 (${resendCooldown}s)` : "重新發送驗證郵件"}
-                </button>
+                </Button>
               )}
               
-              <Link href="/register" className="btn-secondary w-full">
+              <LinkButton href="/register" variant="secondary" className="w-full">
                 返回註冊頁面
-              </Link>
+              </LinkButton>
             </div>
           </div>
         </div>
@@ -253,18 +256,20 @@ function VerifyEmailContent() {
 
             <div className="space-y-3">
               {email && (
-                <button
+                <Button
+                  variant="secondary"
                   onClick={handleResendEmail}
                   disabled={resendCooldown > 0 || isResending}
-                  className="btn-secondary w-full"
+                  loading={isResending}
+                  className="w-full"
                 >
                   {isResending ? "發送中..." : resendCooldown > 0 ? `重新發送 (${resendCooldown}s)` : "重新發送驗證郵件"}
-                </button>
+                </Button>
               )}
               
-              <Link href="/login" className="btn-primary w-full">
+              <LinkButton href="/login" className="w-full">
                 前往登入頁面
-              </Link>
+              </LinkButton>
               
               <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
                 <Link

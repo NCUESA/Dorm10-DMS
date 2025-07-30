@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import Button from '@/components/ui/Button';
+import ButtonGroup from '@/components/ui/ButtonGroup';
 
 export default function AnnouncementList() {
   const [announcements, setAnnouncements] = useState([]);
@@ -60,11 +62,29 @@ export default function AnnouncementList() {
           />
           <svg className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
         </div>
-        <div className="flex space-x-2">
-          <button onClick={() => setFilter('open')} className={`px-4 py-2 text-sm font-medium rounded-lg ${filter==='open' ? 'text-white bg-blue-600' : 'text-gray-700 bg-gray-200 hover:bg-gray-300'} transition-colors duration-200`}>開放申請中</button>
-          <button onClick={() => setFilter('all')} className={`px-4 py-2 text-sm font-medium rounded-lg ${filter==='all' ? 'text-white bg-blue-600' : 'text-gray-700 bg-gray-200 hover:bg-gray-300'} transition-colors duration-200`}>全部</button>
-          <button onClick={() => setFilter('expired')} className={`px-4 py-2 text-sm font-medium rounded-lg ${filter==='expired' ? 'text-white bg-blue-600' : 'text-gray-700 bg-gray-200 hover:bg-gray-300'} transition-colors duration-200`}>已過期</button>
-        </div>
+        <ButtonGroup connected={false}>
+          <Button 
+            variant={filter === 'open' ? 'primary' : 'ghost'} 
+            size="sm"
+            onClick={() => setFilter('open')}
+          >
+            開放申請中
+          </Button>
+          <Button 
+            variant={filter === 'all' ? 'primary' : 'ghost'} 
+            size="sm"
+            onClick={() => setFilter('all')}
+          >
+            全部
+          </Button>
+          <Button 
+            variant={filter === 'expired' ? 'primary' : 'ghost'} 
+            size="sm"
+            onClick={() => setFilter('expired')}
+          >
+            已過期
+          </Button>
+        </ButtonGroup>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden divide-y divide-gray-200">

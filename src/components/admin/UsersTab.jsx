@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Button from '@/components/ui/Button';
 
 // 模擬的使用者數據
 const mockUsers = [
@@ -77,8 +78,14 @@ export default function UsersTab() {
                     </span>
                   </td>
                   <td className="p-4 align-middle">
-                    <button className="text-indigo-600 hover:text-indigo-900 mr-4">編輯</button>
-                    <button className="text-blue-600 hover:text-blue-900">寄送通知</button>
+                    <div className="flex gap-2">
+                      <Button variant="link" className="text-indigo-600 p-0">
+                        編輯
+                      </Button>
+                      <Button variant="link" className="text-blue-600 p-0">
+                        寄送通知
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

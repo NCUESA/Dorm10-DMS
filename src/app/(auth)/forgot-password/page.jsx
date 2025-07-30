@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import Button from "@/components/ui/Button";
+import LinkButton from "@/components/ui/LinkButton";
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -100,23 +102,24 @@ export default function ForgotPassword() {
             </p>
             
             <div className="space-y-3">
-              <Link
+              <LinkButton
                 href="/login"
-                className="btn-primary w-full"
+                className="w-full"
               >
                 返回登入頁面
-              </Link>
+              </LinkButton>
               
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setIsSuccess(false);
                   setMessage("");
                   setEmail("");
                 }}
-                className="btn-secondary w-full"
+                className="w-full"
               >
                 重新發送
-              </button>
+              </Button>
             </div>
           </div>
           
@@ -182,13 +185,14 @@ export default function ForgotPassword() {
               )}
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="btn-primary w-full"
+              loading={isLoading}
+              className="w-full"
             >
               {isLoading ? "發送中..." : "發送重設連結"}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6">

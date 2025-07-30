@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import Button from "@/components/ui/Button";
+import LinkButton from "@/components/ui/LinkButton";
 
 export default function Register() {
   const router = useRouter();
@@ -169,13 +171,13 @@ export default function Register() {
             </div>
             
             <div className="space-y-4">
-              <Link href="/login" className="btn-primary w-full">
+              <LinkButton href="/login" className="w-full">
                 前往登入頁面
-              </Link>
+              </LinkButton>
               
-              <Link href="/verify-email" className="btn-secondary w-full">
+              <LinkButton href="/verify-email" variant="secondary" className="w-full">
                 郵件驗證頁面
-              </Link>
+              </LinkButton>
             </div>
           </div>
           
@@ -390,13 +392,14 @@ export default function Register() {
               </label>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="btn-primary w-full"
+              loading={isLoading}
+              className="w-full"
             >
               {isLoading ? "註冊中..." : "註冊帳號"}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6">

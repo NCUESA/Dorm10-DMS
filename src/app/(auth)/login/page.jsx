@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import Button from "@/components/ui/Button";
 
 function LoginContent() {
   const router = useRouter();
@@ -195,13 +196,15 @@ function LoginContent() {
               </Link>
             </div>
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={isLoading}
-              className="btn-primary w-full"
+              loading={isLoading}
+              className="w-full"
             >
               {isLoading ? "登錄中..." : "登入"}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6">

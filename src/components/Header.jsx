@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useState, forwardRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/app/assets/logo.png";
+import Button from "@/components/ui/Button";
+import IconButton from "@/components/ui/IconButton";
 
 const Header = forwardRef((props, ref) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -174,7 +176,7 @@ const Header = forwardRef((props, ref) => {
                       </Link>
                       <div className="border-t border-gray-200 my-1"></div>
                       <button 
-                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors"
+                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors rounded-md"
                         onClick={handleLogout}
                       >
                         登出
@@ -188,9 +190,9 @@ const Header = forwardRef((props, ref) => {
 
           {/* 手機版選單按鈕 */}
           <div className="md:hidden">
-            <button
-              type="button"
-              className="relative text-muted hover:text-primary hover:bg-blue-50 focus:outline-none rounded-lg p-2 transition-all duration-300 hover:scale-110"
+            <IconButton
+              variant="ghost"
+              className="text-muted hover:text-primary hover:bg-blue-50"
               aria-label={isMenuOpen ? "關閉選單" : "開啟選單"}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
@@ -215,7 +217,7 @@ const Header = forwardRef((props, ref) => {
                   }`}
                 />
               </div>
-            </button>
+            </IconButton>
           </div>
         </div>
       </div>

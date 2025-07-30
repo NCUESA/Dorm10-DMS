@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import LinkButton from '@/components/ui/LinkButton';
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();
@@ -27,13 +28,13 @@ function AuthErrorContent() {
           </p>
           
           <div className="space-y-4">
-            <Link href="/register" className="btn-primary w-full">
+            <LinkButton href="/register" className="w-full">
               重新註冊
-            </Link>
+            </LinkButton>
             
-            <Link href="/login" className="btn-secondary w-full">
+            <LinkButton href="/login" variant="secondary" className="w-full">
               返回登入
-            </Link>
+            </LinkButton>
           </div>
         </div>
       </div>

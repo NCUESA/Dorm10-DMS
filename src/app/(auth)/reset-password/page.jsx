@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import Button from "@/components/ui/Button";
+import LinkButton from "@/components/ui/LinkButton";
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -123,12 +125,12 @@ function ResetPasswordContent() {
               {message}
             </div>
             
-            <Link
+            <LinkButton
               href="/login"
-              className="btn-primary w-full"
+              className="w-full"
             >
               立即登入
-            </Link>
+            </LinkButton>
           </div>
           
           <div className="text-center mt-6">
@@ -213,13 +215,14 @@ function ResetPasswordContent() {
               )}
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="btn-primary w-full"
+              loading={isLoading}
+              className="w-full"
             >
               {isLoading ? "重設中..." : "重設密碼"}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6">

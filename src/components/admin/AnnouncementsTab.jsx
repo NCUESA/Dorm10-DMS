@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import CreateAnnouncementModal from '@/components/CreateAnnouncementModal';
+import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 
 export default function AnnouncementsTab() {
   const [announcements, setAnnouncements] = useState([]);
@@ -40,15 +42,16 @@ export default function AnnouncementsTab() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800">公告列表</h2>
-        <button
+        <Button
           onClick={handleOpenModal}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-indigo-600 text-white hover:bg-indigo-700 h-10 py-2 px-4"
+          leftIcon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          }
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
           新增公告
-        </button>
+        </Button>
       </div>
       
       <div className="border rounded-lg w-full bg-white shadow-sm">
@@ -86,8 +89,14 @@ export default function AnnouncementsTab() {
                     </td>
                     <td className="p-4 align-middle text-gray-600">{new Date(announcement.created_at).toLocaleDateString()}</td>
                     <td className="p-4 align-middle">
-                      <button className="text-indigo-600 hover:text-indigo-900 mr-4 font-medium">編輯</button>
-                      <button className="text-red-600 hover:text-red-900 font-medium">刪除</button>
+                      <div className="flex gap-2">
+                        <Button variant="link" className="text-indigo-600 p-0">
+                          編輯
+                        </Button>
+                        <Button variant="link" className="text-red-600 p-0">
+                          刪除
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
