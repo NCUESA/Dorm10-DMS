@@ -8,6 +8,23 @@ import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import Button from '@/components/ui/Button';
 import IconButton from '@/components/ui/IconButton';
 
+// 寄送公告給所有使用者
+const sendAnnouncement = async (id) => {
+  try {
+    const res = await fetch('/api/send-announcement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ announcementId: id }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '寄送失敗');
+    alert('寄送成功');
+  } catch (err) {
+    console.error(err);
+    alert('寄送失敗');
+  }
+};
+
 export default function AnnouncementsTab() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +120,13 @@ export default function AnnouncementsTab() {
                         </Button>
                         <Button variant="link" className="text-red-600 p-0" onClick={() => handleOpenDelete(announcement.id)}>
                           刪除
+                        </Button>
+                        <Button
+                          variant="link"
+                          className="text-green-600 p-0"
+                          onClick={() => sendAnnouncement(announcement.id)}
+                        >
+                          寄送
                         </Button>
                       </div>
                     </td>
