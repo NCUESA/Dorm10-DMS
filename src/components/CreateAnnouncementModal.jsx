@@ -204,11 +204,13 @@ const PDFUploadArea = ({ selectedFile, setSelectedFile, disabled, showToast }) =
 
 
 // --- 主 Modal 組件 ---
-export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnouncements }) {
+export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnouncements, editingAnnouncement = null }) {
     const [currentStep, setCurrentStep] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState("AI 分析中...");
     const [selectedFile, setSelectedFile] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const isEditMode = !!editingAnnouncement;
     const [formData, setFormData] = useState({
         title: '',
         summary: '',
@@ -220,6 +222,24 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         submission_method: '',
         external_urls: '',
     });
+
+    // 當進入編輯模式時，填充表單數據
+    useEffect(() => {
+        if (editingAnnouncement && isOpen) {
+            setFormData({
+                title: editingAnnouncement.title || '',
+                summary: editingAnnouncement.summary || '',
+                status: editingAnnouncement.is_active ? '1' : '0',
+                category: editingAnnouncement.category || '',
+                application_deadline: editingAnnouncement.application_deadline || '',
+                target_audience: editingAnnouncement.target_audience || '',
+                application_limitations: editingAnnouncement.application_limitations || '',
+                submission_method: editingAnnouncement.submission_method || '',
+                external_urls: editingAnnouncement.external_urls || '',
+            });
+            setCurrentStep(2); // 跳過文件上傳步驟
+        }
+    }, [editingAnnouncement, isOpen]);
 
     // Toast 通知狀態
     const [toast, setToast] = useState({
@@ -250,10 +270,19 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
     useEffect(() => {
         if (isOpen) {
+            // 阻止外部頁面滾動
+            document.body.style.overflow = 'hidden';
             setTimeout(() => setShow(true), 50);
         } else {
+            // 恢復外部頁面滾動
+            document.body.style.overflow = 'unset';
             setShow(false);
         }
+        
+        // 清理函數：確保組件卸載時恢復滾動
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
     }, [isOpen]);
 
     const isFormValid = (() => {
@@ -411,31 +440,67 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             return;
         }
         setIsLoading(true);
-        setLoadingText("儲存中...");
+        setLoadingText(isEditMode ? "更新中..." : "儲存中...");
+
+        try {
+            const announcementData = {
+                title: formData.title,
+                summary: formData.summary,
+                category: formData.category,
+                application_deadline: formData.application_deadline || null,
+                target_audience: formData.target_audience,
+                application_limitations: formData.application_limitations,
+                submission_method: formData.submission_method,
+                external_urls: formData.external_urls,
+                is_active: formData.status === '1',
+            };
+
+            let error;
+            if (isEditMode) {
+                ({ error } = await supabase
+                    .from('announcements')
+                    .update(announcementData)
+                    .eq('id', editingAnnouncement.id));
+            } else {
+                ({ error } = await supabase
+                    .from('announcements')
+                    .insert([announcementData]));
+            }
+
+            if (error) throw error;
+            showToast(isEditMode ? "公告已成功更新！" : "公告已成功儲存！", "success");
+            if (refreshAnnouncements) refreshAnnouncements();
+            handleClose();
+        } catch (error) {
+            console.error(isEditMode ? "更新失敗:" : "儲存失敗:", error);
+            showToast(`${isEditMode ? '更新' : '儲存'}失敗: ${error.message}`, "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!editingAnnouncement) return;
+        
+        setIsLoading(true);
+        setLoadingText("刪除中...");
 
         try {
             const { error } = await supabase
                 .from('announcements')
-                .insert([{
-                    title: formData.title,
-                    summary: formData.summary,
-                    category: formData.category,
-                    application_deadline: formData.application_deadline || null,
-                    target_audience: formData.target_audience,
-                    application_limitations: formData.application_limitations,
-                    submission_method: formData.submission_method,
-                    external_urls: formData.external_urls,
-                    is_active: formData.status === '1',
-                }]);
+                .delete()
+                .eq('id', editingAnnouncement.id);
+
             if (error) throw error;
-            showToast("公告已成功儲存！", "success");
+            showToast("公告已成功刪除！", "success");
             if (refreshAnnouncements) refreshAnnouncements();
             handleClose();
         } catch (error) {
-            console.error("儲存失敗:", error);
-            showToast(`儲存失敗: ${error.message}`, "error");
+            console.error("刪除失敗:", error);
+            showToast(`刪除失敗: ${error.message}`, "error");
         } finally {
             setIsLoading(false);
+            setShowDeleteConfirm(false);
         }
     };
 
@@ -443,9 +508,12 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         if (isLoading) return;
         setShow(false);
         setTimeout(() => {
+            // 恢復外部頁面滾動
+            document.body.style.overflow = 'unset';
             onClose();
             setCurrentStep(0);
             setSelectedFile(null);
+            setShowDeleteConfirm(false);
             setFormData({
                 title: '', summary: '', status: '0', category: '',
                 application_deadline: '', target_audience: '', application_limitations: '',
@@ -464,23 +532,65 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 type={toast.type} 
                 onClose={hideToast} 
             />
+            
+            {/* 刪除確認對話框 */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center px-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                        <div className="flex items-center mb-4">
+                            <svg className="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            <h3 className="text-lg font-semibold text-gray-900">確認刪除</h3>
+                        </div>
+                        <p className="text-gray-600 mb-6">
+                            您確定要刪除「{formData.title}」這個公告嗎？此操作無法復原。
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <Button 
+                                type="button" 
+                                variant="secondary" 
+                                onClick={() => setShowDeleteConfirm(false)}
+                                disabled={isLoading}
+                            >
+                                取消
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="danger" 
+                                onClick={handleDelete}
+                                loading={isLoading}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? '刪除中...' : '確認刪除'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <div
-                className={`fixed inset-0 bg-black/60 z-50 pt-20 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/60 z-50 flex justify-center items-center px-4 pt-20 pb-8 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
                 onClick={handleClose}
                 aria-modal="true"
                 role="dialog"
             >
             <div
-                className={`bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
+                className={`bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
                     <h2 className="text-lg font-bold text-gray-800" id="modal-title">
-                        新增獎學金公告
+                        {isEditMode ? '編輯獎學金公告' : '新增獎學金公告'}
                     </h2>
                     <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed">&times;</button>
                 </div>
-                <div className="p-4 md:p-6 flex-grow overflow-y-auto relative">
+                <div className="p-4 md:p-6 flex-grow overflow-y-auto scrollbar-hide relative" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+                    <style jsx>{`
+                        .scrollbar-hide::-webkit-scrollbar {
+                            display: none;
+                        }
+                    `}</style>
                     {isLoading && (
                         <div className="absolute inset-0 bg-white/70 z-10 flex flex-col items-center justify-center rounded-lg">
                             <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -489,22 +599,26 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     )}
                     <Stepper currentStep={currentStep} />
                     <form id="announcement-form" noValidate className="space-y-6">
+                        {!isEditMode && (
+                            <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
+                                <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-blue-50 rounded-md">步驟一：上傳文件</legend>
+                                <PDFUploadArea selectedFile={selectedFile} setSelectedFile={setSelectedFile} disabled={isLoading} showToast={showToast}/>
+                                <Button
+                                    type="button"
+                                    variant="warning"
+                                    className="w-full mt-6"
+                                    onClick={handleAiAnalyze}
+                                    disabled={!selectedFile || isLoading}
+                                    loading={isLoading && currentStep === 1}
+                                >
+                                    {isLoading && currentStep === 1 ? '處理中...' : '開始 AI 分析'}
+                                </Button>
+                            </fieldset>
+                        )}
                         <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
-                            <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-blue-50 rounded-md">步驟一：上傳文件</legend>
-                            <PDFUploadArea selectedFile={selectedFile} setSelectedFile={setSelectedFile} disabled={isLoading} showToast={showToast}/>
-                            <Button
-                                type="button"
-                                variant="warning"
-                                className="w-full mt-6"
-                                onClick={handleAiAnalyze}
-                                disabled={!selectedFile || isLoading}
-                                loading={isLoading && currentStep === 1}
-                            >
-                                {isLoading && currentStep === 1 ? '處理中...' : '開始 AI 分析'}
-                            </Button>
-                        </fieldset>
-                        <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
-                            <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-green-50 rounded-md">步驟二：基本資訊與內容</legend>
+                            <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-green-50 rounded-md">
+                                {isEditMode ? '編輯公告資訊' : '步驟二：基本資訊與內容'}
+                            </legend>
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -631,17 +745,29 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                         </fieldset>
                     </form>
                 </div>
-                <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t flex justify-end space-x-3 flex-shrink-0">
-                    <Button type="button" variant="secondary" onClick={handleClose} disabled={isLoading}>
-                        取消
-                    </Button>
+                <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t rounded-b-2xl flex justify-between space-x-3 flex-shrink-0">
+                    <div className="flex space-x-3">
+                        <Button type="button" variant="secondary" onClick={handleClose} disabled={isLoading}>
+                            取消
+                        </Button>
+                        {isEditMode && (
+                            <Button 
+                                type="button" 
+                                variant="danger" 
+                                onClick={() => setShowDeleteConfirm(true)} 
+                                disabled={isLoading}
+                            >
+                                刪除
+                            </Button>
+                        )}
+                    </div>
                     <Button 
                         type="button"
                         onClick={handleSave} 
                         disabled={!isFormValid || isLoading}
                         loading={isLoading}
                     >
-                        {isLoading ? loadingText : '儲存公告'}
+                        {isLoading ? loadingText : (isEditMode ? '更新公告' : '儲存公告')}
                     </Button>
                 </div>
             </div>
