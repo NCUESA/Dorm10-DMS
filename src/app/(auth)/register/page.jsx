@@ -196,7 +196,7 @@ export default function Register() {
 
   return (
     <div className="flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--background)' }}>
-      <div className="max-w-6xl w-full">
+      <div className="max-w-4xl w-full">
         {/* Logo 和標題 */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-3">
@@ -216,7 +216,7 @@ export default function Register() {
 
         {/* 註冊表單 */}
         <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {errors.submit && (
               <div className="p-4 rounded-lg" style={{ backgroundColor: '#fee', color: 'var(--error)', border: '1px solid var(--error)' }}>
                 {errors.submit}
@@ -229,7 +229,7 @@ export default function Register() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="form-group">
                 <label htmlFor="name" className="form-label">
                   姓名 *
@@ -268,29 +268,29 @@ export default function Register() {
                   <p className="form-error">{errors.studentId}</p>
                 )}
               </div>
-
-              <div className="form-group md:col-span-2 xl:col-span-1">
-                <label htmlFor="email" className="form-label">
-                  電子郵件 *
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="input-field"
-                  placeholder="請輸入您的電子郵件"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-                {errors.email && (
-                  <p className="form-error">{errors.email}</p>
-                )}
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
+                電子郵件 *
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="input-field"
+                placeholder="請輸入您的電子郵件"
+                value={formData.email}
+                onChange={handleChange}
+              />
+              {errors.email && (
+                <p className="form-error">{errors.email}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="form-group">
                 <label htmlFor="department" className="form-label">
                   系所 *
@@ -334,7 +334,9 @@ export default function Register() {
                   <p className="form-error">{errors.year}</p>
                 )}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="form-group">
                 <label htmlFor="password" className="form-label">
                   密碼 *
@@ -354,9 +356,7 @@ export default function Register() {
                   <p className="form-error">{errors.password}</p>
                 )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
               <div className="form-group">
                 <label htmlFor="confirmPassword" className="form-label">
                   確認密碼 *
