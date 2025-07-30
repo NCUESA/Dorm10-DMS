@@ -14,8 +14,8 @@ export default function AnnouncementList() {
       setLoading(true);
       const { data, error } = await supabase
         .from('announcements')
-        .select('*')
-        .eq('status', 'published')
+        .select('*, attachments(*)')
+        .eq('is_active', true)
         .order('application_deadline', { ascending: true });
       if (!error) {
         setAnnouncements(data || []);
@@ -48,6 +48,11 @@ export default function AnnouncementList() {
     };
     return map[cat] || 'bg-gray-500';
   };
+
+  const getPublicUrl = (path) => {
+    const { data } = supabase.storage.from('attachments').getPublicUrl(path)
+    return data.publicUrl
+  }
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -100,6 +105,15 @@ export default function AnnouncementList() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg text-gray-900">{item.title}</h3>
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.summary}</p>
+                      {item.attachments && item.attachments.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {item.attachments.map(att => (
+                            <a key={att.id} href={getPublicUrl(att.stored_file_path)} target="_blank" className="text-blue-600 underline text-xs">
+                              {att.file_name}
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

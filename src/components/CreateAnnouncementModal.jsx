@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabase } from '@/lib/supabase/client';
 import QuillEditor from './QuillEditor';
+import AttachmentUploader from './AttachmentUploader';
 import Button from '@/components/ui/Button';
 
 // Stepper component to show the current stage
@@ -209,6 +210,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState("AI 分析中...");
     const [selectedFile, setSelectedFile] = useState(null);
+    const [attachments, setAttachments] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isEditMode = !!editingAnnouncement;
     const [formData, setFormData] = useState({
@@ -455,19 +457,45 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 is_active: formData.status === '1',
             };
 
-            let error;
+            let announcementId;
             if (isEditMode) {
-                ({ error } = await supabase
+                const { data: updated, error } = await supabase
                     .from('announcements')
                     .update(announcementData)
-                    .eq('id', editingAnnouncement.id));
+                    .eq('id', editingAnnouncement.id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                announcementId = updated.id;
             } else {
-                ({ error } = await supabase
+                const { data: created, error } = await supabase
                     .from('announcements')
-                    .insert([announcementData]));
+                    .insert([announcementData])
+                    .select()
+                    .single();
+                if (error) throw error;
+                announcementId = created.id;
             }
 
-            if (error) throw error;
+            for (const file of attachments) {
+                const path = `${announcementId}/${crypto.randomUUID()}-${file.name}`;
+                const { error: upErr } = await supabase.storage
+                    .from('attachments')
+                    .upload(path, file);
+                if (upErr) throw upErr;
+                const { error: insErr } = await supabase.from('attachments').insert({
+                    announcement_id: announcementId,
+                    file_name: file.name,
+                    stored_file_path: path,
+                    file_size: file.size,
+                    mime_type: file.type,
+                });
+                if (insErr) throw insErr;
+            }
+
+            showToast(isEditMode ? "公告已成功更新！" : "公告已成功儲存！", "success");
+            if (refreshAnnouncements) refreshAnnouncements();
+            handleClose();
             showToast(isEditMode ? "公告已成功更新！" : "公告已成功儲存！", "success");
             if (refreshAnnouncements) refreshAnnouncements();
             handleClose();
@@ -513,6 +541,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             onClose();
             setCurrentStep(0);
             setSelectedFile(null);
+            setAttachments([]);
             setShowDeleteConfirm(false);
             setFormData({
                 title: '', summary: '', status: '0', category: '',
@@ -734,12 +763,16 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                                 </div>
                                 <div>
                                     <label htmlFor="summary" className="block text-sm font-semibold text-gray-700 mb-2">公告摘要 (必填)</label>
-                                    <QuillEditor 
+                                <QuillEditor
                                         value={formData.summary}
                                         onChange={handleSummaryChange}
                                         placeholder="AI 生成的內容將顯示於此，您也可以手動編輯..."
                                         disabled={isLoading}
                                     />
+                                <div className="mt-4">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件</label>
+                                    <AttachmentUploader files={attachments} setFiles={setAttachments} disabled={isLoading} />
+                                </div>
                                 </div>
                             </div>
                         </fieldset>
