@@ -16,6 +16,9 @@ export const authService = {
           data: {
             name: userData.name,
             student_id: userData.student_id,
+            // 在註冊階段將系所與年級寫入 raw_user_meta_data
+            department: userData.department,
+            year: userData.year,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
