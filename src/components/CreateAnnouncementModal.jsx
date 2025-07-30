@@ -216,7 +216,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const [formData, setFormData] = useState({
         title: '',
         summary: '',
-        status: '0',
+        status: '1',
         category: '',
         application_deadline: '',
         target_audience: '',
@@ -422,7 +422,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             setFormData(prev => ({
                 ...prev,
                 ...aiResponse,
-                status: prev.status || '0', 
+                status: prev.status || '1',
             }));
             
             setCurrentStep(2);
@@ -544,7 +544,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             setAttachments([]);
             setShowDeleteConfirm(false);
             setFormData({
-                title: '', summary: '', status: '0', category: '',
+                title: '', summary: '', status: '1', category: '',
                 application_deadline: '', target_audience: '', application_limitations: '',
                 submission_method: '', external_urls: '',
             });
