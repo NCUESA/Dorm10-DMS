@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { GoogleGenAI } from '@google/genai'
 import StudentInfoForm from '@/components/StudentInfoForm'
 import Button from '@/components/ui/Button'
@@ -20,6 +21,7 @@ const SYSTEM_PROMPT = `# 角色 (Persona)
 `
 
 export default function ChatPage() {
+  const { user } = useAuth()
   const [info, setInfo] = useState(null)
   const [infoReady, setInfoReady] = useState(false)
   const [messages, setMessages] = useState([])
@@ -32,6 +34,17 @@ export default function ChatPage() {
       modelRef.current = genAI
     }
   }, [])
+
+  // 若使用者已登入，預先帶入系所與年級
+  useEffect(() => {
+    if (user && user.user_metadata) {
+      setInfo(prev => ({
+        ...prev,
+        department: user.user_metadata.department || '',
+        grade: user.user_metadata.year || ''
+      }))
+    }
+  }, [user])
 
   const handleInfoSubmit = (data) => {
     setInfo(data)
@@ -72,7 +85,10 @@ export default function ChatPage() {
   if (!infoReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
-        <StudentInfoForm onSubmit={handleInfoSubmit} />
+        <StudentInfoForm onSubmit={handleInfoSubmit} initialData={{
+          department: user?.user_metadata?.department || '',
+          grade: user?.user_metadata?.year || ''
+        }} />
       </div>
     )
   }

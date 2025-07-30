@@ -104,8 +104,14 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, student_id)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'student_id');
+  INSERT INTO public.profiles (id, username, student_id, department, year)
+  VALUES (
+    NEW.id,
+    NEW.raw_user_meta_data->>'name',
+    NEW.raw_user_meta_data->>'student_id',
+    NEW.raw_user_meta_data->>'department',
+    NEW.raw_user_meta_data->>'year'
+  );
 
   RETURN NEW;
 END;

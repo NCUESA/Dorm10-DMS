@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 
 const familyOptions = [
@@ -12,7 +12,7 @@ const familyOptions = [
   '無以上資料但家境清寒'
 ]
 
-export default function StudentInfoForm({ onSubmit }) {
+export default function StudentInfoForm({ onSubmit, initialData = {} }) {
   const [form, setForm] = useState({
     educationLevel: '',
     college: '',
@@ -28,6 +28,11 @@ export default function StudentInfoForm({ onSubmit }) {
     graduating: '否',
     directMaster: '否'
   })
+
+  // 載入初始資料（若提供）
+  useEffect(() => {
+    setForm(prev => ({ ...prev, ...initialData }))
+  }, [initialData])
 
   const handleChange = (e) => {
     const { name, value } = e.target
