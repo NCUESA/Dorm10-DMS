@@ -157,13 +157,28 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
   return (
     <>
       <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
-      <div className={`fixed inset-0 bg-black/60 z-50 pt-20 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`} onClick={handleClose} aria-modal="true" role="dialog">
-        <div className={`bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`fixed inset-0 bg-black/60 z-50 pt-20 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClose}
+        aria-modal="true"
+        role="dialog"
+      >
+        <div
+          className={`bg-white rounded-xl shadow-2xl w-full max-w-5xl flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}
+        >
           <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
-            <h2 className="text-lg font-bold text-gray-800">編輯獎學金公告</h2>
-            <button onClick={handleClose} disabled={isSaving} className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed">&times;</button>
+            <h2 className="text-lg font-bold text-gray-800">更新公告</h2>
+            <button
+              onClick={handleClose}
+              disabled={isSaving}
+              className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed"
+            >
+              &times;
+            </button>
           </div>
-          <div className="p-4 md:p-6 flex-grow overflow-y-auto relative">
+          <div className="p-6 space-y-4">
             {isSaving && (
               <div className="absolute inset-0 bg-white/70 z-10 flex flex-col items-center justify-center rounded-lg">
                 <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -227,9 +242,9 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
               </fieldset>
             </form>
           </div>
-          <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t flex justify-end space-x-3 flex-shrink-0">
+          <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t flex justify-end space-x-3 flex-shrink-0 rounded-b-2xl">
             <Button type="button" variant="secondary" onClick={handleClose} disabled={isSaving}>取消</Button>
-            <Button type="button" onClick={handleSave} disabled={!isFormValid || isSaving} loading={isSaving}>儲存變更</Button>
+            <Button type="button" variant="primary" onClick={handleSave} loading={isSaving}>保存</Button>
           </div>
         </div>
       </div>

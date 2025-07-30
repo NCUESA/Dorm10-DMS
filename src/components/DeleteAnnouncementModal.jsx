@@ -94,16 +94,31 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
   return (
     <>
       <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
-      <div className={`fixed inset-0 bg-black/60 z-50 pt-20 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`} onClick={handleClose} aria-modal="true" role="dialog">
-        <div className={`bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`fixed inset-0 bg-black/60 z-50 pt-20 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClose}
+        aria-modal="true"
+        role="dialog"
+      >
+        <div
+          className={`bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}
+        >
           <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
             <h2 className="text-lg font-bold text-gray-800">刪除公告</h2>
-            <button onClick={handleClose} disabled={isDeleting} className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed">&times;</button>
+            <button
+              onClick={handleClose}
+              disabled={isDeleting}
+              className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed"
+            >
+              &times;
+            </button>
           </div>
           <div className="p-6 space-y-4">
             <p className="text-gray-700">確定要刪除這則公告嗎？此操作無法復原。</p>
           </div>
-          <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t flex justify-end space-x-3 flex-shrink-0">
+          <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t flex justify-end space-x-3 flex-shrink-0 rounded-b-2xl">
             <Button type="button" variant="secondary" onClick={handleClose} disabled={isDeleting}>取消</Button>
             <Button type="button" variant="danger" onClick={handleDelete} loading={isDeleting}>確認刪除</Button>
           </div>

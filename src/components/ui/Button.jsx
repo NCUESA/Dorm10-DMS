@@ -44,7 +44,7 @@ const Button = forwardRef(({
       font-bold
     `,
     danger: `
-      bg-error text-white border border-error
+      bg-red-700 text-white border border-error
       hover:bg-red-600 hover:border-red-600
       focus:ring-error/20
       shadow-error/20
