@@ -1,631 +1,375 @@
-"use client";
+'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from '@/lib/supabase/client';
+import QuillEditor from './QuillEditor';
 
-export default function CreateAnnouncementModal({ isOpen, onClose, onSuccess }) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [aiAnalyzing, setAiAnalyzing] = useState(false);
-    const [formData, setFormData] = useState({
-      title: '',
-      content: '',
-      summary: '',
-      category: '',
-      applicationDeadline: '',
-      applicationMethod: '',
-      announcementDeadline: '',
-      targetAudience: '',
-      status: 'draft'
-    });
-  const [sources, setSources] = useState({
-    pdfFiles: [],
-    externalUrls: '',
-    textContent: ''
-  });
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [analysisError, setAnalysisError] = useState('');
-
-  const resetForm = () => {
-    setCurrentStep(1);
-    setFormData({
-      title: '',
-      content: '',
-      summary: '',
-      category: '',
-      applicationDeadline: '',
-      applicationMethod: '',
-      announcementDeadline: '',
-      targetAudience: '',
-      status: 'draft'
-    });
-    setSources({
-      pdfFiles: [],
-      externalUrls: '',
-      textContent: ''
-    });
-    setAnalysisResult(null);
-    setAnalysisError('');
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  const handleFileUpload = (files) => {
-    setSources(prev => ({
-      ...prev,
-      pdfFiles: [...prev.pdfFiles, ...Array.from(files)]
-    }));
-  };
-
-  const removeFile = (index) => {
-    setSources(prev => ({
-      ...prev,
-      pdfFiles: prev.pdfFiles.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleAiAnalysis = async () => {
-    if (!sources.pdfFiles.length && !sources.externalUrls && !sources.textContent) {
-      setAnalysisError('請至少提供一種資料來源');
-      return;
-    }
-
-    setAiAnalyzing(true);
-    setAnalysisError('');
-
-    try {
-      // 模擬 AI 分析過程
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // 模擬 AI 分析結果
-      const mockResult = {
-        title: '國際學程交流協會中華民國總會「開蒙愛‧讀夢想起飛-國立大學清寒女學生助學方案」',
-        summary: `
-大一新生及大二學生錄取後補助2年學雜費；大二及大三學生需重新申請。
-
-大二及大四學生錄取後補助1年學雜費（大二學生於大三時重重新申請）。
-
-特殊經濟困難個案經核准後，可額外補助雜費及住宿費。
-        `.trim(),
-        category: 'C',
-        applicationDeadline: '2025-07-23',
-        applicationMethod: '線上系統申請',
-        targetAudience: `
-申請對象：
-1. 申請書（需家長及學生本人簽名，黏貼2吋大頭照1張，就讀年級請填寫14學年2年級）。
-2. 戶年成績單（需含積計成績）：大一新生請提供高三全學年成績單（含會考成績表現）或本校取通知單。
-3. 大一新生及碩學生需加附3-2學期期成績單，前往本組統一函附。
-4. 全戶設戶籍分戶資本（印父母不同戶籍，需一併檢附）。
-5. 全戶113年所得及財產清單。
-6. 其他家庭狀況左證資料（如重大傷病卡、身障手冊、醫院診療證明等，影本請於文件右下方加蓋「與正本相符」並署名功能；日期；無則免）。
-        `.trim()
-      };
-
-      setAnalysisResult(mockResult);
-      setFormData(prev => ({
-        ...prev,
-        ...mockResult
-      }));
-      setCurrentStep(3);
-    } catch (error) {
-      setAnalysisError('AI 分析失敗，請稍後再試');
-    }
-
-    setAiAnalyzing(false);
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data, error } = await supabase
-        .from('announcements')
-        .insert([{
-          title: formData.title,
-          content: formData.content,
-          summary: formData.summary,
-          category: formData.category,
-          application_deadline: formData.applicationDeadline || null,
-          application_method: formData.applicationMethod,
-          announcement_deadline: formData.announcementDeadline || null,
-          target_audience: formData.targetAudience,
-          status: formData.status,
-          created_by: user?.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      onSuccess(data);
-      handleClose();
-      alert('公告創建成功！');
-    } catch (error) {
-      console.error('創建公告失敗:', error);
-      alert('創建失敗，請稍後再試');
-    }
-
-    setLoading(false);
-  };
-
-  const handleQuickPublish = () => {
-    if (!formData.title.trim()) {
-      alert('請填寫公告標題');
-      return;
-    }
-    
-    setFormData(prev => ({ ...prev, status: 'published' }));
-    handleSubmit();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black opacity-50" onClick={handleClose}></div>
-        
-        <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          {/* 標題列 */}
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">新增獎學金公告</h2>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
-            >
-              ×
-            </button>
-          </div>
-
-          {/* 步驟指示器 */}
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-4">
-                <div className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    1
-                  </div>
-                  <span className="ml-2 text-sm font-medium">提供來源</span>
-                </div>
-                <div className={`flex items-center ${currentStep >= 2 ? 'text-red-600' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    currentStep >= 2 ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    2
-                  </div>
-                  <span className="ml-2 text-sm font-medium">AI 分析</span>
-                </div>
-                <div className={`flex items-center ${currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    3
-                  </div>
-                  <span className="ml-2 text-sm font-medium">審閱儲存</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 內容區域 */}
-          <div className="px-6 py-6">
-            {currentStep === 1 && (
-              <Step1ProvideSource 
-                sources={sources}
-                setSources={setSources}
-                onFileUpload={handleFileUpload}
-                onRemoveFile={removeFile}
-                onNext={() => setCurrentStep(2)}
-                onQuickPublish={() => setCurrentStep(3)}
-              />
-            )}
-
-            {currentStep === 2 && (
-              <Step2AiAnalysis
-                sources={sources}
-                analysisResult={analysisResult}
-                analysisError={analysisError}
-                aiAnalyzing={aiAnalyzing}
-                onAnalyze={handleAiAnalysis}
-                onBack={() => setCurrentStep(1)}
-                onNext={() => setCurrentStep(3)}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <Step3ReviewAndSave
-                formData={formData}
-                setFormData={setFormData}
-                analysisResult={analysisResult}
-                loading={loading}
-                onBack={() => setCurrentStep(analysisResult ? 2 : 1)}
-                onSave={handleSubmit}
-                onQuickPublish={handleQuickPublish}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 步驟1：提供資料來源
-function Step1ProvideSource({ sources, setSources, onFileUpload, onRemoveFile, onNext, onQuickPublish }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          步驟一：提供資料來源 (AI 分析，可選)
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 左側：資料來源選項 */}
-          <div>
-            <div className="space-y-4">
-              <div>
-                <label className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    checked={sources.pdfFiles.length > 0}
-                    onChange={(e) => {
-                      if (!e.target.checked) {
-                        setSources(prev => ({ ...prev, pdfFiles: [] }));
-                      }
-                    }}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-gray-700">PDF 檔案</span>
-                </label>
-                {sources.pdfFiles.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    {sources.pdfFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <span className="text-sm text-gray-600">{file.name}</span>
-                        <button
-                          onClick={() => onRemoveFile(index)}
-                          className="text-red-500 hover:text-red-700 text-xs"
+// Stepper component to show the current stage
+const Stepper = ({ currentStep }) => {
+    const steps = ['上傳檔案', 'AI 分析', '審閱發布'];
+    return (
+        <div className="flex items-center justify-center mb-4">
+            {steps.map((step, index) => (
+                <div key={index} className="flex items-center text-sm md:text-base">
+                    <div className={`flex items-center ${index <= currentStep ? 'text-indigo-600' : 'text-gray-500'}`}>
+                        <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 ${index <= currentStep ? 'bg-indigo-600 scale-105' : 'bg-gray-400'
+                                }`}
                         >
-                          移除
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="flex items-center space-x-3">
-                  <input type="checkbox" className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">外部網址</span>
-                </label>
-              </div>
-
-              <div>
-                <label className="flex items-center space-x-3">
-                  <input type="checkbox" className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">文字內容</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <input
-                type="file"
-                multiple
-                accept=".pdf"
-                onChange={(e) => onFileUpload(e.target.files)}
-                className="hidden"
-                id="pdf-upload"
-              />
-              <label
-                htmlFor="pdf-upload"
-                className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 cursor-pointer"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                AI 摘要
-              </label>
-            </div>
-          </div>
-
-          {/* 右側：表單欄位 */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">公告狀態</label>
-              <select className="w-full border border-gray-300 rounded-md px-3 py-2">
-                <option>下架 (草稿)</option>
-                <option>已發布</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">獎學金分類</label>
-              <select className="w-full border border-gray-300 rounded-md px-3 py-2">
-                <option>N/A</option>
-                <option>A</option>
-                <option>B</option>
-                <option>C</option>
-                <option>D</option>
-                <option>E</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">申請截止日期</label>
-              <input
-                type="date"
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">公告下架日期</label>
-              <input
-                type="date"
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">適用對象</label>
-              <textarea
-                rows={4}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="請描述獎學金適用對象..."
-              />
-            </div>
-          </div>
+                            {index + 1}
+                        </div>
+                        <span className="ml-2 font-medium hidden md:block">{step}</span>
+                    </div>
+                    {index < steps.length - 1 && <div className="w-8 md:w-16 h-0.5 mx-2 md:mx-4 bg-gray-300 rounded-full"></div>}
+                </div>
+            ))}
         </div>
-      </div>
+    );
+};
 
-      {/* 底部按鈕 */}
-      <div className="flex justify-between pt-6 border-t">
-        <button
-          onClick={onQuickPublish}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+// PDF Upload Area component
+const PDFUploadArea = ({ selectedFile, setSelectedFile, disabled }) => {
+    const fileInputRef = useRef(null);
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (file && file.type === 'application/pdf') {
+            setSelectedFile(file);
+        }
+    };
+    const handleDragOver = (event) => event.preventDefault();
+    const handleDrop = (event) => {
+        event.preventDefault();
+        if (disabled) return;
+        const file = event.dataTransfer.files[0];
+        if (file && file.type === 'application/pdf') {
+            setSelectedFile(file);
+        }
+    };
+    const handleRemoveFile = () => setSelectedFile(null);
+
+    return (
+        <div
+            className={`relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'hover:border-indigo-400 bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onClick={() => !disabled && fileInputRef.current?.click()}
         >
-          略過 AI 分析，直接編輯
-        </button>
-        <button
-          onClick={onNext}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          下一步：AI 分析
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// 步驟2：AI 分析
-function Step2AiAnalysis({ sources, analysisResult, analysisError, aiAnalyzing, onAnalyze, onBack, onNext }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          步驟二：AI 分析
-        </h3>
-        
-        {analysisError && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-red-800 text-sm">分析失敗：{analysisError}</p>
-          </div>
-        )}
-
-        {!analysisResult && !aiAnalyzing && (
-          <div className="text-center py-8">
-            <svg className="mx-auto h-12 w-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <p className="mt-4 text-gray-600">準備進行 AI 分析</p>
-            <button
-              onClick={onAnalyze}
-              className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-            >
-              開始 AI 分析
-            </button>
-          </div>
-        )}
-
-        {aiAnalyzing && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">AI 正在分析資料，請稍候...</p>
-          </div>
-        )}
-
-        {analysisResult && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-4">
-            <div className="flex items-center mb-2">
-              <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-green-800 font-medium">AI 分析完成</span>
-            </div>
-            <p className="text-green-700 text-sm">已成功分析並自動填入表單欄位，請前往下一步進行審閱。</p>
-          </div>
-        )}
-      </div>
-
-      {/* 底部按鈕 */}
-      <div className="flex justify-between pt-6 border-t">
-        <button
-          onClick={onBack}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-        >
-          上一步
-        </button>
-        {analysisResult && (
-          <button
-            onClick={onNext}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            下一步：審閱內容
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 步驟3：審閱與儲存
-function Step3ReviewAndSave({ formData, setFormData, analysisResult, loading, onBack, onSave, onQuickPublish }) {
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          步驟三：審閱與編輯
-        </h3>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              公告標題 (必填)
-            </label>
             <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="請輸入公告標題"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="application/pdf"
+                disabled={disabled}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              公告摘要 (必填)
-            </label>
-            <div className="relative">
-              <textarea
-                rows={6}
-                value={formData.summary}
-                onChange={(e) => handleInputChange('summary', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="請輸入公告摘要"
-              />
-              {analysisResult && (
-                <button className="absolute top-2 right-2 text-blue-600 hover:text-blue-800 text-xs">
-                  重新生成摘要
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">獎學金分類</label>
-              <select
-                value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              >
-                <option value="">請選擇分類</option>
-                <option value="A">A - 各縣市政府獎助學金</option>
-                <option value="B">B - 縣市政府以外之各級公家機關及公營事業獎助學金</option>
-                <option value="C">C - 宗教會及民間各項指定分類獎助學金</option>
-                <option value="D">D - 各民間團體、經濟不利、學業優良或其他無法歸納之獎助學金</option>
-                <option value="E">E - 獎學金特殊案件公告</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">公告狀態</label>
-              <select
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              >
-                <option value="draft">草稿</option>
-                <option value="published">已發布</option>
-                <option value="archived">已封存</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">申請截止日期</label>
-              <input
-                type="date"
-                value={formData.applicationDeadline}
-                onChange={(e) => handleInputChange('applicationDeadline', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">申請方式</label>
-              <input
-                type="text"
-                value={formData.applicationMethod}
-                onChange={(e) => handleInputChange('applicationMethod', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">公告下架日期</label>
-              <input
-                type="date"
-                value={formData.announcementDeadline}
-                onChange={(e) => handleInputChange('announcementDeadline', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">適用對象</label>
-            <textarea
-              rows={6}
-              value={formData.targetAudience}
-              onChange={(e) => handleInputChange('targetAudience', e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="請描述獎學金適用對象、申請條件等詳細資訊"
-            />
-          </div>
+            {!selectedFile ? (
+                <>
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-600">
+                        拖曳檔案到此處，或 <span className="font-medium text-indigo-600">點擊上傳</span>
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">僅支援 PDF 檔案</p>
+                </>
+            ) : (
+                <div className="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="mt-2 font-medium text-gray-700 break-all">{selectedFile.name}</p>
+                    {!disabled && (
+                         <button
+                            onClick={(e) => { e.stopPropagation(); handleRemoveFile(); }}
+                            className="mt-2 text-xs text-red-500 hover:text-red-700 font-semibold"
+                        >
+                            移除檔案
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
-      </div>
+    );
+};
 
-      {/* 底部按鈕 */}
-      <div className="flex justify-between pt-6 border-t">
-        <button
-          onClick={onBack}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-          disabled={loading}
+
+// --- 主 Modal 組件 ---
+export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnouncements }) {
+    const [currentStep, setCurrentStep] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingText, setLoadingText] = useState("AI 分析中...");
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [formData, setFormData] = useState({
+        title: '',
+        summary: '',
+        status: '0',
+        category: '',
+        application_deadline: '',
+        target_audience: '',
+        submission_method: '',
+    });
+    
+    const modelRef = useRef(null);
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+            const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
+            modelRef.current = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        }
+    }, []);
+
+    const [show, setShow] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setTimeout(() => setShow(true), 50);
+        } else {
+            setShow(false);
+        }
+    }, [isOpen]);
+
+    const isFormValid = (() => {
+        if (formData.title.trim() === '') return false;
+        const pureTextSummary = formData.summary.replace(/<[^>]*>?/gm, '').trim();
+        if (pureTextSummary === '') return false;
+        return true;
+    })();
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const handleSummaryChange = useCallback((content) => {
+        setFormData(prev => ({ ...prev, summary: content }));
+    }, []);
+
+
+    async function fileToGenerativePart(file) {
+        const base64EncodedData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(file);
+        });
+        return {
+            inlineData: { data: base64EncodedData, mimeType: file.type },
+        };
+    }
+
+    const handleAiAnalyze = async () => {
+        if (!selectedFile) {
+            alert("請先選擇一個 PDF 檔案");
+            return;
+        }
+        if (!modelRef.current) {
+            alert("AI 模型尚未初始化。請檢查您的 Gemini API 金鑰環境變數。");
+            return;
+        }
+
+        setIsLoading(true);
+        setCurrentStep(1); 
+
+        try {
+            setLoadingText("正在準備檔案...");
+            const pdfPart = await fileToGenerativePart(selectedFile);
+
+            const htmlStyleInstructions = `
+                - **標題 (h4)**: 使用 <h4> 標籤，並加上 inline style 'color: #1e40af; font-weight: bold;'。
+                - **列表 (ul/li)**: 使用 <ul> 和 <li>。
+                - **表格 (table)**: 使用標準 HTML 表格標籤，並為 table 加上 'border-collapse: collapse; width: 100%;'，為 th/td 加上 'border: 1px solid #ddd; padding: 8px;' 的 inline style。
+                - **強調 (span)**: 對於關鍵字詞（如日期、金額），使用 <span> 並加上 'color: #c026d3; font-weight: 600;' 的 inline style。
+            `;
+
+            const prompt = `你是一個專業的獎學金公告分析助理。請仔細閱讀這份 PDF 檔案，並根據內容，回傳一個 JSON 物件。
+            JSON 物件應包含以下欄位:
+            - title: "公告標題 (純文字)"
+            - summary: "一個包含詳細說明的 HTML 字串。請嚴格遵循以下樣式指南來生成此 HTML：${htmlStyleInstructions}"
+            - category: "從 'A' (縣市政府), 'B' (其他公家機關), 'C' (宗親會/指定身分), 'D' (其他民間單位), 'E' (得獎名單) 中選擇一個最適合的分類字母"
+            - application_deadline: "YYYY-MM-DD 格式的申請截止日期。如果找不到，請回傳空字串。"
+            - target_audience: "申請資格或適用對象。如果找不到，請回傳空字串。"
+            - submission_method: "簡要說明申請方式。如果找不到，請回傳空字串。"
+            
+            對於找不到資訊的欄位，請回傳空字串 ""。`;
+            
+            setLoadingText("AI 分析中，請稍候...");
+
+            const result = await modelRef.current.generateContent({
+                contents: [{ role: "user", parts: [pdfPart, { text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            });
+
+            setLoadingText("正在解析結果...");
+            const response = await result.response;
+            const aiResponse = JSON.parse(response.text());
+
+            setFormData(prev => ({
+                ...prev,
+                ...aiResponse,
+                status: prev.status || '0', 
+            }));
+            
+            setCurrentStep(2);
+
+        } catch (error) {
+            console.error("AI 分析失敗:", error);
+            alert(`AI 分析時發生錯誤。請檢查瀏覽器主控台以獲取詳細資訊。可能是 API 金鑰問題或網路連線錯誤。
+
+錯誤訊息: ${error.message}`);
+            setCurrentStep(0);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleSave = async () => {
+        if (!isFormValid) {
+            alert("請填寫所有必填欄位。");
+            return;
+        }
+        setIsLoading(true);
+        setLoadingText("儲存中...");
+
+        try {
+            const { error } = await supabase
+                .from('announcements')
+                .insert([{
+                    title: formData.title,
+                    summary: formData.summary,
+                    category: formData.category,
+                    application_deadline: formData.application_deadline || null,
+                    target_audience: formData.target_audience,
+                    submission_method: formData.submission_method,
+                    is_active: formData.status === '1',
+                }]);
+            if (error) throw error;
+            alert("公告已成功儲存！");
+            if (refreshAnnouncements) refreshAnnouncements();
+            handleClose();
+        } catch (error) {
+            console.error("儲存失敗:", error);
+            alert(`儲存失敗: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleClose = useCallback(() => {
+        if (isLoading) return;
+        setShow(false);
+        setTimeout(() => {
+            onClose();
+            setCurrentStep(0);
+            setSelectedFile(null);
+            setFormData({
+                title: '', summary: '', status: '0', category: '',
+                application_deadline: '', target_audience: '', submission_method: '',
+            });
+        }, 300);
+    }, [isLoading, onClose]);
+    
+    if (!isOpen) return null;
+
+    return (
+        <div
+            className={`fixed inset-0 bg-black/60 z-50 pt-16 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+            onClick={handleClose}
+            aria-modal="true"
+            role="dialog"
         >
-          上一步
-        </button>
-        <div className="flex space-x-3">
-          <button
-            onClick={onSave}
-            disabled={loading || !formData.title.trim()}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-          >
-            {loading ? '儲存中...' : '儲存'}
-          </button>
-          <button
-            onClick={onQuickPublish}
-            disabled={loading || !formData.title.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? '發布中...' : '儲存公告'}
-          </button>
+            <div
+                className={`bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
+                    <h2 className="text-lg font-bold text-gray-800" id="modal-title">
+                        新增獎學金公告
+                    </h2>
+                    <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed">&times;</button>
+                </div>
+                <div className="p-4 md:p-6 flex-grow overflow-y-auto relative">
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-white/70 z-10 flex flex-col items-center justify-center rounded-lg">
+                            <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <p className="mt-4 text-indigo-700 font-semibold">{loadingText}</p>
+                        </div>
+                    )}
+                    <Stepper currentStep={currentStep} />
+                    <form id="announcement-form" noValidate className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2 space-y-6">
+                            <fieldset className="p-5 bg-white rounded-lg border">
+                                <legend className="text-base font-semibold text-gray-800 px-2">步驟一：上傳 PDF</legend>
+                                <PDFUploadArea selectedFile={selectedFile} setSelectedFile={setSelectedFile} disabled={isLoading}/>
+                                <button
+                                    type="button"
+                                    onClick={handleAiAnalyze}
+                                    disabled={!selectedFile || isLoading}
+                                    className="w-full mt-4 btn-modern accent disabled:bg-indigo-300 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading && currentStep === 1 ? '處理中...' : '開始 AI 分析'}
+                                </button>
+                            </fieldset>
+                            <fieldset className="p-5 bg-white rounded-lg border">
+                                <legend className="text-base font-semibold text-gray-800 px-2">步驟三：審閱與發布</legend>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label htmlFor="title" className="form-label">公告標題 (必填)</label>
+                                        <input type="text" id="title" name="title" className="form-control" value={formData.title} onChange={handleChange} disabled={isLoading} />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="summary" className="form-label">公告摘要 (必填)</label>
+                                        <QuillEditor 
+                                            value={formData.summary}
+                                            onChange={handleSummaryChange}
+                                            placeholder="AI 生成的內容將顯示於此，您也可以手動編輯..."
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <aside className="p-5 bg-white rounded-lg border h-fit sticky top-4 space-y-4">
+                             <div>
+                                <label htmlFor="status" className="form-label">公告狀態</label>
+                                <select id="status" name="status" className="form-control" value={formData.status} onChange={handleChange} disabled={isLoading}>
+                                    <option value="0">下架 (草稿)</option>
+                                    <option value="1">上架</option>
+                                </select>
+                            </div>
+                             <div>
+                                <label htmlFor="category" className="form-label">獎學金分類</label>
+                                <select id="category" name="category" className="form-control" value={formData.category} onChange={handleChange} disabled={isLoading}>
+                                     <option value="">請選擇或由AI分析</option>
+                                     <option value="A">A: 縣市政府</option>
+                                     <option value="B">B: 其他公家機關</option>
+                                     <option value="C">C: 宗親會/指定身分</option>
+                                     <option value="D">D: 其他民間單位</option>
+                                     <option value="E">E: 得獎名單</option>
+                                </select>
+                             </div>
+                             <div>
+                                 <label htmlFor="application_deadline" className="form-label">申請截止日期</label>
+                                 <input type="date" id="application_deadline" name="application_deadline" className="form-control" value={formData.application_deadline} onChange={handleChange} disabled={isLoading} />
+                             </div>
+                             <div>
+                                 <label htmlFor="target_audience" className="form-label">適用對象</label>
+                                 <textarea id="target_audience" name="target_audience" className="form-control" rows={3} value={formData.target_audience} onChange={handleChange} disabled={isLoading}></textarea>
+                             </div>
+                              <div>
+                                 <label htmlFor="submission_method" className="form-label">送件方式</label>
+                                 <input type="text" id="submission_method" name="submission_method" className="form-control" placeholder="自行送件、至系生輔組申請..." value={formData.submission_method} onChange={handleChange} disabled={isLoading}/>
+                             </div>
+                        </aside>
+                    </form>
+                </div>
+                <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t flex justify-end space-x-3 flex-shrink-0">
+                    <button type="button" onClick={handleClose} className="btn-modern secondary" disabled={isLoading}>取消</button>
+                    <button type="button" onClick={handleSave} className="btn-modern primary" disabled={!isFormValid || isLoading}>
+                        {isLoading ? loadingText : '儲存公告'}
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

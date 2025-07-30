@@ -1,166 +1,107 @@
-"use client";
+'use client';
 
-import React from "react";
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import CreateAnnouncementModal from '@/components/CreateAnnouncementModal';
 
-/**
- * 公告管理組件
- */
-export default function AnnouncementsTab({ announcements, isLoading, onDelete, onRefresh, onCreateNew }) {
-  const getCategoryColor = (category) => {
-    const colors = {
-      'A': 'bg-red-100 text-red-800',
-      'B': 'bg-orange-100 text-orange-800',
-      'C': 'bg-blue-100 text-blue-800',
-      'D': 'bg-yellow-100 text-yellow-800',
-      'E': 'bg-green-100 text-green-800'
-    };
-    if (!category || typeof category !== 'string') return 'bg-gray-100 text-gray-800';
-    return colors[category] || 'bg-gray-100 text-gray-800';
-  };
+export default function AnnouncementsTab() {
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'published': 'bg-green-100 text-green-800',
-      'draft': 'bg-yellow-100 text-yellow-800',
-      'archived': 'bg-gray-100 text-gray-800'
-    };
-    if (!status || typeof status !== 'string') return 'bg-gray-100 text-gray-800';
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
+  // 【新】從 Supabase 獲取公告資料
+  const fetchAnnouncements = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const getStatusText = (status) => {
-    const texts = {
-      'published': '已上線',
-      'draft': '草稿',
-      'archived': '已封存'
-    };
-    if (!status || typeof status !== 'string') return '未知';
-    return texts[status] || status;
-  };
+      if (error) throw error;
+      setAnnouncements(data || []);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      alert('無法載入公告列表，請稍後再試。');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 組件載入時，自動獲取一次資料
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-medium text-gray-900 flex items-center">
-            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-            </svg>
-            公告列表
-            <span className="ml-2 text-sm text-gray-500">({announcements.length})</span>
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">管理和發佈系統公告</p>
-        </div>
-        <div className="flex space-x-3">
-          <button 
-            onClick={onRefresh}
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors flex items-center"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            重新載入
-          </button>
-          <button 
-            onClick={onCreateNew}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            新增公告
-          </button>
-        </div>
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-800">公告列表</h2>
+        <button
+          onClick={handleOpenModal}
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-indigo-600 text-white hover:bg-indigo-700 h-10 py-2 px-4"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          新增公告
+        </button>
       </div>
-
-      {isLoading ? (
-        <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">載入中...</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">標題</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分類</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申請截止日</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申請方式</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">建立者</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最後更新</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+      
+      <div className="border rounded-lg w-full bg-white shadow-sm">
+        <div className="relative w-full overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&>tr]:border-b">
+              <tr className="border-b transition-colors hover:bg-muted/50 text-left">
+                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">標題</th>
+                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">分類</th>
+                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">申請截止日</th>
+                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">狀態</th>
+                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">最後更新</th>
+                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">操作</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {announcements.map((announcement) => (
-                <tr key={announcement.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                      {announcement.title}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(announcement.category)}`}>
-                      {announcement.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {announcement.application_deadline ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW') : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {announcement.application_method || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(announcement.status)}`}>
-                      {getStatusText(announcement.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {announcement.profiles?.name || 'Unknown'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(announcement.updated_at).toLocaleString('zh-TW')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={() => onDelete(announcement.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="[&>tr:last-child]:border-0">
+              {loading ? (
+                <tr><td colSpan="6" className="text-center p-8">載入中...</td></tr>
+              ) : announcements.length === 0 ? (
+                <tr><td colSpan="6" className="text-center p-8 text-gray-500">目前沒有任何公告。</td></tr>
+              ) : (
+                announcements.map((announcement) => (
+                  <tr key={announcement.id} className="border-b transition-colors hover:bg-gray-50/50">
+                    <td className="p-4 align-middle font-medium">{announcement.title}</td>
+                    <td className="p-4 align-middle text-gray-600">{announcement.category}</td>
+                    <td className="p-4 align-middle text-gray-600">{announcement.application_deadline || 'N/A'}</td>
+                    <td className="p-4 align-middle">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        announcement.is_active 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {announcement.is_active ? '上架' : '下架'}
+                      </span>
+                    </td>
+                    <td className="p-4 align-middle text-gray-600">{new Date(announcement.created_at).toLocaleDateString()}</td>
+                    <td className="p-4 align-middle">
+                      <button className="text-indigo-600 hover:text-indigo-900 mr-4 font-medium">編輯</button>
+                      <button className="text-red-600 hover:text-red-900 font-medium">刪除</button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          {announcements.length === 0 && (
-            <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">尚無公告</h3>
-              <p className="mt-1 text-sm text-gray-500">開始建立第一個公告吧！</p>
-            </div>
-          )}
         </div>
-      )}
+      </div>
+      
+      <CreateAnnouncementModal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal} 
+        refreshAnnouncements={fetchAnnouncements} // 【重要】將刷新函式傳遞下去
+      />
     </div>
   );
 }
