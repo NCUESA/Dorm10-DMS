@@ -141,7 +141,7 @@ export default function Register() {
                         });
 
                         if (!res.ok) {
-                                throw new Error('檢查重複失敗');
+                                throw new Error('Email重複');
                         }
 
                         const { emailExists, studentIdExists } = await res.json();
