@@ -4,17 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
+import { createClient } from "@supabase/supabase-js";
 import { User, Mail, GraduationCap, Eye, EyeOff } from 'lucide-react';
 
-// 設定 zxcvbn
-zxcvbnOptions.setOptions({
-	dictionary: {
-		userInputs: ['ncue', 'scholarship', 'changhua', 'student']
-	}
-});
-
-// UI 子元件: 輸入框
+// --- UI 元件: 輸入框 ---
 const InputField = ({ id, name, type, placeholder, value, onChange, error, icon: Icon }) => (
 	<div>
 		<div className="relative">
@@ -31,7 +24,7 @@ const InputField = ({ id, name, type, placeholder, value, onChange, error, icon:
 	</div>
 );
 
-// UI 子元件: 密碼輸入框
+// --- UI 元件: 密碼輸入框 ---
 const PasswordField = ({ id, name, placeholder, value, onChange, error, passwordStrength, isConfirmField = false }) => {
 	const [showPassword, setShowPassword] = useState(false);
 	const strength = !isConfirmField && value ? passwordStrength(value) : null;
@@ -60,7 +53,6 @@ const PasswordField = ({ id, name, placeholder, value, onChange, error, password
 					{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
 				</button>
 			</div>
-
 			{!isConfirmField && currentStrength && (
 				<div className="mt-2">
 					<div className={`h-1.5 w-full rounded-full ${currentStrength.lightColor}`}>
@@ -69,15 +61,15 @@ const PasswordField = ({ id, name, placeholder, value, onChange, error, password
 					<p className={`mt-1 text-xs font-medium ${currentStrength.textColor}`}>{currentStrength.text}</p>
 				</div>
 			)}
-
 			{error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 		</div>
 	);
 };
 
+// --- 主要註冊元件 ---
 export default function Register() {
 	const router = useRouter();
-	const { signUp, isAuthenticated, loading } = useAuth();
+	const { signUp, isAuthenticated, loading, error: authError } = useAuth();
 	const [formData, setFormData] = useState({ username: "", email: "", student_id: "", password: "", confirmPassword: "" });
 	const [errors, setErrors] = useState({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,45 +82,101 @@ export default function Register() {
 		const { name, value } = e.target;
 		setFormData(prev => ({ ...prev, [name]: value }));
 		if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
-		if (errors.submit) setErrors(prev => ({ ...prev, submit: "" }));
 	};
 
-	const getPasswordStrength = (password) => zxcvbn(password);
+	const calculatePasswordStrength = (password) => {
+		if (!password) return { score: 0 };
+		
+        let score = 0;
+        
+        // 規則 1: 基礎加分項
+		if (password.length > 8) score++;
+		if (password.length > 12) score++;
+		if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 2; // 混合大小寫
+		if (/\d/.test(password)) score++;
+		if (/[\W_]/.test(password)) score++; // 特殊字元
 
+        // 規則 2: 弱點扣分項 (偵測是否*包含*弱密碼模式)
+        const weakPatterns = /123|abc|qwerty|password|admin|test|user|1111|aaaa|changhua|ncue|scholarship|student/i;
+        if (weakPatterns.test(password)) score -= 3;
+        
+        const sequentialPatterns = /1234|2345|3456|4567|5678|6789|9876|8765|abcd|bcde|cdef|qwer|asdf|zxcv/i;
+        if (sequentialPatterns.test(password)) score -= 2;
+
+		// 將分數正規化到 0-4 的範圍
+		const finalScore = Math.max(0, Math.min(Math.floor(score / 1.5), 4));
+		return { score: finalScore };
+	};
+    
 	const validateForm = () => {
 		const newErrors = {};
 		if (!formData.username.trim()) newErrors.username = "請提供您的姓名";
-
 		if (!/^[A-Za-z]\d{7}$/.test(formData.student_id)) {
 			newErrors.student_id = "學號格式應為 1 位英文字母加上 7 位數字";
 		}
-
-		if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "請輸入有效的電子郵件地址";
-
-		if (getPasswordStrength(formData.password).score < 2) newErrors.password = "密碼強度不足，請嘗試更複雜的組合";
-		if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "兩次輸入的密碼不一致";
+		if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+			newErrors.email = "請輸入有效的電子郵件地址";
+		}
+        
+		if (formData.password.length < 8) {
+			newErrors.password = "密碼長度至少需要 8 個字元";
+		} else if (formData.password !== formData.confirmPassword) {
+			newErrors.confirmPassword = "兩次輸入的密碼不一致";
+		}
 
 		return newErrors;
 	};
-
+    
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		const newErrors = validateForm();
-		if (Object.keys(newErrors).length > 0) {
-			setErrors(newErrors);
+		setErrors({});
+
+		const formErrors = validateForm();
+		if (Object.keys(formErrors).length > 0) {
+			setErrors(formErrors);
 			return;
 		}
+
 		setIsSubmitting(true);
-		setErrors({});
+        
 		try {
-			const result = await signUp(formData.email, formData.password, { username: formData.username, student_id: formData.student_id, role: 'user' });
+            const supabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            );
+			const { data: existingProfile, error: profileError } = await supabase
+				.from('profiles')
+				.select('student_id')
+				.eq('student_id', formData.student_id)
+				.maybeSingle();
+
+            if (profileError) throw new Error(`資料庫查詢錯誤: ${profileError.message}`);
+			if (existingProfile) {
+				setErrors({ student_id: "此學號已被註冊，請檢查或直接登入。" });
+				setIsSubmitting(false);
+				return;
+			}
+            
+			const result = await signUp(
+                formData.email, 
+                formData.password, 
+                {
+                    name: formData.username, 
+                    student_id: formData.student_id
+                }
+            );
+
 			if (result.success) {
-				router.push(`/auth/check-email?email=${formData.email}`);
+				router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
 			} else {
-				setErrors({ submit: result.error || "發生未知錯誤，請稍後再試" });
+                if (result.error?.includes('User already registered')) {
+                    setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
+                } else {
+                    setErrors({ submit: result.error || "發生未知錯誤，請稍後再試" });
+                }
 			}
 		} catch (error) {
-			setErrors({ submit: "註冊請求失敗，請檢查您的網路連線" });
+			setErrors({ submit: `註冊請求失敗: ${error.message}` });
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -137,6 +185,7 @@ export default function Register() {
 	return (
 		<main className="flex justify-center items-center my-16 sm:my-24 px-4">
 			<div className="flex w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl">
+				{/* --- 左側面板 --- */}
 				<div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
 					<div className="absolute inset-0 h-full w-full overflow-hidden">
 						<div className="absolute w-64 h-64 bg-violet-500 rounded-full filter blur-3xl opacity-20" style={{ top: '-5%', left: '-10%', animation: 'move-particle 20s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '100px', '--y-end': '80px', '--x-end-2': '-100px', '--y-end-2': '-150px' }} />
@@ -146,7 +195,7 @@ export default function Register() {
 					<div className="relative flex h-full flex-col justify-center p-16 text-left text-white">
 						<div className="max-w-lg">
 							<h2 className="text-3xl font-bold leading-tight tracking-tight">
-								Complexity, Simplified.<br /><br /> Potential, Amplified.
+								Complexity,<br/>Simplified.<br/> Potential,<br/>Amplified.
 							</h2>
 							<p className="mt-6 text-lg text-slate-200">
 								新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為無縫的數位體驗 !
@@ -155,6 +204,7 @@ export default function Register() {
 					</div>
 				</div>
 
+				{/* --- 右側表單面板 --- */}
 				<div className="flex flex-1 flex-col justify-center bg-white px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
 					<div className="mx-auto w-full max-w-sm lg:w-96">
 						<div>
@@ -168,16 +218,20 @@ export default function Register() {
 						</div>
 						<div className="mt-10">
 							<form onSubmit={handleSubmit} className="space-y-6">
-								{errors.submit && <div className="rounded-md bg-red-50 p-4"><p className="text-sm font-medium text-red-800">{errors.submit}</p></div>}
+								{(errors.submit || authError) && (
+                                    <div className="rounded-md bg-red-50 p-4">
+                                        <p className="text-sm font-medium text-red-800">{errors.submit || authError}</p>
+                                    </div>
+                                )}
 								<InputField id="username" name="username" type="text" placeholder="姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
 								<InputField id="student_id" name="student_id" type="text" placeholder="學號" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
 								<InputField id="email" name="email" type="email" placeholder="電子郵件地址" value={formData.email} onChange={handleChange} error={errors.email} icon={Mail} />
-								<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={getPasswordStrength} />
+								<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={calculatePasswordStrength} />
 								<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
 
 								<div>
-									<button type="submit" disabled={isSubmitting} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
-										{isSubmitting ? '處理中...' : '同意並註冊帳號'}
+									<button type="submit" disabled={isSubmitting || loading} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+										{isSubmitting || loading ? '處理中...' : '同意並註冊帳號'}
 									</button>
 								</div>
 							</form>

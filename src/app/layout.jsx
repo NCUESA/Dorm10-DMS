@@ -15,7 +15,7 @@ const notoSans = Noto_Sans_TC({
 })
 
 const metadata = {
-  title: 'NCUE 獎助學金資訊平台',
+  title: '彰師大生輔組 校外獎助學金資訊平台',
   icon: logo,
 }
 

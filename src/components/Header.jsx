@@ -55,7 +55,7 @@ const Header = forwardRef((props, ref) => {
                 />
                 <h1 className="font-bold" style={{ color: 'var(--primary)' }}>
                   <span className="text-sm lg:hidden">NCUE</span>
-                  <span className="text-base hidden lg:block xl:text-xl">NCUE 獎助學金資訊平台</span>
+                  <span className="text-base hidden lg:block xl:text-xl">生輔組 校外獎助學金資訊平台</span>
                 </h1>
               </Link>
             </div>
@@ -99,7 +99,7 @@ const Header = forwardRef((props, ref) => {
               />
               <h1 className="font-bold" style={{ color: 'var(--primary)' }}>
                 <span className="text-sm lg:hidden">NCUE</span>
-                <span className="text-base hidden lg:block xl:text-xl">NCUE 獎助學金資訊平台</span>
+                <span className="text-base hidden lg:block xl:text-xl">生輔組 校外獎助學金資訊平台</span>
               </h1>
             </Link>
           </div>
