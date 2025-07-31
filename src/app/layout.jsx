@@ -6,12 +6,18 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useState, useLayoutEffect, useRef } from 'react';
+import logo from "@/app/assets/logo.ico";
 
 const notoSans = Noto_Sans_TC({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-noto-sans',
 })
+
+const metadata = {
+  title: 'NCUE 獎助學金資訊平台',
+  icon: logo,
+}
 
 export default function RootLayout({ children }) {
   const headerRef = useRef(null);
@@ -42,14 +48,20 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="zh-TW" className={notoSans.variable}>
+      <head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="shortcut icon" href={metadata.icon} type="image/x-icon" />
+        <title>{metadata.title}</title>
+      </head>
       <body className={notoSans.className}>
-        <AuthProvider>
-          <Header ref={headerRef} />
-          <main style={{ paddingTop: `${headerHeight}px` }}>
-            {children}
-          </main>
-          <Footer />
-        </AuthProvider>
+          <AuthProvider>
+            <Header ref={headerRef} />
+            <main style={{ paddingTop: `${headerHeight}px` }}>
+              {children}
+            </main>
+            <Footer />
+          </AuthProvider>
       </body>
     </html>
   );
