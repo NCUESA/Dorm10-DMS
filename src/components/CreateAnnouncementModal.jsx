@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabase } from '@/lib/supabase/client';
 import QuillEditor from './QuillEditor';
-import AttachmentUploader from './AttachmentUploader';
 import Button from '@/components/ui/Button';
 
 // Stepper component to show the current stage
@@ -89,8 +88,8 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
     );
 };
 
-// PDF Upload Area component
-const PDFUploadArea = ({ selectedFile, setSelectedFile, disabled, showToast }) => {
+// Multiple Files Upload Area component
+const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
     const fileInputRef = useRef(null);
     
     // 支援的文件類型
@@ -106,22 +105,53 @@ const PDFUploadArea = ({ selectedFile, setSelectedFile, disabled, showToast }) =
     };
     
     const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const maxFiles = 5; // 最多5個檔案
     
-    const handleFileChange = (event) => {
-        const file = event.target.files[0];
-        if (file) {
+    const validateAndAddFiles = (files) => {
+        const validFiles = [];
+        const fileArray = Array.from(files);
+        const currentFilesCount = selectedFiles.length;
+        
+        for (const file of fileArray) {
+            // 檢查是否已經存在相同名稱的檔案
+            if (selectedFiles.some(existingFile => existingFile.name === file.name)) {
+                showToast(`檔案 "${file.name}" 已經存在`, 'warning');
+                continue;
+            }
+            
+            // 檢查檔案數量限制（包括現有檔案）
+            if (currentFilesCount + validFiles.length >= maxFiles) {
+                showToast(`最多只能上傳 ${maxFiles} 個檔案`, 'warning');
+                break;
+            }
+            
             // 檢查文件類型
             if (!supportedTypes[file.type]) {
-                showToast('不支援的文件格式。請上傳 PDF、DOCX、DOC 或圖片文件。', 'warning');
-                return;
+                showToast(`檔案 "${file.name}" 格式不支援。請上傳 PDF、DOCX、DOC 或圖片文件。`, 'warning');
+                continue;
             }
+            
             // 檢查文件大小
             if (file.size > maxFileSize) {
-                showToast('文件大小超過限制。請選擇小於 10MB 的文件。', 'warning');
-                return;
+                showToast(`檔案 "${file.name}" 大小超過限制。請選擇小於 10MB 的文件。`, 'warning');
+                continue;
             }
-            setSelectedFile(file);
+            
+            validFiles.push(file);
         }
+        
+        if (validFiles.length > 0) {
+            setSelectedFiles(prev => [...prev, ...validFiles]);
+        }
+    };
+    
+    const handleFileChange = (event) => {
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            validateAndAddFiles(files);
+        }
+        // 重置 input value 以允許重新選擇相同檔案
+        event.target.value = '';
     };
     
     const handleDragOver = (event) => event.preventDefault();
@@ -129,23 +159,15 @@ const PDFUploadArea = ({ selectedFile, setSelectedFile, disabled, showToast }) =
     const handleDrop = (event) => {
         event.preventDefault();
         if (disabled) return;
-        const file = event.dataTransfer.files[0];
-        if (file) {
-            // 檢查文件類型
-            if (!supportedTypes[file.type]) {
-                showToast('不支援的文件格式。請上傳 PDF、DOCX、DOC 或圖片文件。', 'warning');
-                return;
-            }
-            // 檢查文件大小
-            if (file.size > maxFileSize) {
-                showToast('文件大小超過限制。請選擇小於 10MB 的文件。', 'warning');
-                return;
-            }
-            setSelectedFile(file);
+        const files = event.dataTransfer.files;
+        if (files && files.length > 0) {
+            validateAndAddFiles(files);
         }
     };
     
-    const handleRemoveFile = () => setSelectedFile(null);
+    const handleRemoveFile = (indexToRemove) => {
+        setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    };
 
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 Bytes';
@@ -156,47 +178,107 @@ const PDFUploadArea = ({ selectedFile, setSelectedFile, disabled, showToast }) =
     };
 
     return (
-        <div
-            className={`relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'hover:border-indigo-400 bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={() => !disabled && fileInputRef.current?.click()}
-        >
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp"
-                disabled={disabled}
-            />
-            {!selectedFile ? (
-                <>
-                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <p className="mt-2 text-sm text-gray-600">
-                        拖曳檔案到此處，或 <span className="font-medium text-indigo-600">點擊上傳</span>
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">支援 PDF、DOCX、DOC、圖片格式 (最大 10MB)</p>
-                </>
-            ) : (
-                <div className="flex flex-col items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <p className="mt-2 font-medium text-gray-700 break-all">{selectedFile.name}</p>
-                    <p className="mt-1 text-xs text-gray-500">
-                        {supportedTypes[selectedFile.type]} • {formatFileSize(selectedFile.size)}
-                    </p>
-                    {!disabled && (
-                         <button
-                            onClick={(e) => { e.stopPropagation(); handleRemoveFile(); }}
-                            className="mt-2 text-xs text-red-500 hover:text-red-700 font-semibold"
-                        >
-                            移除檔案
-                        </button>
-                    )}
+        <div className="space-y-4">
+            {/* 上傳區域 */}
+            <div
+                className={`relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'hover:border-indigo-400 bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => !disabled && fileInputRef.current?.click()}
+            >
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp"
+                    disabled={disabled}
+                    multiple
+                />
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="mt-2 text-sm text-gray-600">
+                    拖曳多個檔案到此處，或 <span className="font-medium text-indigo-600">點擊上傳</span>
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                    支援 PDF、DOCX、DOC、圖片格式 (最大 10MB，最多 {maxFiles} 個檔案)
+                </p>
+                <p className="mt-1 text-xs text-indigo-600">
+                    已選擇 {selectedFiles.length} / {maxFiles} 個檔案
+                </p>
+            </div>
+
+            {/* 已選擇的檔案列表 */}
+            {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">已選擇的檔案：</h4>
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                        {selectedFiles.map((file, index) => {
+                            const isExisting = file.isExisting;
+                            const fileType = isExisting ? file.type : supportedTypes[file.type];
+                            
+                            return (
+                                <div key={isExisting ? file.id : index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                                    <div className="flex items-center space-x-3">
+                                        {isExisting ? (
+                                            <button
+                                                onClick={() => handleFileDownload(file)}
+                                                className="group relative"
+                                                title="點擊下載檔案"
+                                            >
+                                                <svg 
+                                                    xmlns="http://www.w3.org/2000/svg" 
+                                                    className="h-8 w-8 text-blue-500 transition-all duration-200 hover:scale-110 hover:shadow-lg cursor-pointer" 
+                                                    viewBox="0 0 20 20" 
+                                                    fill="currentColor"
+                                                >
+                                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                                {/* Hover 提示 */}
+                                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                                    點擊下載
+                                                </div>
+                                            </button>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                        <div>
+                                            <div className="flex items-center space-x-2">
+                                                <p className="text-sm font-medium text-gray-700 break-all">{file.name}</p>
+                                                {isExisting && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                        現有檔案
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {fileType} • {formatFileSize(file.size)}
+                                            </p>
+                                            {isExisting && (
+                                                <p className="text-xs text-blue-600">
+                                                    路徑: {file.path}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {!disabled && (
+                                        <button
+                                            onClick={() => handleRemoveFile(index)}
+                                            className="text-red-500 hover:text-red-700 transition-colors"
+                                            title={isExisting ? "從列表移除" : "移除檔案"}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
         </div>
@@ -209,7 +291,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const [currentStep, setCurrentStep] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState("AI 分析中...");
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const [attachments, setAttachments] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isEditMode = !!editingAnnouncement;
@@ -225,7 +307,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         external_urls: '',
     });
 
-    // 當進入編輯模式時，填充表單數據
+    // 當進入編輯模式時，填充表單數據和載入附件
     useEffect(() => {
         if (editingAnnouncement && isOpen) {
             setFormData({
@@ -240,8 +322,68 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 external_urls: editingAnnouncement.external_urls || '',
             });
             setCurrentStep(2); // 跳過文件上傳步驟
+            
+            // 載入現有附件
+            loadExistingAttachments(editingAnnouncement.id);
         }
     }, [editingAnnouncement, isOpen]);
+
+    // 載入現有附件的函數
+    const loadExistingAttachments = async (announcementId) => {
+        try {
+            const { data: attachments, error } = await supabase
+                .from('attachments')
+                .select('*')
+                .eq('announcement_id', announcementId);
+            
+            if (error) throw error;
+            
+            // 將現有附件轉換為顯示格式
+            if (attachments && attachments.length > 0) {
+                const existingFiles = attachments.map(attachment => ({
+                    id: attachment.id,
+                    name: attachment.file_name,
+                    size: attachment.file_size,
+                    type: attachment.mime_type,
+                    path: attachment.stored_file_path,
+                    isExisting: true // 標記為現有檔案
+                }));
+                setSelectedFiles(existingFiles);
+            }
+        } catch (error) {
+            console.error('載入附件失敗:', error);
+            showToast('載入附件失敗', 'error');
+        }
+    };
+
+    // 處理檔案下載
+    const handleFileDownload = async (file) => {
+        try {
+            // 對於現有檔案，使用儲存的路徑
+            if (file.isExisting && file.path) {
+                // 構建完整的檔案 URL
+                const fileUrl = file.path.startsWith('/') ? file.path : `/${file.path}`;
+                
+                // 創建下載連結
+                const link = document.createElement('a');
+                link.href = fileUrl;
+                link.download = file.name;
+                link.target = '_blank';
+                
+                // 觸發下載
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast(`正在下載檔案: ${file.name}`, 'success');
+            } else {
+                showToast('無法下載此檔案', 'error');
+            }
+        } catch (error) {
+            console.error('下載失敗:', error);
+            showToast('檔案下載失敗', 'error');
+        }
+    };
 
     // Toast 通知狀態
     const [toast, setToast] = useState({
@@ -322,8 +464,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     }
 
     const handleAiAnalyze = async () => {
-        if (!selectedFile) {
-            showToast("請先選擇一個文件", "warning");
+        if (selectedFiles.length === 0) {
+            showToast("請先選擇至少一個文件", "warning");
             return;
         }
         if (!modelRef.current) {
@@ -331,12 +473,23 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             return;
         }
 
+        // 如果有多個檔案，讓用戶選擇用於AI分析的檔案
+        let fileForAnalysis;
+        if (selectedFiles.length === 1) {
+            fileForAnalysis = selectedFiles[0];
+        } else {
+            // 自動選擇第一個PDF檔案，如果沒有PDF則選擇第一個檔案
+            const pdfFiles = selectedFiles.filter(file => file.type === 'application/pdf');
+            fileForAnalysis = pdfFiles.length > 0 ? pdfFiles[0] : selectedFiles[0];
+            showToast(`使用檔案 "${fileForAnalysis.name}" 進行AI分析`, "success");
+        }
+
         setIsLoading(true);
         setCurrentStep(1); 
 
         try {
             setLoadingText("正在準備檔案...");
-            const pdfPart = await fileToGenerativePart(selectedFile);
+            const pdfPart = await fileToGenerativePart(fileForAnalysis);
 
             const htmlStyleInstructions = `
                 - **標題 (h4)**: 使用 <h4> 標籤，並加上 inline style 'color: #1e40af; font-weight: bold;'。
@@ -477,25 +630,71 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 announcementId = created.id;
             }
 
-            for (const file of attachments) {
-                const path = `${announcementId}/${crypto.randomUUID()}-${file.name}`;
-                const { error: upErr } = await supabase.storage
-                    .from('attachments')
-                    .upload(path, file);
-                if (upErr) throw upErr;
-                const { error: insErr } = await supabase.from('attachments').insert({
-                    announcement_id: announcementId,
-                    file_name: file.name,
-                    stored_file_path: path,
-                    file_size: file.size,
-                    mime_type: file.type,
+            // 上傳新檔案到本地儲存
+            const newFiles = selectedFiles.filter(file => !file.isExisting);
+            if (newFiles.length > 0) {
+                setLoadingText("上傳檔案中...");
+                
+                const uploadFormData = new FormData();
+                newFiles.forEach(file => {
+                    uploadFormData.append('files', file);
                 });
-                if (insErr) throw insErr;
+                uploadFormData.append('announcementId', announcementId.toString());
+
+                const uploadResponse = await fetch('/api/upload-files', {
+                    method: 'POST',
+                    body: uploadFormData,
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error('檔案上傳失敗');
+                }
+
+                const uploadResult = await uploadResponse.json();
+                
+                // 將新檔案資訊儲存到資料庫
+                for (const uploadedFile of uploadResult.files) {
+                    const { error: insErr } = await supabase.from('attachments').insert({
+                        announcement_id: announcementId,
+                        file_name: uploadedFile.originalName,
+                        stored_file_path: uploadedFile.relativePath,
+                        file_size: uploadedFile.size,
+                        mime_type: uploadedFile.mimeType,
+                    });
+                    if (insErr) throw insErr;
+                }
             }
 
-            showToast(isEditMode ? "公告已成功更新！" : "公告已成功儲存！", "success");
-            if (refreshAnnouncements) refreshAnnouncements();
-            handleClose();
+            // 處理被移除的現有檔案
+            if (isEditMode) {
+                // 獲取原始附件列表
+                const { data: originalAttachments, error: fetchError } = await supabase
+                    .from('attachments')
+                    .select('*')
+                    .eq('announcement_id', announcementId);
+                
+                if (fetchError) throw fetchError;
+                
+                // 找出被移除的檔案
+                const currentExistingFiles = selectedFiles.filter(file => file.isExisting);
+                const removedAttachments = originalAttachments.filter(
+                    original => !currentExistingFiles.some(current => current.id === original.id)
+                );
+                
+                // 刪除被移除的檔案記錄
+                for (const removedAttachment of removedAttachments) {
+                    const { error: deleteError } = await supabase
+                        .from('attachments')
+                        .delete()
+                        .eq('id', removedAttachment.id);
+                    
+                    if (deleteError) throw deleteError;
+                    
+                    // 可選：也可以從檔案系統中刪除實際檔案
+                    // 這裡暫時跳過實際檔案刪除，只刪除資料庫記錄
+                }
+            }
+
             showToast(isEditMode ? "公告已成功更新！" : "公告已成功儲存！", "success");
             if (refreshAnnouncements) refreshAnnouncements();
             handleClose();
@@ -540,7 +739,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             document.body.style.overflow = 'unset';
             onClose();
             setCurrentStep(0);
-            setSelectedFile(null);
+            setSelectedFiles([]);
             setAttachments([]);
             setShowDeleteConfirm(false);
             setFormData({
@@ -631,13 +830,13 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                         {!isEditMode && (
                             <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
                                 <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-blue-50 rounded-md">步驟一：上傳文件</legend>
-                                <PDFUploadArea selectedFile={selectedFile} setSelectedFile={setSelectedFile} disabled={isLoading} showToast={showToast}/>
+                                <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast}/>
                                 <Button
                                     type="button"
                                     variant="warning"
                                     className="w-full mt-6"
                                     onClick={handleAiAnalyze}
-                                    disabled={!selectedFile || isLoading}
+                                    disabled={selectedFiles.length === 0 || isLoading}
                                     loading={isLoading && currentStep === 1}
                                 >
                                     {isLoading && currentStep === 1 ? '處理中...' : '開始 AI 分析'}
@@ -770,8 +969,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                                         disabled={isLoading}
                                     />
                                 <div className="mt-4">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件</label>
-                                    <AttachmentUploader files={attachments} setFiles={setAttachments} disabled={isLoading} />
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件上傳</label>
+                                    <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast}/>
                                 </div>
                                 </div>
                             </div>

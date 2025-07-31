@@ -56,10 +56,19 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
 
   useEffect(() => {
     if (isOpen) {
+      // 阻止外部頁面滾動
+      document.body.style.overflow = 'hidden';
       setTimeout(() => setShow(true), 50)
     } else {
+      // 恢復外部頁面滾動
+      document.body.style.overflow = 'unset';
       setShow(false)
     }
+    
+    // 清理函數：確保組件卸載時恢復滾動
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen])
 
   const showToast = (message, type = 'success') => setToast({ show: true, message, type })
@@ -85,6 +94,8 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
     if (isDeleting) return
     setShow(false)
     setTimeout(() => {
+      // 恢復外部頁面滾動
+      document.body.style.overflow = 'unset';
       onClose()
     }, 300)
   }, [isDeleting, onClose])

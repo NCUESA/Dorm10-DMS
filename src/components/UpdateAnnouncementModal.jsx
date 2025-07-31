@@ -1,11 +1,190 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import QuillEditor from './QuillEditor'
-import AttachmentUploader from './AttachmentUploader'
 import Button from '@/components/ui/Button'
 
+// Multiple Files Upload Area component (與 CreateAnnouncementModal 相同)
+const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
+    const fileInputRef = useRef(null);
+
+    // 支援的文件類型
+    const supportedTypes = {
+        'application/pdf': 'PDF',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+        'application/msword': 'DOC',
+        'image/jpeg': '圖片',
+        'image/jpg': '圖片',
+        'image/png': '圖片',
+        'image/gif': '圖片',
+        'image/webp': '圖片'
+    };
+
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const maxFiles = 5; // 最多5個檔案
+
+    // 格式化檔案大小
+    const formatFileSize = (size) => {
+        if (size < 1024) return `${size} B`;
+        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    // 移除檔案
+    const handleRemoveFile = (index) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // 處理檔案選擇
+    const handleFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        let newFiles = [];
+        for (const file of files) {
+            if (!supportedTypes[file.type]) {
+                showToast(`不支援的檔案類型: ${file.name}`, 'warning');
+                continue;
+            }
+            if (file.size > maxFileSize) {
+                showToast(`檔案過大: ${file.name}`, 'warning');
+                continue;
+            }
+            if (selectedFiles.length + newFiles.length >= maxFiles) {
+                showToast(`最多只能選擇 ${maxFiles} 個檔案`, 'warning');
+                break;
+            }
+            newFiles.push(file);
+        }
+        setSelectedFiles(prev => [...prev, ...newFiles]);
+        e.target.value = '';
+    };
+
+    // 拖曳上傳
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (disabled) return;
+        const files = Array.from(e.dataTransfer.files);
+        let newFiles = [];
+        for (const file of files) {
+            if (!supportedTypes[file.type]) {
+                showToast(`不支援的檔案類型: ${file.name}`, 'warning');
+                continue;
+            }
+            if (file.size > maxFileSize) {
+                showToast(`檔案過大: ${file.name}`, 'warning');
+                continue;
+            }
+            if (selectedFiles.length + newFiles.length >= maxFiles) {
+                showToast(`最多只能選擇 ${maxFiles} 個檔案`, 'warning');
+                break;
+            }
+            newFiles.push(file);
+        }
+        setSelectedFiles(prev => [...prev, ...newFiles]);
+    };
+
+    return (
+        <div className="space-y-4">
+            {/* 上傳區域 */}
+            <div
+                className={`relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'hover:border-indigo-400 bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => !disabled && fileInputRef.current?.click()}
+            >
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp"
+                    disabled={disabled}
+                    multiple
+                />
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="mt-2 text-sm text-gray-600">
+                    拖曳多個檔案到此處，或 <span className="font-medium text-indigo-600">點擊上傳</span>
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                    支援 PDF、DOCX、DOC、圖片格式 (最大 10MB，最多 {maxFiles} 個檔案)
+                </p>
+                <p className="mt-1 text-xs text-indigo-600">
+                    已選擇 {selectedFiles.length} / {maxFiles} 個檔案
+                </p>
+            </div>
+
+            {/* 已選擇的檔案列表 */}
+            {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">已選擇的檔案：</h4>
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                        {selectedFiles.map((file, index) => {
+                            const isExisting = file.isExisting;
+                            const fileType = isExisting ? file.type : supportedTypes[file.type];
+                            return (
+                                <div key={isExisting ? file.id : index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg relative" style={{ overflow: 'visible' }}>
+                                    <div className="flex items-center space-x-3">
+                                        {isExisting ? (
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-8 w-8 text-blue-500"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                        <div>
+                                            <div className="flex items-center space-x-2">
+                                                <p className="text-sm font-medium text-gray-700 break-all">{file.name}</p>
+                                                {isExisting && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                        現有檔案
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {fileType} • {formatFileSize(file.size)}
+                                            </p>
+                                            {isExisting && (
+                                                <p className="text-xs text-blue-600">
+                                                    路徑: <a href={file.path.startsWith('/') ? file.path : `/${file.path}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-800">{file.path}</a>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {!disabled && (
+                                        <button
+                                            onClick={() => handleRemoveFile(index)}
+                                            className="text-red-500 hover:text-red-700 transition-colors"
+                                            title={isExisting ? "從列表移除" : "移除檔案"}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 // Toast 與 CreateAnnouncementModal 中相同
 const Toast = ({ show, message, type = 'success', onClose }) => {
   useEffect(() => {
@@ -61,7 +240,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
 export default function UpdateAnnouncementModal({ isOpen, onClose, announcement, refreshAnnouncements }) {
   const [show, setShow] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [attachments, setAttachments] = useState([])
+  const [selectedFiles, setSelectedFiles] = useState([])
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
   const [formData, setFormData] = useState({
     title: '',
@@ -77,6 +256,9 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
 
   useEffect(() => {
     if (isOpen) {
+      // 阻止外部頁面滾動
+      document.body.style.overflow = 'hidden';
+      
       setFormData({
         title: announcement?.title || '',
         summary: announcement?.summary || '',
@@ -88,11 +270,73 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         submission_method: announcement?.submission_method || '',
         external_urls: announcement?.external_urls || ''
       })
+      
+      // 載入現有附件
+      loadExistingAttachments(announcement?.id);
+      
       setTimeout(() => setShow(true), 50)
     } else {
+      // 恢復外部頁面滾動
+      document.body.style.overflow = 'unset';
       setShow(false)
     }
+    
+    // 清理函數：確保組件卸載時恢復滾動
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen, announcement])
+
+  // 載入現有附件的函數
+  const loadExistingAttachments = async (announcementId) => {
+    if (!announcementId) return;
+    
+    try {
+      const { data: attachments, error } = await supabase
+        .from('attachments')
+        .select('*')
+        .eq('announcement_id', announcementId);
+      
+      if (error) throw error;
+      
+      // 將現有附件轉換為顯示格式
+      if (attachments && attachments.length > 0) {
+        const existingFiles = attachments.map(attachment => ({
+          id: attachment.id,
+          name: attachment.file_name,
+          size: attachment.file_size,
+          type: attachment.mime_type,
+          path: attachment.stored_file_path,
+          isExisting: true // 標記為現有檔案
+        }));
+        setSelectedFiles(existingFiles);
+      }
+    } catch (error) {
+      console.error('載入附件失敗:', error);
+      showToast('載入附件失敗', 'error');
+    }
+  };
+
+  // 處理檔案下載
+  const handleFileDownload = async (file) => {
+    try {
+      // 對於現有檔案，使用儲存的路徑
+      if (file.isExisting && file.path) {
+        // 構建完整的檔案 URL，確保檔案可以被正確訪問
+        const fileUrl = file.path.startsWith('/') ? file.path : `/${file.path}`;
+        
+        // 使用 window.open 來下載檔案，這樣可以更好地處理檔案下載
+        window.open(fileUrl, '_blank');
+        
+        showToast(`正在下載檔案: ${file.name}`, 'success');
+      } else {
+        showToast('無法下載此檔案', 'error');
+      }
+    } catch (error) {
+      console.error('下載失敗:', error);
+      showToast('檔案下載失敗', 'error');
+    }
+  };
 
   const showToast = (message, type = 'success') => setToast({ show: true, message, type })
   const hideToast = () => setToast(prev => ({ ...prev, show: false }))
@@ -138,20 +382,62 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         .single()
       if (error) throw error
 
-      for (const file of attachments) {
-        const path = `${updated.id}/${crypto.randomUUID()}-${file.name}`
-        const { error: upErr } = await supabase.storage
+      // 上傳新檔案到本地儲存
+      const newFiles = selectedFiles.filter(file => !file.isExisting);
+      if (newFiles.length > 0) {
+        const uploadFormData = new FormData();
+        newFiles.forEach(file => {
+          uploadFormData.append('files', file);
+        });
+        uploadFormData.append('announcementId', updated.id.toString());
+
+        const uploadResponse = await fetch('/api/upload-files', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('檔案上傳失敗');
+        }
+
+        const uploadResult = await uploadResponse.json();
+        
+        // 將新檔案資訊儲存到資料庫
+        for (const uploadedFile of uploadResult.files) {
+          const { error: insErr } = await supabase.from('attachments').insert({
+            announcement_id: updated.id,
+            file_name: uploadedFile.originalName,
+            stored_file_path: uploadedFile.relativePath,
+            file_size: uploadedFile.size,
+            mime_type: uploadedFile.mimeType,
+          });
+          if (insErr) throw insErr;
+        }
+      }
+
+      // 處理被移除的現有檔案
+      // 獲取原始附件列表
+      const { data: originalAttachments, error: fetchError } = await supabase
+        .from('attachments')
+        .select('*')
+        .eq('announcement_id', updated.id);
+      
+      if (fetchError) throw fetchError;
+      
+      // 找出被移除的檔案
+      const currentExistingFiles = selectedFiles.filter(file => file.isExisting);
+      const removedAttachments = originalAttachments.filter(
+        original => !currentExistingFiles.some(current => current.id === original.id)
+      );
+      
+      // 刪除被移除的檔案記錄
+      for (const removedAttachment of removedAttachments) {
+        const { error: deleteError } = await supabase
           .from('attachments')
-          .upload(path, file)
-        if (upErr) throw upErr
-        const { error: insErr } = await supabase.from('attachments').insert({
-          announcement_id: updated.id,
-          file_name: file.name,
-          stored_file_path: path,
-          file_size: file.size,
-          mime_type: file.type
-        })
-        if (insErr) throw insErr
+          .delete()
+          .eq('id', removedAttachment.id);
+        
+        if (deleteError) throw deleteError;
       }
 
       showToast('公告已更新', 'success')
@@ -169,8 +455,10 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
     if (isSaving) return
     setShow(false)
     setTimeout(() => {
+      // 恢復外部頁面滾動
+      document.body.style.overflow = 'unset';
       onClose()
-      setAttachments([])
+      setSelectedFiles([])
     }, 300)
   }, [isSaving, onClose])
 
@@ -180,15 +468,14 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
     <>
       <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
       <div
-        className={`fixed inset-0 bg-black/60 z-50 pt-20 pb-10 px-4 flex justify-center items-start overflow-y-auto transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 bg-black/60 z-50 flex justify-center items-center px-4 pt-20 pb-8 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
         onClick={handleClose}
         aria-modal="true"
         role="dialog"
       >
         <div
-          className={`bg-white rounded-xl shadow-2xl w-full max-w-5xl flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
+          className={`bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
           onClick={(e) => e.stopPropagation()}
-          style={{ borderBottomLeftRadius: '1rem', borderBottomRightRadius: '1rem' }}
         >
           <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
             <h2 className="text-lg font-bold text-gray-800">更新公告</h2>
@@ -200,7 +487,12 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
               &times;
             </button>
           </div>
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 flex-grow overflow-y-auto scrollbar-hide relative" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+            <style jsx>{`
+              .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
             {isSaving && (
               <div className="absolute inset-0 bg-white/70 z-10 flex flex-col items-center justify-center rounded-lg">
                 <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -261,8 +553,8 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                     <QuillEditor value={formData.summary} onChange={handleSummaryChange} disabled={isSaving} />
                   </div>
                   <div className="mt-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件</label>
-                    <AttachmentUploader files={attachments} setFiles={setAttachments} disabled={isSaving} />
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件上傳</label>
+                    <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isSaving} showToast={showToast} />
                   </div>
                 </div>
               </fieldset>
