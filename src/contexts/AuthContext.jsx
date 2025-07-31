@@ -127,10 +127,11 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
-  // 更新個人資料
+  // 更新個人資料，只修改 name 和 student_id
   const updateProfile = async (profileData) => {
     setError(null);
-    const result = await authService.updateProfile(profileData);
+    const { name, student_id } = profileData;
+    const result = await authService.updateProfile({ name, student_id });
     if (result.success) {
       const refreshed = await authService.getCurrentUser();
       if (refreshed.success) {
