@@ -4,11 +4,77 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
+import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
+import { Eye, EyeOff } from "lucide-react";
+
+// 設定 zxcvbn
+zxcvbnOptions.setOptions({
+  dictionary: {
+    userInputs: ['ncue', 'scholarship', 'changhua', 'student']
+  }
+});
+
+// 密碼輸入框元件，含強度顯示
+const PasswordField = ({ id, name, placeholder, value, onChange, error, passwordStrength, isConfirmField = false }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const strength = !isConfirmField && value ? passwordStrength(value) : null;
+
+  const strengthLevels = [
+    { text: '非常弱', lightColor: 'bg-red-200', color: 'bg-red-500', textColor: 'text-red-600' },
+    { text: '弱', lightColor: 'bg-orange-200', color: 'bg-orange-500', textColor: 'text-orange-600' },
+    { text: '中等', lightColor: 'bg-yellow-200', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+    { text: '強', lightColor: 'bg-green-200', color: 'bg-green-500', textColor: 'text-green-600' },
+    { text: '非常強', lightColor: 'bg-emerald-200', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
+  ];
+
+  const currentStrength = strength ? strengthLevels[strength.score] : null;
+  const widthPercentage = strength ? (strength.score + 1) * 20 : 0;
+
+  return (
+    <div>
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.993.883L4 8v10a1 1 0 00.883.993L5 19h10a1 1 0 00.993-.883L16 18V8a1 1 0 00-.883-.993L15 7h-1V6a4 4 0 00-4-4zm0 1.5a2.5 2.5 0 012.5 2.5V7h-5V6a2.5 2.5 0 012.5-2.5z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <input
+          id={id}
+          name={name}
+          type={showPassword ? 'text' : 'password'}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
+          required
+        />
+        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {!isConfirmField && currentStrength && (
+        <div className="mt-2">
+          <div className={`h-1.5 w-full rounded-full ${currentStrength.lightColor}`}>
+            <div className={`h-full rounded-full ${currentStrength.color} transition-all duration-300`} style={{ width: `${widthPercentage}%` }} />
+          </div>
+          <p className={`mt-1 text-xs font-medium ${currentStrength.textColor}`}>{currentStrength.text}</p>
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+};
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, loading, signOut } = useAuth();
+  const { user, isAuthenticated, loading, signOut, updatePassword } = useAuth();
   const [profileData, setProfileData] = useState(null);
+  const [passwordData, setPasswordData] = useState({ password: '', confirmPassword: '' });
+  const [pwErrors, setPwErrors] = useState({});
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwMessage, setPwMessage] = useState('');
 
   useEffect(() => {
     // 如果未登入，重定向到登入頁面
@@ -37,6 +103,47 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+    if (pwErrors[name]) setPwErrors(prev => ({ ...prev, [name]: '' }));
+    if (pwErrors.submit) setPwErrors(prev => ({ ...prev, submit: '' }));
+    if (pwMessage) setPwMessage('');
+  };
+
+  const getPasswordStrength = (password) => zxcvbn(password);
+
+  const validatePasswordForm = () => {
+    const newErrors = {};
+    if (getPasswordStrength(passwordData.password).score < 2) newErrors.password = '密碼強度不足，請嘗試更複雜的組合';
+    if (passwordData.password !== passwordData.confirmPassword) newErrors.confirmPassword = '兩次輸入的密碼不一致';
+    return newErrors;
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = validatePasswordForm();
+    if (Object.keys(newErrors).length > 0) {
+      setPwErrors(newErrors);
+      return;
+    }
+    setPwLoading(true);
+    setPwErrors({});
+    try {
+      const result = await updatePassword(passwordData.password);
+      if (result.success) {
+        setPwMessage('密碼已更新');
+        setPasswordData({ password: '', confirmPassword: '' });
+      } else {
+        setPwErrors({ submit: result.error });
+      }
+    } catch (error) {
+      setPwErrors({ submit: '更新密碼失敗，請稍後再試' });
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   // 載入中狀態
@@ -178,39 +285,40 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* 功能區 */}
+              {/* 重設密碼 */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                 <h2 className="text-lg font-semibold text-yellow-900 mb-4">
-                  快速功能
+                  重設密碼
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button variant="secondary" className="p-4 h-auto border border-gray-300 hover:bg-gray-50">
-                    <div className="text-center">
-                      <svg className="w-8 h-8 mx-auto mb-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="text-sm font-bold text-primary">查看獎學金</span>
-                    </div>
-                  </Button>
-                  
-                  <Button variant="secondary" className="p-4 h-auto border border-gray-300 hover:bg-gray-50">
-                    <div className="text-center">
-                      <svg className="w-8 h-8 mx-auto mb-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      <span className="text-sm font-bold text-primary">申請獎學金</span>
-                    </div>
-                  </Button>
-                  
-                  <Button variant="secondary" className="p-4 h-auto border border-gray-300 hover:bg-gray-50">
-                    <div className="text-center">
-                      <svg className="w-8 h-8 mx-auto mb-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      <span className="text-sm font-bold text-primary">申請歷史</span>
-                    </div>
-                  </Button>
-                </div>
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  <PasswordField
+                    id="password"
+                    name="password"
+                    placeholder="設定新密碼"
+                    value={passwordData.password}
+                    onChange={handlePasswordChange}
+                    error={pwErrors.password}
+                    passwordStrength={getPasswordStrength}
+                  />
+                  <PasswordField
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    placeholder="再次輸入新密碼"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    error={pwErrors.confirmPassword}
+                    isConfirmField={true}
+                  />
+                  {pwErrors.submit && (
+                    <p className="text-sm text-red-600">{pwErrors.submit}</p>
+                  )}
+                  {pwMessage && (
+                    <p className="text-sm text-green-600">{pwMessage}</p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button type="submit" loading={pwLoading}>更新密碼</Button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
