@@ -1,9 +1,17 @@
+"use client"; // 因為要使用 usePathname hook，所以需要宣告為客戶端元件
+
 import Link from "next/link";
+import { usePathname } from 'next/navigation'; // 導入 Next.js 的 usePathname hook
 import { School, HelpCircle, Mail, MessageSquare } from 'lucide-react';
 
 export default function Footer() {
+    const pathname = usePathname(); // 獲取當前的頁面路徑
+    
+    const isPrivacyPage = pathname === '/terms-and-privacy';
+
     return (
-        <footer className="bg-[#1E2129] text-white py-16 mt-24">
+        // 動態添加 class：如果不是隱私權政策頁面，就加上 mt-24 (margin-top)
+        <footer className={`bg-[#1E2129] text-white py-16 ${!isPrivacyPage ? 'mt-24' : ''}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
 
