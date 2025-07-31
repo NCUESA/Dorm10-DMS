@@ -69,7 +69,8 @@ const PasswordField = ({ id, name, placeholder, value, onChange, error, password
 // --- 主要註冊元件 ---
 export default function Register() {
 	const router = useRouter();
-	const { signUp, isAuthenticated, loading, error: authError } = useAuth();
+    // ** MODIFIED: We still get loading state from context to disable the button correctly **
+	const { signUp, isAuthenticated, loading } = useAuth();
 	const [formData, setFormData] = useState({ username: "", email: "", student_id: "", password: "", confirmPassword: "" });
 	const [errors, setErrors] = useState({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,28 +83,21 @@ export default function Register() {
 		const { name, value } = e.target;
 		setFormData(prev => ({ ...prev, [name]: value }));
 		if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+        if (errors.submit) setErrors(prev => ({...prev, submit: ""}));
 	};
 
 	const calculatePasswordStrength = (password) => {
 		if (!password) return { score: 0 };
-		
-        let score = 0;
-        
-        // 規則 1: 基礎加分項
+		let score = 0;
 		if (password.length > 8) score++;
 		if (password.length > 12) score++;
-		if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 2; // 混合大小寫
+		if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 2;
 		if (/\d/.test(password)) score++;
-		if (/[\W_]/.test(password)) score++; // 特殊字元
-
-        // 規則 2: 弱點扣分項 (偵測是否*包含*弱密碼模式)
+		if (/[\W_]/.test(password)) score++;
         const weakPatterns = /123|abc|qwerty|password|admin|test|user|1111|aaaa|changhua|ncue|scholarship|student/i;
         if (weakPatterns.test(password)) score -= 3;
-        
         const sequentialPatterns = /1234|2345|3456|4567|5678|6789|9876|8765|abcd|bcde|cdef|qwer|asdf|zxcv/i;
         if (sequentialPatterns.test(password)) score -= 2;
-
-		// 將分數正規化到 0-4 的範圍
 		const finalScore = Math.max(0, Math.min(Math.floor(score / 1.5), 4));
 		return { score: finalScore };
 	};
@@ -117,16 +111,15 @@ export default function Register() {
 		if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
 			newErrors.email = "請輸入有效的電子郵件地址";
 		}
-        
 		if (formData.password.length < 8) {
 			newErrors.password = "密碼長度至少需要 8 個字元";
 		} else if (formData.password !== formData.confirmPassword) {
 			newErrors.confirmPassword = "兩次輸入的密碼不一致";
 		}
-
 		return newErrors;
 	};
     
+    // ** MODIFIED: The main logic is corrected here for robust error handling **
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setErrors({});
@@ -140,6 +133,7 @@ export default function Register() {
 		setIsSubmitting(true);
         
 		try {
+            // 步驟 1: 檢查學號是否已存在 (這是業務邏輯，AuthContext 無法處理)
             const supabase = createClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -157,19 +151,20 @@ export default function Register() {
 				return;
 			}
             
+            // 步驟 2: 呼叫 signUp 並直接處理其回傳結果
 			const result = await signUp(
                 formData.email, 
                 formData.password, 
-                {
-                    name: formData.username, 
-                    student_id: formData.student_id
-                }
+                { name: formData.username, student_id: formData.student_id }
             );
 
+            // 步驟 3: 根據回傳結果決定下一步
 			if (result.success) {
 				router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
 			} else {
-                if (result.error?.includes('User already registered')) {
+                // 如果失敗，直接使用回傳的錯誤訊息來設定局部狀態
+                // 這是最直接且可靠的方式
+                if (result.error && result.error.includes('User already registered')) {
                     setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
                 } else {
                     setErrors({ submit: result.error || "發生未知錯誤，請稍後再試" });
@@ -218,9 +213,9 @@ export default function Register() {
 						</div>
 						<div className="mt-10">
 							<form onSubmit={handleSubmit} className="space-y-6">
-								{(errors.submit || authError) && (
+								{errors.submit && (
                                     <div className="rounded-md bg-red-50 p-4">
-                                        <p className="text-sm font-medium text-red-800">{errors.submit || authError}</p>
+                                        <p className="text-sm font-medium text-red-800">{errors.submit}</p>
                                     </div>
                                 )}
 								<InputField id="username" name="username" type="text" placeholder="姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
