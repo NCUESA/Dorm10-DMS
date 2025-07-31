@@ -108,7 +108,12 @@ export default function AnnouncementList() {
                       {item.attachments && item.attachments.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {item.attachments.map(att => (
-                            <a key={att.id} href={getPublicUrl(att.stored_file_path)} target="_blank" className="text-blue-600 underline text-xs">
+                            <a
+                              key={att.id}
+                              href={att.public_url || getPublicUrl(att.stored_file_path)}
+                              target="_blank"
+                              className="text-blue-600 underline text-xs"
+                            >
                               {att.file_name}
                             </a>
                           ))}

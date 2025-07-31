@@ -144,10 +144,14 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
           .from('attachments')
           .upload(path, file)
         if (upErr) throw upErr
+        const { data: urlData } = supabase.storage
+          .from('attachments')
+          .getPublicUrl(path)
         const { error: insErr } = await supabase.from('attachments').insert({
           announcement_id: updated.id,
           file_name: file.name,
           stored_file_path: path,
+          public_url: urlData.publicUrl,
           file_size: file.size,
           mime_type: file.type
         })
