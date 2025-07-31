@@ -80,7 +80,7 @@ export default function EditProfilePage() {
             className="w-full border rounded px-3 py-2"
           />
         </div>
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium mb-1">系所</label>
           <input
             type="text"
@@ -99,7 +99,7 @@ export default function EditProfilePage() {
             onChange={handleChange}
             className="w-full border rounded px-3 py-2"
           />
-        </div>
+        </div> */}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => router.back()}>取消</Button>
           <Button type="submit" loading={saving}>儲存</Button>
