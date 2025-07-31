@@ -32,6 +32,7 @@ body {
 }
 
 /* Header 固定和玻璃模糊效果 */
+/* 1. 修改 .header-fixed */
 .header-fixed {
   position: fixed;
   top: 0;
@@ -39,12 +40,18 @@ body {
   right: 0;
   z-index: 1000;
   height: var(--header-height);
-  background: rgba(248, 249, 250, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--surface); /* <-- 將原來的 rgba(...) 修改為 var(--surface) 或 #FFFFFF */
+  /* backdrop-filter: blur(20px); -- 可以移除 */
+  /* -webkit-backdrop-filter: blur(20px); -- 可以移除 */
   border-bottom: 1px solid var(--border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all var(--transition-speed) ease-in-out;
+}
+
+/* 2. 在您的 CSS 文件中【新增】以下規則 */
+/* 讓 active 狀態的連結底線恆常顯示 */
+.nav-link.active.underline-extend::after {
+  width: 75%; /* 保持和 hover 效果一致的寬度 */
 }
 
 /* 當手機版選單展開時，隱藏 header 底部邊界 */
