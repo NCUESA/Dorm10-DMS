@@ -17,6 +17,15 @@ DO $$ BEGIN
 END $$;
 
 -- ===============================
+-- 0️⃣ 建立公開 Storage Bucket
+-- ===============================
+SELECT
+  CASE
+    WHEN NOT EXISTS (SELECT 1 FROM storage.buckets WHERE name = 'attachments')
+    THEN storage.create_bucket('attachments', true)
+  END;
+
+-- ===============================
 -- 1️⃣ 建立 profiles 表
 -- ===============================
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -54,15 +63,13 @@ CREATE TABLE IF NOT EXISTS public.announcements (
   tags TEXT[]
 );
 
--- ===============================
--- 3️⃣ 建立 attachments 表
--- ===============================
 CREATE TABLE IF NOT EXISTS public.attachments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   announcement_id UUID REFERENCES public.announcements(id) ON DELETE CASCADE,
   file_name VARCHAR(255) NOT NULL,
   stored_file_path VARCHAR(255) NOT NULL,
   uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  public_url TEXT,
   file_size INT,
   mime_type VARCHAR(255)
 );
