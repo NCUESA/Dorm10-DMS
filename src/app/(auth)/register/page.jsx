@@ -4,431 +4,191 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import Button from "@/components/ui/Button";
-import LinkButton from "@/components/ui/LinkButton";
+import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
+import { User, Mail, GraduationCap, Eye, EyeOff } from 'lucide-react';
+
+// 設定 zxcvbn
+zxcvbnOptions.setOptions({
+	dictionary: {
+		userInputs: ['ncue', 'scholarship', 'changhua', 'student']
+	}
+});
+
+// UI 子元件: 輸入框
+const InputField = ({ id, name, type, placeholder, value, onChange, error, icon: Icon }) => (
+	<div>
+		<div className="relative">
+			<div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+				<Icon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+			</div>
+			<input
+				id={id} name={name} type={type} placeholder={placeholder} value={value} onChange={onChange}
+				className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
+				required
+			/>
+		</div>
+		{error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+	</div>
+);
+
+// UI 子元件: 密碼輸入框
+const PasswordField = ({ id, name, placeholder, value, onChange, error, passwordStrength, isConfirmField = false }) => {
+	const [showPassword, setShowPassword] = useState(false);
+	const strength = !isConfirmField && value ? passwordStrength(value) : null;
+
+	const strengthLevels = [
+		{ text: '非常弱', lightColor: 'bg-red-200', color: 'bg-red-500', textColor: 'text-red-600' },
+		{ text: '弱', lightColor: 'bg-orange-200', color: 'bg-orange-500', textColor: 'text-orange-600' },
+		{ text: '中等', lightColor: 'bg-yellow-200', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+		{ text: '強', lightColor: 'bg-green-200', color: 'bg-green-500', textColor: 'text-green-600' },
+		{ text: '非常強', lightColor: 'bg-emerald-200', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
+	];
+
+	const currentStrength = strength ? strengthLevels[strength.score] : null;
+	const widthPercentage = strength ? (strength.score + 1) * 20 : 0;
+
+	return (
+		<div>
+			<div className="relative">
+				<div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.993.883L4 8v10a1 1 0 00.883.993L5 19h10a1 1 0 00.993-.883L16 18V8a1 1 0 00-.883-.993L15 7h-1V6a4 4 0 00-4-4zm0 1.5a2.5 2.5 0 012.5 2.5V7h-5V6a2.5 2.5 0 012.5-2.5z" clipRule="evenodd" /></svg></div>
+				<input
+					id={id} name={name} type={showPassword ? "text" : "password"} placeholder={placeholder} value={value} onChange={onChange}
+					className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
+					required
+				/>
+				<button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+					{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+				</button>
+			</div>
+
+			{!isConfirmField && currentStrength && (
+				<div className="mt-2">
+					<div className={`h-1.5 w-full rounded-full ${currentStrength.lightColor}`}>
+						<div className={`h-full rounded-full ${currentStrength.color} transition-all duration-300`} style={{ width: `${widthPercentage}%` }} />
+					</div>
+					<p className={`mt-1 text-xs font-medium ${currentStrength.textColor}`}>{currentStrength.text}</p>
+				</div>
+			)}
+
+			{error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+		</div>
+	);
+};
 
 export default function Register() {
-  const router = useRouter();
-  const { signUp, isAuthenticated, loading } = useAuth();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    studentId: "",
-    password: "",
-    confirmPassword: "",
-    department: "",
-    year: ""
-  });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [message, setMessage] = useState("");
+	const router = useRouter();
+	const { signUp, isAuthenticated, loading } = useAuth();
+	const [formData, setFormData] = useState({ username: "", email: "", student_id: "", password: "", confirmPassword: "" });
+	const [errors, setErrors] = useState({});
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    // 檢查是否已經登入
-    if (!loading && isAuthenticated) {
-      router.push('/profile'); // 已登入則重定向到個人資料頁面
-    }
-  }, [isAuthenticated, loading, router]);
+	useEffect(() => {
+		if (!loading && isAuthenticated) router.push('/profile');
+	}, [isAuthenticated, loading, router]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // 清除對應的錯誤
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
-    }
-    // 清除訊息
-    if (message) {
-      setMessage("");
-    }
-  };
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setFormData(prev => ({ ...prev, [name]: value }));
+		if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+		if (errors.submit) setErrors(prev => ({ ...prev, submit: "" }));
+	};
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = "請輸入姓名";
-    }
-    
-    if (!formData.email) {
-      newErrors.email = "請輸入電子郵件";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "請輸入有效的電子郵件格式";
-    }
-    
-    if (!formData.studentId.trim()) {
-      newErrors.studentId = "請輸入學號";
-    }
-    
-    if (!formData.password) {
-      newErrors.password = "請輸入密碼";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "密碼至少需要8個字符";
-    }
-    
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "請確認密碼";
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "密碼確認不一致";
-    }
-    
-    if (!formData.department) {
-      newErrors.department = "請選擇系所";
-    }
-    
-    if (!formData.year) {
-      newErrors.year = "請選擇年級";
-    }
-    
-    return newErrors;
-  };
+	const getPasswordStrength = (password) => zxcvbn(password);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = validateForm();
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    
-    setIsLoading(true);
-    setErrors({});
-    setMessage("");
-    
-    try {
-      // 準備用戶資料
-      const userData = {
-        name: formData.name,
-        student_id: formData.studentId,
-        department: formData.department,
-        year: formData.year
-      };
+	const validateForm = () => {
+		const newErrors = {};
+		if (!formData.username.trim()) newErrors.username = "請提供您的姓名";
 
-      const result = await signUp(formData.email, formData.password, userData);
-      
-      if (result.success) {
-        setIsSuccess(true);
-        setMessage("註冊成功！我們已發送確認郵件到您的信箱，請點擊郵件中的連結來啟用您的帳號。");
-      } else {
-        setErrors({ submit: result.error });
-      }
-      
-    } catch (error) {
-      setErrors({ submit: "註冊失敗，請檢查您的網路連線" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+		if (!/^[A-Za-z]\d{7}$/.test(formData.student_id)) {
+			newErrors.student_id = "學號格式應為 1 位英文字母加上 7 位數字";
+		}
 
-  const departments = [
-    "資訊工程學系", "電機工程學系", "機械工程學系", "化學工程學系",
-    "材料科學與工程學系", "土木工程學系", "企業管理學系", "會計學系",
-    "財務金融學系", "國際企業學系", "應用數學系", "物理學系",
-    "化學系", "生物學系", "中國文學系", "英語學系",
-    "歷史學系", "地理學系", "教育學系", "心理與諮商學系"
-  ];
+		if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "請輸入有效的電子郵件地址";
 
-  const years = ["大一", "大二", "大三", "大四", "碩一", "碩二", "博一", "博二", "博三", "博四"];
+		if (getPasswordStrength(formData.password).score < 2) newErrors.password = "密碼強度不足，請嘗試更複雜的組合";
+		if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "兩次輸入的密碼不一致";
 
-  // 如果註冊成功，顯示成功頁面
-  if (isSuccess) {
-    return (
-      <div className="flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--background)' }}>
-        <div className="max-w-md w-full">
-          <div className="card text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
-            
-            <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text)' }}>
-              註冊成功！
-            </h2>
-            
-            <p className="mb-6" style={{ color: 'var(--text-muted)' }}>
-              我們已經發送驗證郵件到 <strong>{formData.email}</strong>
-            </p>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="font-medium mb-2" style={{ color: 'var(--primary)' }}>
-                接下來該怎麼做？
-              </h3>
-              <ol className="text-sm text-left space-y-2" style={{ color: 'var(--text-muted)' }}>
-                <li>1. 檢查您的電子郵件收件箱</li>
-                <li>2. 找到來自 NCUE 獎助學金平台的郵件</li>
-                <li>3. 點擊郵件中的驗證連結</li>
-                <li>4. 完成驗證後即可開始使用</li>
-              </ol>
-            </div>
-            
-            <div className="space-y-4">
-              <LinkButton href="/login" className="w-full">
-                前往登入頁面
-              </LinkButton>
-              
-              <LinkButton href="/verify-email" variant="secondary" className="w-full">
-                郵件驗證頁面
-              </LinkButton>
-            </div>
-          </div>
-          
-          <div className="text-center mt-6">
-            <Link
-              href="/"
-              className="text-sm nav-link underline-extend"
-            >
-              返回首頁
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+		return newErrors;
+	};
 
-  return (
-    <div className="flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--background)' }}>
-      <div className="max-w-4xl w-full">
-        {/* Logo 和標題 */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-3">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" style={{ color: 'var(--primary)' }} fill="currentColor" viewBox="0 0 20 20">
-                <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-              </svg>
-            </div>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--text)' }}>
-            註冊新帳號
-          </h2>
-          <p className="mt-2 text-sm sm:text-base" style={{ color: 'var(--text-muted)' }}>
-            加入 NCUE 獎助學金資訊平台，開始您的獎學金申請之旅
-          </p>
-        </div>
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		const newErrors = validateForm();
+		if (Object.keys(newErrors).length > 0) {
+			setErrors(newErrors);
+			return;
+		}
+		setIsSubmitting(true);
+		setErrors({});
+		try {
+			const result = await signUp(formData.email, formData.password, { username: formData.username, student_id: formData.student_id, role: 'user' });
+			if (result.success) {
+				router.push(`/auth/check-email?email=${formData.email}`);
+			} else {
+				setErrors({ submit: result.error || "發生未知錯誤，請稍後再試" });
+			}
+		} catch (error) {
+			setErrors({ submit: "註冊請求失敗，請檢查您的網路連線" });
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
-        {/* 註冊表單 */}
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {errors.submit && (
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#fee', color: 'var(--error)', border: '1px solid var(--error)' }}>
-                {errors.submit}
-              </div>
-            )}
+	return (
+		<main className="flex justify-center items-center my-16 sm:my-24 px-4">
+			<div className="flex w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl">
+				<div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
+					<div className="absolute inset-0 h-full w-full overflow-hidden">
+						<div className="absolute w-64 h-64 bg-violet-500 rounded-full filter blur-3xl opacity-20" style={{ top: '-5%', left: '-10%', animation: 'move-particle 20s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '100px', '--y-end': '80px', '--x-end-2': '-100px', '--y-end-2': '-150px' }} />
+						<div className="absolute w-72 h-72 bg-sky-500 rounded-full filter blur-3xl opacity-20" style={{ top: '50%', left: '50%', animation: 'move-particle 25s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-100px', '--y-end': '50px', '--x-end-2': '50px', '--y-end-2': '-50px' }} />
+						<div className="absolute w-56 h-56 bg-pink-500 rounded-full filter blur-3xl opacity-20" style={{ bottom: '-5%', right: '-10%', animation: 'move-particle 18s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-80px', '--y-end': '-120px', '--x-end-2': '120px', '--y-end-2': '80px' }} />
+					</div>
+					<div className="relative flex h-full flex-col justify-center p-16 text-left text-white">
+						<div className="max-w-lg">
+							<h2 className="text-3xl font-bold leading-tight tracking-tight">
+								Complexity, Simplified.<br /><br /> Potential, Amplified.
+							</h2>
+							<p className="mt-6 text-lg text-slate-200">
+								新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為無縫的數位體驗 !
+							</p>
+						</div>
+					</div>
+				</div>
 
-            {message && (
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#e8f5e8', color: '#2d5f2d', border: '1px solid #4caf50' }}>
-                {message}
-              </div>
-            )}
+				<div className="flex flex-1 flex-col justify-center bg-white px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+					<div className="mx-auto w-full max-w-sm lg:w-96">
+						<div>
+							<h2 className="text-3xl font-bold leading-9 tracking-tight text-gray-900">建立您的專屬帳號</h2>
+							<p className="mt-2 text-sm leading-6 text-gray-500">
+								已經是會員？{' '}
+								<Link href="/login" className="font-semibold text-indigo-600 login-link-hover">
+									由此登入
+								</Link>
+							</p>
+						</div>
+						<div className="mt-10">
+							<form onSubmit={handleSubmit} className="space-y-6">
+								{errors.submit && <div className="rounded-md bg-red-50 p-4"><p className="text-sm font-medium text-red-800">{errors.submit}</p></div>}
+								<InputField id="username" name="username" type="text" placeholder="您的真實姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
+								<InputField id="student_id" name="student_id" type="text" placeholder="學號 (1位字母+7位數字)" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
+								<InputField id="email" name="email" type="email" placeholder="電子郵件地址" value={formData.email} onChange={handleChange} error={errors.email} icon={Mail} />
+								<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={getPasswordStrength} />
+								<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="form-group">
-                <label htmlFor="name" className="form-label">
-                  姓名 *
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  className="input-field"
-                  placeholder="請輸入您的姓名"
-                  value={formData.name}
-                  onChange={handleChange}
-                />
-                {errors.name && (
-                  <p className="form-error">{errors.name}</p>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="studentId" className="form-label">
-                  學號 *
-                </label>
-                <input
-                  id="studentId"
-                  name="studentId"
-                  type="text"
-                  required
-                  className="input-field"
-                  placeholder="請輸入您的學號"
-                  value={formData.studentId}
-                  onChange={handleChange}
-                />
-                {errors.studentId && (
-                  <p className="form-error">{errors.studentId}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                電子郵件 *
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="input-field"
-                placeholder="請輸入您的電子郵件"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && (
-                <p className="form-error">{errors.email}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="form-group">
-                <label htmlFor="department" className="form-label">
-                  系所 *
-                </label>
-                <select
-                  id="department"
-                  name="department"
-                  required
-                  className="input-field"
-                  value={formData.department}
-                  onChange={handleChange}
-                >
-                  <option value="">請選擇系所</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-                {errors.department && (
-                  <p className="form-error">{errors.department}</p>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="year" className="form-label">
-                  年級 *
-                </label>
-                <select
-                  id="year"
-                  name="year"
-                  required
-                  className="input-field"
-                  value={formData.year}
-                  onChange={handleChange}
-                >
-                  <option value="">請選擇年級</option>
-                  {years.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-                {errors.year && (
-                  <p className="form-error">{errors.year}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">
-                  密碼 *
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  className="input-field"
-                  placeholder="請輸入密碼（至少8個字符）"
-                  value={formData.password}
-                  onChange={handleChange}
-                />
-                {errors.password && (
-                  <p className="form-error">{errors.password}</p>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="confirmPassword" className="form-label">
-                  確認密碼 *
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  className="input-field"
-                  placeholder="請再次輸入密碼"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                />
-                {errors.confirmPassword && (
-                  <p className="form-error">{errors.confirmPassword}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="agree-terms"
-                name="agree-terms"
-                type="checkbox"
-                required
-                className="h-4 w-4 rounded border-gray-300"
-                style={{ accentColor: 'var(--primary)' }}
-              />
-              <label htmlFor="agree-terms" className="ml-2 block text-sm" style={{ color: 'var(--text)' }}>
-                我同意 <Link href="/terms" className="underline-extend" style={{ color: 'var(--primary)' }}>使用條款</Link> 及 <Link href="/privacy" className="underline-extend" style={{ color: 'var(--primary)' }}>隱私政策</Link>
-              </label>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              loading={isLoading}
-              className="w-full"
-            >
-              {isLoading ? "註冊中..." : "註冊帳號"}
-            </Button>
-          </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" style={{ borderColor: 'var(--border)' }} />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white" style={{ color: 'var(--text-muted)' }}>
-                  或
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                已經有帳號了？{' '}
-                <Link
-                  href="/login"
-                  className="font-medium underline-extend"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  立即登入
-                </Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+								<div>
+									<button type="submit" disabled={isSubmitting} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+										{isSubmitting ? '處理中...' : '同意並建立帳號'}
+									</button>
+								</div>
+							</form>
+							<p className="mt-6 text-center text-xs text-gray-500">
+								點擊上方按鈕即表示您同意我們的
+								<Link href="/terms-and-privacy" className="font-medium text-indigo-500 underline hover:text-indigo-700">服務條款與隱私權政策</Link>。
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</main>
+	);
 }
