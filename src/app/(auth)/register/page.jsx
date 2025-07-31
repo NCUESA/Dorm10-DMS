@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@supabase/supabase-js";
 import { User, Mail, GraduationCap, Eye, EyeOff } from 'lucide-react';
-
+import Toast from '@/components/ui/Toast';
 // --- UI 元件: 輸入框 ---
 const InputField = ({ id, name, type, placeholder, value, onChange, error, icon: Icon }) => (
 	<div>
@@ -69,12 +69,14 @@ const PasswordField = ({ id, name, placeholder, value, onChange, error, password
 // --- 主要註冊元件 ---
 export default function Register() {
 	const router = useRouter();
-    // ** MODIFIED: We still get loading state from context to disable the button correctly **
+	// ** MODIFIED: We still get loading state from context to disable the button correctly **
 	const { signUp, isAuthenticated, loading } = useAuth();
 	const [formData, setFormData] = useState({ username: "", email: "", student_id: "", password: "", confirmPassword: "" });
 	const [errors, setErrors] = useState({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
-
+	const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+	const showToast = (message, type = 'success') => setToast({ show: true, message, type });
+	const hideToast = () => setToast(prev => ({ ...prev, show: false }));
 	useEffect(() => {
 		if (!loading && isAuthenticated) router.push('/profile');
 	}, [isAuthenticated, loading, router]);
@@ -83,7 +85,7 @@ export default function Register() {
 		const { name, value } = e.target;
 		setFormData(prev => ({ ...prev, [name]: value }));
 		if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
-        if (errors.submit) setErrors(prev => ({...prev, submit: ""}));
+		if (errors.submit) setErrors(prev => ({...prev, submit: ""}));
 	};
 
 	const calculatePasswordStrength = (password) => {
@@ -94,14 +96,14 @@ export default function Register() {
 		if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 2;
 		if (/\d/.test(password)) score++;
 		if (/[\W_]/.test(password)) score++;
-        const weakPatterns = /123|abc|qwerty|password|admin|test|user|1111|aaaa|changhua|ncue|scholarship|student/i;
-        if (weakPatterns.test(password)) score -= 3;
-        const sequentialPatterns = /1234|2345|3456|4567|5678|6789|9876|8765|abcd|bcde|cdef|qwer|asdf|zxcv/i;
-        if (sequentialPatterns.test(password)) score -= 2;
+		const weakPatterns = /123|abc|qwerty|password|admin|test|user|1111|aaaa|changhua|ncue|scholarship|student/i;
+		if (weakPatterns.test(password)) score -= 3;
+		const sequentialPatterns = /1234|2345|3456|4567|5678|6789|9876|8765|abcd|bcde|cdef|qwer|asdf|zxcv/i;
+		if (sequentialPatterns.test(password)) score -= 2;
 		const finalScore = Math.max(0, Math.min(Math.floor(score / 1.5), 4));
 		return { score: finalScore };
 	};
-    
+	
 	const validateForm = () => {
 		const newErrors = {};
 		if (!formData.username.trim()) newErrors.username = "請提供您的姓名";
@@ -118,8 +120,8 @@ export default function Register() {
 		}
 		return newErrors;
 	};
-    
-    // ** MODIFIED: The main logic is corrected here for robust error handling **
+	
+	// ** MODIFIED: The main logic is corrected here for robust error handling **
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setErrors({});
@@ -131,118 +133,139 @@ export default function Register() {
 		}
 
 		setIsSubmitting(true);
-        
 		try {
-            // 步驟 1: 檢查學號是否已存在 (這是業務邏輯，AuthContext 無法處理)
-            const supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-            );
+			// 步驟 1: 檢查學號是否已存在
+			const supabase = createClient(
+				process.env.NEXT_PUBLIC_SUPABASE_URL,
+				process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+			);
 			const { data: existingProfile, error: profileError } = await supabase
 				.from('profiles')
 				.select('student_id')
 				.eq('student_id', formData.student_id)
 				.maybeSingle();
 
-            if (profileError) throw new Error(`資料庫查詢錯誤: ${profileError.message}`);
+			if (profileError) throw new Error(`資料庫查詢錯誤: ${profileError.message}`);
 			if (existingProfile) {
 				setErrors({ student_id: "此學號已被註冊，請檢查或直接登入。" });
+				showToast('此學號已被註冊，請檢查或直接登入。', 'error');
 				setIsSubmitting(false);
 				return;
 			}
-            
-            // 步驟 2: 呼叫 signUp 並直接處理其回傳結果
-			const result = await signUp(
-                formData.email, 
-                formData.password, 
-                { name: formData.username, student_id: formData.student_id }
-            );
 
-            // 步驟 3: 根據回傳結果決定下一步
+			// 步驟 2: 檢查 email 是否已存在
+			const { data: existingEmail, error: emailError } = await supabase
+				.from('profiles')
+				.select('email')
+				.eq('email', formData.email)
+				.maybeSingle();
+
+			if (emailError) throw new Error(`資料庫查詢錯誤: ${emailError.message}`);
+			if (existingEmail) {
+				setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
+				showToast('此電子郵件已被註冊，請直接登入。', 'error');
+				setIsSubmitting(false);
+				return;
+			}
+
+			// 步驟 3: 呼叫 signUp 並直接處理其回傳結果
+			const result = await signUp(
+				formData.email, 
+				formData.password, 
+				{ name: formData.username, student_id: formData.student_id }
+			);
+
+			// 步驟 4: 根據回傳結果決定下一步
 			if (result.success) {
 				router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
 			} else {
-                // 如果失敗，直接使用回傳的錯誤訊息來設定局部狀態
-                // 這是最直接且可靠的方式
-                if (result.error && result.error.includes('User already registered')) {
-                    setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
-                } else {
-                    setErrors({ submit: result.error || "發生未知錯誤，請稍後再試" });
-                }
+				if (result.error && result.error.includes('User already registered')) {
+					setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
+					showToast('此電子郵件已被註冊，請直接登入。', 'error');
+					setIsSubmitting(false);
+					return;
+				} else {
+					setErrors({ submit: result.error || "發生未知錯誤，請稍後再試" });
+					showToast(result.error || "發生未知錯誤，請稍後再試", 'error');
+				}
 			}
 		} catch (error) {
 			setErrors({ submit: `註冊請求失敗: ${error.message}` });
+			showToast(`註冊請求失敗: ${error.message}`, 'error');
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
 	return (
-		<main className="flex justify-center items-center my-16 sm:my-24 px-4">
-			<div className="flex w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl">
-				{/* --- 左側面板 --- */}
-				<div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
-					<div className="absolute inset-0 h-full w-full overflow-hidden">
-						<div className="absolute w-64 h-64 bg-violet-500 rounded-full filter blur-3xl opacity-20" style={{ top: '-5%', left: '-10%', animation: 'move-particle 20s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '100px', '--y-end': '80px', '--x-end-2': '-100px', '--y-end-2': '-150px' }} />
-						<div className="absolute w-72 h-72 bg-sky-500 rounded-full filter blur-3xl opacity-20" style={{ top: '50%', left: '50%', animation: 'move-particle 25s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-100px', '--y-end': '50px', '--x-end-2': '50px', '--y-end-2': '-50px' }} />
-						<div className="absolute w-56 h-56 bg-pink-500 rounded-full filter blur-3xl opacity-20" style={{ bottom: '-5%', right: '-10%', animation: 'move-particle 18s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-80px', '--y-end': '-120px', '--x-end-2': '120px', '--y-end-2': '80px' }} />
+		<>
+			<Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
+			<main className="flex justify-center items-center my-16 sm:my-24 px-4">
+				<div className="flex w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl">
+					{/* --- 左側面板 --- */}
+					<div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
+						<div className="absolute inset-0 h-full w-full overflow-hidden">
+							<div className="absolute w-64 h-64 bg-violet-500 rounded-full filter blur-3xl opacity-20" style={{ top: '-5%', left: '-10%', animation: 'move-particle 20s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '100px', '--y-end': '80px', '--x-end-2': '-100px', '--y-end-2': '-150px' }} />
+							<div className="absolute w-72 h-72 bg-sky-500 rounded-full filter blur-3xl opacity-20" style={{ top: '50%', left: '50%', animation: 'move-particle 25s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-100px', '--y-end': '50px', '--x-end-2': '50px', '--y-end-2': '-50px' }} />
+							<div className="absolute w-56 h-56 bg-pink-500 rounded-full filter blur-3xl opacity-20" style={{ bottom: '-5%', right: '-10%', animation: 'move-particle 18s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-80px', '--y-end': '-120px', '--x-end-2': '120px', '--y-end-2': '80px' }} />
+						</div>
+						<div className="relative flex h-full flex-col justify-center p-16 text-left text-white">
+							<div className="max-w-lg">
+								<h2 className="text-3xl font-bold leading-tight tracking-tight">
+									Complexity,<br/>Simplified.<br/> Potential,<br/>Amplified.
+								</h2>
+								<p className="mt-6 text-lg text-slate-200">
+									新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為無縫的數位體驗 !
+								</p>
+							</div>
+						</div>
 					</div>
-					<div className="relative flex h-full flex-col justify-center p-16 text-left text-white">
-						<div className="max-w-lg">
-							<h2 className="text-3xl font-bold leading-tight tracking-tight">
-								Complexity,<br/>Simplified.<br/> Potential,<br/>Amplified.
-							</h2>
-							<p className="mt-6 text-lg text-slate-200">
-								新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為無縫的數位體驗 !
-							</p>
+
+					{/* --- 右側表單面板 --- */}
+					<div className="flex flex-1 flex-col justify-center bg-white px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+						<div className="mx-auto w-full max-w-sm lg:w-96">
+							<div>
+								<h2 className="text-3xl font-bold leading-9 tracking-tight text-gray-900">建立您的專屬帳號</h2>
+								<p className="mt-2 text-sm leading-6 text-gray-500">
+									已經是會員？{' '}
+									<Link href="/login" className="font-semibold text-indigo-600 login-link-hover">
+										由此登入
+									</Link>
+								</p>
+							</div>
+							<div className="mt-10">
+								<form onSubmit={handleSubmit} className="space-y-6">
+									{errors.submit && (
+										<div className="rounded-md bg-red-50 p-4">
+											<p className="text-sm font-medium text-red-800">{errors.submit}</p>
+										</div>
+									)}
+									<InputField id="username" name="username" type="text" placeholder="姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
+									<InputField id="student_id" name="student_id" type="text" placeholder="學號" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
+									<InputField id="email" name="email" type="email" placeholder="電子郵件地址" value={formData.email} onChange={handleChange} error={errors.email} icon={Mail} />
+									<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={calculatePasswordStrength} />
+									<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
+
+									<div>
+										<button type="submit" disabled={isSubmitting || loading} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+											{isSubmitting || loading ? '處理中...' : '同意並註冊帳號'}
+										</button>
+									</div>
+								</form>
+								<p className="mt-6 text-center text-xs text-gray-500">
+									點擊註冊按鈕即表示您同意我們的
+									<Link
+										href="/terms-and-privacy"
+										className="font-medium text-indigo-500 underline hover:text-indigo-700"
+										target="_blank"
+										rel="noopener noreferrer"
+									>服務條款與隱私權政策</Link>。
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>
-
-				{/* --- 右側表單面板 --- */}
-				<div className="flex flex-1 flex-col justify-center bg-white px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-					<div className="mx-auto w-full max-w-sm lg:w-96">
-						<div>
-							<h2 className="text-3xl font-bold leading-9 tracking-tight text-gray-900">建立您的專屬帳號</h2>
-							<p className="mt-2 text-sm leading-6 text-gray-500">
-								已經是會員？{' '}
-								<Link href="/login" className="font-semibold text-indigo-600 login-link-hover">
-									由此登入
-								</Link>
-							</p>
-						</div>
-						<div className="mt-10">
-							<form onSubmit={handleSubmit} className="space-y-6">
-								{errors.submit && (
-                                    <div className="rounded-md bg-red-50 p-4">
-                                        <p className="text-sm font-medium text-red-800">{errors.submit}</p>
-                                    </div>
-                                )}
-								<InputField id="username" name="username" type="text" placeholder="姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
-								<InputField id="student_id" name="student_id" type="text" placeholder="學號" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
-								<InputField id="email" name="email" type="email" placeholder="電子郵件地址" value={formData.email} onChange={handleChange} error={errors.email} icon={Mail} />
-								<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={calculatePasswordStrength} />
-								<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
-
-								<div>
-									<button type="submit" disabled={isSubmitting || loading} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
-										{isSubmitting || loading ? '處理中...' : '同意並註冊帳號'}
-									</button>
-								</div>
-							</form>
-							<p className="mt-6 text-center text-xs text-gray-500">
-								點擊註冊按鈕即表示您同意我們的
-								<Link
-									href="/terms-and-privacy"
-									className="font-medium text-indigo-500 underline hover:text-indigo-700"
-									target="_blank"
-									rel="noopener noreferrer"
-								>服務條款與隱私權政策</Link>。
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		</main>
+			</main>
+		</>
 	);
 }
