@@ -17,15 +17,6 @@ DO $$ BEGIN
 END $$;
 
 -- ===============================
--- 0️⃣ 建立公開 Storage Bucket
--- ===============================
-SELECT
-  CASE
-    WHEN NOT EXISTS (SELECT 1 FROM storage.buckets WHERE name = 'attachments')
-    THEN storage.create_bucket('attachments', true)
-  END;
-
--- ===============================
 -- 1️⃣ 建立 profiles 表
 -- ===============================
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -63,13 +54,15 @@ CREATE TABLE IF NOT EXISTS public.announcements (
   tags TEXT[]
 );
 
+-- ===============================
+-- 3️⃣ 建立 attachments 表
+-- ===============================
 CREATE TABLE IF NOT EXISTS public.attachments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   announcement_id UUID REFERENCES public.announcements(id) ON DELETE CASCADE,
   file_name VARCHAR(255) NOT NULL,
   stored_file_path VARCHAR(255) NOT NULL,
   uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  public_url TEXT,
   file_size INT,
   mime_type VARCHAR(255)
 );
@@ -111,14 +104,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, student_id, department, year)
-  VALUES (
-    NEW.id,
-    NEW.raw_user_meta_data->>'name',
-    NEW.raw_user_meta_data->>'student_id',
-    NEW.raw_user_meta_data->>'department',
-    NEW.raw_user_meta_data->>'year'
-  );
+  INSERT INTO public.profiles (id, username, student_id)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'student_id');
 
   RETURN NEW;
 END;
