@@ -169,21 +169,26 @@ export default function Register() {
 						<div className="mt-10">
 							<form onSubmit={handleSubmit} className="space-y-6">
 								{errors.submit && <div className="rounded-md bg-red-50 p-4"><p className="text-sm font-medium text-red-800">{errors.submit}</p></div>}
-								<InputField id="username" name="username" type="text" placeholder="您的真實姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
-								<InputField id="student_id" name="student_id" type="text" placeholder="學號 (1位字母+7位數字)" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
+								<InputField id="username" name="username" type="text" placeholder="姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
+								<InputField id="student_id" name="student_id" type="text" placeholder="學號" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
 								<InputField id="email" name="email" type="email" placeholder="電子郵件地址" value={formData.email} onChange={handleChange} error={errors.email} icon={Mail} />
 								<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={getPasswordStrength} />
 								<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
 
 								<div>
 									<button type="submit" disabled={isSubmitting} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
-										{isSubmitting ? '處理中...' : '同意並建立帳號'}
+										{isSubmitting ? '處理中...' : '同意並註冊帳號'}
 									</button>
 								</div>
 							</form>
 							<p className="mt-6 text-center text-xs text-gray-500">
-								點擊上方按鈕即表示您同意我們的
-								<Link href="/terms-and-privacy" className="font-medium text-indigo-500 underline hover:text-indigo-700">服務條款與隱私權政策</Link>。
+								點擊註冊按鈕即表示您同意我們的
+								<Link
+									href="/terms-and-privacy"
+									className="font-medium text-indigo-500 underline hover:text-indigo-700"
+									target="_blank"
+									rel="noopener noreferrer"
+								>服務條款與隱私權政策</Link>。
 							</p>
 						</div>
 					</div>
