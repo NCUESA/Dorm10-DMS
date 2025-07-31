@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import AnnouncementsTab from '@/components/admin/AnnouncementsTab';
 import UsersTab from '@/components/admin/UsersTab';
 import UsageTab from '@/components/admin/UsageTab';
@@ -13,7 +15,20 @@ const tabs = [
 ];
 
 export default function ManagePage() {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('announcements');
+
+  // 檢查登入狀態與權限，不符合條件則導向其他頁面
+  useEffect(() => {
+    if (!loading) {
+      if (!isAuthenticated) {
+        router.push('/login?redirect=/manage');
+      } else if (!isAdmin) {
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, isAdmin, loading, router]);
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
@@ -31,6 +46,23 @@ export default function ManagePage() {
         return null;
     }
   };
+
+  // 載入資料期間顯示讀取狀態
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">載入中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 若未通過驗證或非管理員，不渲染內容
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-gray-50/50">
