@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { createClient } from "@supabase/supabase-js";
 import { User, Mail, GraduationCap, Eye, EyeOff } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
 // --- UI 元件: 輸入框 ---
@@ -133,40 +132,33 @@ export default function Register() {
 		}
 
 		setIsSubmitting(true);
-		try {
-			// 步驟 1: 檢查學號是否已存在
-			const supabase = createClient(
-				process.env.NEXT_PUBLIC_SUPABASE_URL,
-				process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-			);
-			const { data: existingProfile, error: profileError } = await supabase
-				.from('profiles')
-				.select('student_id')
-				.eq('student_id', formData.student_id)
-				.maybeSingle();
+                try {
+                        // 步驟 1: 透過後端 API 檢查學號與 Email 是否重複
+                        const res = await fetch('/api/check-duplicate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: formData.email, student_id: formData.student_id })
+                        });
 
-			if (profileError) throw new Error(`資料庫查詢錯誤: ${profileError.message}`);
-			if (existingProfile) {
-				setErrors({ student_id: "此學號已被註冊，請檢查或直接登入。" });
-				showToast('此學號已被註冊，請檢查或直接登入。', 'error');
-				setIsSubmitting(false);
-				return;
-			}
+                        if (!res.ok) {
+                                throw new Error('檢查重複失敗');
+                        }
 
-			// 步驟 2: 檢查 email 是否已存在
-			const { data: existingEmail, error: emailError } = await supabase
-				.from('profiles')
-				.select('email')
-				.eq('email', formData.email)
-				.maybeSingle();
+                        const { emailExists, studentIdExists } = await res.json();
 
-			if (emailError) throw new Error(`資料庫查詢錯誤: ${emailError.message}`);
-			if (existingEmail) {
-				setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
-				showToast('此電子郵件已被註冊，請直接登入。', 'error');
-				setIsSubmitting(false);
-				return;
-			}
+                        if (studentIdExists) {
+                                setErrors({ student_id: '此學號已被註冊，請檢查或直接登入。' });
+                                showToast('此學號已被註冊，請檢查或直接登入。', 'error');
+                                setIsSubmitting(false);
+                                return;
+                        }
+
+                        if (emailExists) {
+                                setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
+                                showToast('此電子郵件已被註冊，請直接登入。', 'error');
+                                setIsSubmitting(false);
+                                return;
+                        }
 
 			// 步驟 3: 呼叫 signUp 並直接處理其回傳結果
 			const result = await signUp(
