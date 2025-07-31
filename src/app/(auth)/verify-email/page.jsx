@@ -203,7 +203,7 @@ export default function VerifyEmailPage() {
             <p className="text-slate-500 mt-4">正在載入頁面...</p>
         </div>
     }>
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-slate-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md mx-auto p-8 sm:p-10 bg-white rounded-xl shadow-lg">
                 <VerifyEmailContent />
             </div>
