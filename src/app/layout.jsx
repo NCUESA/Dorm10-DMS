@@ -48,12 +48,6 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="zh-TW" className={notoSans.variable}>
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="shortcut icon" href={metadata.icon} type="image/x-icon" />
-        <title>{metadata.title}</title>
-      </head>
       <body className={notoSans.className}>
           <AuthProvider>
             <Header ref={headerRef} />
