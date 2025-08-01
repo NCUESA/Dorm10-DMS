@@ -1,47 +1,34 @@
 'use client'
 
-import { useState, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import StudentInfoForm from '@/components/StudentInfoForm'
-import PreferenceForm from '@/components/PreferenceForm'
 import ChatInterface from '@/components/ChatInterface'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 export default function ChatPage() {
-  const { user } = useAuth()
-  const [info, setInfo] = useState(null)
-  const [preferences, setPreferences] = useState(null)
-  const [phase, setPhase] = useState('info') // info -> preference -> chat
+  const { isAuthenticated, loading } = useAuth()
+  const router = useRouter()
 
-  const handleInfoSubmit = (data) => {
-    setInfo(data)
-    setPhase('preference')
-  }
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/login?redirect=/ai-assistant/chat')
+    }
+  }, [isAuthenticated, loading, router])
 
-  const handlePrefSubmit = (data) => {
-    setPreferences(data)
-    setPhase('chat')
-  }
-
-  const userInfo = useMemo(() => ({
-    department: user?.user_metadata?.department || '',
-    grade: user?.user_metadata?.year || ''
-  }), [user])
-
-  if (phase === 'info') {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
-        <StudentInfoForm onSubmit={handleInfoSubmit} initialData={userInfo} />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">載入中...</p>
+        </div>
       </div>
     )
   }
 
-  if (phase === 'preference') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
-        <PreferenceForm onSubmit={handlePrefSubmit} />
-      </div>
-    )
+  if (!isAuthenticated) {
+    return null
   }
 
-  return <ChatInterface userInfo={info} preferences={preferences} />
+  return <ChatInterface />
 }
