@@ -88,6 +88,108 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
     );
 };
 
+// URL Input Area component
+const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
+    const [urlInput, setUrlInput] = useState('');
+    
+    const handleAddUrl = () => {
+        const trimmedUrl = urlInput.trim();
+        if (!trimmedUrl) {
+            showToast('請輸入網址', 'warning');
+            return;
+        }
+        
+        // 簡單的 URL 驗證
+        try {
+            new URL(trimmedUrl);
+        } catch {
+            showToast('請輸入有效的網址', 'warning');
+            return;
+        }
+        
+        // 檢查是否已存在
+        if (urls.some(url => url === trimmedUrl)) {
+            showToast('此網址已經存在', 'warning');
+            return;
+        }
+        
+        setUrls(prev => [...prev, trimmedUrl]);
+        setUrlInput('');
+        showToast('網址已添加', 'success');
+    };
+    
+    const handleRemoveUrl = (indexToRemove) => {
+        setUrls(prev => prev.filter((_, index) => index !== indexToRemove));
+    };
+    
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddUrl();
+        }
+    };
+    
+    return (
+        <div className="space-y-4">
+            <div className="flex gap-2">
+                <input
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="輸入網址進行AI分析 (例: https://example.com)"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={disabled}
+                />
+                <button
+                    type="button"
+                    onClick={handleAddUrl}
+                    disabled={disabled || !urlInput.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                    添加
+                </button>
+            </div>
+            
+            {urls.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">已添加的網址：</h4>
+                    <div className="max-h-32 overflow-y-auto space-y-2">
+                        {urls.map((url, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                                <div className="flex items-center space-x-3">
+                                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                    </svg>
+                                    <a 
+                                        href={url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 hover:text-blue-800 break-all"
+                                    >
+                                        {url}
+                                    </a>
+                                </div>
+                                {!disabled && (
+                                    <button
+                                        onClick={() => handleRemoveUrl(index)}
+                                        className="text-red-500 hover:text-red-700 transition-colors ml-2"
+                                        title="移除網址"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // Multiple Files Upload Area component
 const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
     const fileInputRef = useRef(null);
@@ -292,6 +394,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState("AI 分析中...");
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [urls, setUrls] = useState([]);
     const [attachments, setAttachments] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isEditMode = !!editingAnnouncement;
@@ -464,8 +567,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     }
 
     const handleAiAnalyze = async () => {
-        if (selectedFiles.length === 0) {
-            showToast("請先選擇至少一個文件", "warning");
+        if (selectedFiles.length === 0 && urls.length === 0) {
+            showToast("請先選擇至少一個文件或添加一個網址", "warning");
             return;
         }
         if (!modelRef.current) {
@@ -473,57 +576,44 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             return;
         }
 
-        // 如果有多個檔案，讓用戶選擇用於AI分析的檔案
-        let fileForAnalysis;
-        if (selectedFiles.length === 1) {
-            fileForAnalysis = selectedFiles[0];
-        } else {
-            // 自動選擇第一個PDF檔案，如果沒有PDF則選擇第一個檔案
-            const pdfFiles = selectedFiles.filter(file => file.type === 'application/pdf');
-            fileForAnalysis = pdfFiles.length > 0 ? pdfFiles[0] : selectedFiles[0];
-            showToast(`使用檔案 "${fileForAnalysis.name}" 進行AI分析`, "success");
-        }
-
         setIsLoading(true);
         setCurrentStep(1); 
 
         try {
-            setLoadingText("正在準備檔案...");
-            const pdfPart = await fileToGenerativePart(fileForAnalysis);
-
-            const htmlStyleInstructions = `
-                - **標題 (h4)**: 使用 <h4> 標籤，並加上 inline style 'color: #1e40af; font-weight: bold;'。
-                - **列表 (ul/li)**: 使用 <ul> 和 <li>。
-                - **表格 (table)**: 使用標準 HTML 表格標籤，並為 table 加上 'border-collapse: collapse; width: 100%;'，為 th/td 加上 'border: 1px solid #ddd; padding: 8px;' 的 inline style。
-                - **強調 (span)**: 對於關鍵字詞（如日期、金額），使用 <span> 並加上 'color: #c026d3; font-weight: 600;' 的 inline style。
-            `;
-
-            const prompt = `
+            setLoadingText("正在準備分析資料...");
+            
+            // 準備 prompt 內容
+            let promptParts = [];
+            let hasFileContent = false;
+            
+            // 如果有檔案，處理檔案
+            if (selectedFiles.length > 0) {
+                let fileForAnalysis;
+                if (selectedFiles.length === 1) {
+                    fileForAnalysis = selectedFiles[0];
+                } else {
+                    // 自動選擇第一個PDF檔案，如果沒有PDF則選擇第一個檔案
+                    const pdfFiles = selectedFiles.filter(file => file.type === 'application/pdf');
+                    fileForAnalysis = pdfFiles.length > 0 ? pdfFiles[0] : selectedFiles[0];
+                    showToast(`使用檔案 "${fileForAnalysis.name}" 進行AI分析`, "success");
+                }
+                
+                const pdfPart = await fileToGenerativePart(fileForAnalysis);
+                promptParts.push(pdfPart);
+                hasFileContent = true;
+            }
+            
+            // 建構 prompt 文字
+            let promptText = `
 # 角色 (Persona)
-你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的任務是將一篇關於獎學金的公告，轉換成一段重點突出、視覺清晰的 HTML 公告，並提取結構化資料。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
+你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的任務是將獎學金相關資訊進行分析，提取結構化資料並生成摘要內容。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
 
 # 核心任務 (Core Task)
-你的任務是根據下方提供的「公告全文」，執行以下兩項任務，並將結果合併在一個**單一的 JSON 物件**中回傳。
-
-## 任務一：提取結構化資料 (JSON Extraction)
-提取公告中的關鍵資訊，並以一個嚴格的 JSON 物件格式回傳。
+根據提供的資訊來源，提取關鍵資訊並生成結構化摘要內容。
 
 ### 欄位規則 (Field Rules)
 - **不確定性原則**：若資訊未提及或不明確，**必須**回傳空字串 ""，**禁止**自行猜测。
-- **欄位列表**：
-    1. title (string): 公告的**簡短**標題，必須包含**提供單位**和**獎學金名稱**。
-    2. category (string): 根據下方的「代碼定義」從 'A'~'E' 中選擇一個。
-    3. application_deadline (string): **申請截止日期**，格式必須是 YYYY-MM-DD。若只提及月份，以該月最後一天為準。若為區間，以**結束日期**為準，備註: 民國年 + 1911 即為西元年。
-    4. target_audience (string): **目標對象**。用一段話簡潔但完整地說明，應包含年級、特殊身份、家庭狀況或成績要求等核心申請條件。
-    5. application_limitations (string): **兼領限制**。若內容明確提及**可以**兼領其他獎學金，回傳 'Y'。若提及**不行**兼領其他獎學金，則回傳 'N'。若完全未提及，則回傳空字串 ""。
-    6. submission_method (string): **送件方式**。簡要說明最終的送件管道。
-    7. external_urls (string): 若有相關網址或連結，請提取。若無，則回傳空字串 ""。
-    8. summary (string): 生成專業、條理分明的 HTML 格式重點摘要，使用以下樣式指導：
-       - **多色彩重點標記**：
-         * **金額、日期、名額等數字類關鍵字**: <span style="color: #D6334C; font-weight: bold;">
-         * **身份、成績等申請條件**: <span style="color: #F79420; font-weight: bold;">
-         * **所有小標題**: <h4 style="color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;">
-       - **標籤限定**：只能使用 <h4>, <ul>, <li>, <ol>, <strong>, <p>, <br>, <span>, <table>, <tbody>, <tr>, <td>
+- 對於 summary_content 欄位，請提取並整理關鍵內容項目，後續會在前端組合成 HTML 格式。
 
 # 獎助學金代碼定義 (Category Definitions)
 - **A**: 各縣市政府獎助學金
@@ -532,27 +622,132 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 - **D**: 各民間單位：因經濟不利、學業優良或其他無法歸類之獎助學金
 - **E**: 純粹的獎學金「得獎名單」公告
 
-# 最終輸出規則 (Final Output Rules)
-- **你的回覆必須是、也只能是一個 JSON 物件**。
-- **絕對禁止**在 JSON 物件前後包含任何 Markdown 標記或其他解釋性文字。
-- 所有欄位都必須填寫，找不到資訊時請回傳空字串 ""。
-
-請分析以下 PDF 檔案內容：`;
+請分析以下資訊：`;
             
-            const config = {
-                responseMimeType: 'application/json'
+            // 如果有網址，添加網址資訊
+            if (urls.length > 0) {
+                promptText += `\n\n# 網址資料來源：\n`;
+                urls.forEach((url, index) => {
+                    promptText += `${index + 1}. ${url}\n`;
+                });
+            }
+            
+            // 如果有檔案，添加檔案說明
+            if (hasFileContent) {
+                promptText += `\n\n# 檔案資料來源已上傳`;
+            }
+            
+            promptParts.push({ text: promptText });
+
+            const responseSchema = {
+                type: Type.OBJECT,
+                properties: {
+                    title: {
+                        type: Type.STRING,
+                        description: "公告的簡短標題，必須包含提供單位和獎學金名稱"
+                    },
+                    category: {
+                        type: Type.STRING,
+                        description: "獎學金分類代碼 A-E"
+                    },
+                    application_deadline: {
+                        type: Type.STRING,
+                        description: "申請截止日期，格式 YYYY-MM-DD"
+                    },
+                    target_audience: {
+                        type: Type.STRING,
+                        description: "目標對象，包含年級、特殊身份、家庭狀況或成績要求等核心申請條件"
+                    },
+                    application_limitations: {
+                        type: Type.STRING,
+                        description: "兼領限制，Y=可以兼領，N=不可兼領，空字串=未提及"
+                    },
+                    submission_method: {
+                        type: Type.STRING,
+                        description: "送件方式，簡要說明最終的送件管道"
+                    },
+                    external_urls: {
+                        type: Type.STRING,
+                        description: "相關網址或連結"
+                    },
+                    summary_content: {
+                        type: Type.OBJECT,
+                        properties: {
+                            sections: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        title: {
+                                            type: Type.STRING,
+                                            description: "小標題"
+                                        },
+                                        content: {
+                                            type: Type.ARRAY,
+                                            items: {
+                                                type: Type.OBJECT,
+                                                properties: {
+                                                    type: {
+                                                        type: Type.STRING,
+                                                        description: "內容類型：text, list, table, highlight_number, highlight_condition"
+                                                    },
+                                                    text: {
+                                                        type: Type.STRING,
+                                                        description: "文字內容"
+                                                    },
+                                                    items: {
+                                                        type: Type.ARRAY,
+                                                        items: {
+                                                            type: Type.STRING
+                                                        },
+                                                        description: "列表項目，當type為list時使用"
+                                                    },
+                                                    table_data: {
+                                                        type: Type.ARRAY,
+                                                        items: {
+                                                            type: Type.ARRAY,
+                                                            items: {
+                                                                type: Type.STRING
+                                                            }
+                                                        },
+                                                        description: "表格數據，當type為table時使用"
+                                                    }
+                                                },
+                                                required: ["type"]
+                                            }
+                                        }
+                                    },
+                                    required: ["title", "content"]
+                                }
+                            }
+                        },
+                        required: ["sections"]
+                    }
+                },
+                required: ["title", "category", "application_deadline", "target_audience", "application_limitations", "submission_method", "external_urls", "summary_content"],
+                propertyOrdering: ["title", "category", "application_deadline", "target_audience", "application_limitations", "submission_method", "external_urls", "summary_content"]
             };
 
-            const model = 'gemini-2.0-flash-lite';
+            // 配置 tools 和 config
+            const tools = urls.length > 0 ? [{ urlContext: {} }] : [];
+            
+            const config = {
+                responseMimeType: 'application/json',
+                responseSchema: responseSchema,
+                tools: tools,
+                systemInstruction: [
+                    {
+                        text: `繁體中文回應。如果有提供網址，請詳細分析網頁內容並提取相關的獎學金資訊。`,
+                    }
+                ],
+                mediaResolution: 'MEDIA_RESOLUTION_MEDIUM'
+            };
+
+            const model = 'gemini-2.5-flash';
             const contents = [
                 {
                     role: 'user',
-                    parts: [
-                        pdfPart,
-                        {
-                            text: prompt,
-                        },
-                    ],
+                    parts: promptParts,
                 },
             ];
 
@@ -571,10 +766,19 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             }
 
             const aiResponse = JSON.parse(result);
+            
+            // 在前端組合 HTML 格式的 summary
+            const summary = generateHtmlSummary(aiResponse.summary_content);
+            
+            const processedResponse = {
+                ...aiResponse,
+                summary: summary
+            };
+            delete processedResponse.summary_content;
 
             setFormData(prev => ({
                 ...prev,
-                ...aiResponse,
+                ...processedResponse,
                 status: prev.status || '1',
             }));
             
@@ -587,6 +791,126 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // 生成 HTML 格式摘要的函數
+    const generateHtmlSummary = (summaryContent) => {
+        if (!summaryContent || !summaryContent.sections) return '';
+        
+        // 定義需要特殊標註的關鍵字模式
+        const highlightPatterns = {
+            // 紅色 - 金額、日期、名額等數字類關鍵字
+            red: [
+                /(\d+[\d,]*)\s*元/g,                    // 金額
+                /(\d+)\s*名/g,                          // 名額
+                /(\d+)\s*位/g,                          // 位數
+                /(\d{2,4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g, // 日期
+                /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,        // 日期格式
+                /(\d{1,2}-\d{1,2}-\d{2,4})/g,          // 日期格式
+                /(\d+)\s*學分/g,                        // 學分
+                /(\d+)\s*點/g,                          // 點數
+                /前\s*(\d+)\s*名/g,                     // 排名
+                /第\s*(\d+)\s*名/g,                     // 排名
+                /(\d+)\s*萬/g,                          // 萬元
+                /(\d+)\s*千/g,                          // 千元
+                /平均\s*(\d+\.?\d*)/g,                  // 平均分數
+                /(\d+)\s*分/g,                          // 分數
+                /(\d+)\s*級分/g,                        // 級分
+                /(\d+)\s*%/g,                           // 百分比
+                /(\d+)\s*件/g                           // 件數
+            ],
+            // 橙色 - 身份、成績、申請條件
+            orange: [
+                /(大[一二三四]|碩[一二]|博[一二三四五六七八])/g,  // 年級
+                /(低收入戶|中低收入戶)/g,                // 經濟狀況
+                /(原住民|身心障礙|清寒)/g,              // 特殊身份
+                /(優秀|傑出|優良|卓越)/g,               // 優秀相關
+                /(學業成績|操行成績|學期成績)/g,         // 成績相關
+                /(全班前\d+%|全系前\d+%|全校前\d+%)/g,  // 排名
+                /(碩士班|大學部|博士班)/g,               // 學制
+                /(在學|就讀|修讀)/g,                     // 就學狀態
+                /(設籍|戶籍)/g,                         // 戶籍相關
+                /(家庭年收入|年收入)/g,                  // 收入相關
+                /(持有證明|檢附證明)/g,                  // 證明文件
+                /(具備|符合|滿足)/g,                     // 條件符合
+                /(限制|禁止|不得)/g                      // 限制條件
+            ]
+        };
+        
+        // 文字高亮處理函數
+        const highlightText = (text) => {
+            if (!text) return text;
+            
+            let processedText = text;
+            
+            // 先處理紅色高亮（數字相關）
+            highlightPatterns.red.forEach(pattern => {
+                processedText = processedText.replace(pattern, (match) => {
+                    return `<span style="color: #D6334C; font-weight: bold;">${match}</span>`;
+                });
+            });
+            
+            // 再處理橙色高亮（條件相關）
+            highlightPatterns.orange.forEach(pattern => {
+                processedText = processedText.replace(pattern, (match) => {
+                    // 避免重複標註已經被標註的內容
+                    if (match.includes('<span')) return match;
+                    return `<span style="color: #F79420; font-weight: bold;">${match}</span>`;
+                });
+            });
+            
+            return processedText;
+        };
+        
+        let html = '';
+        
+        summaryContent.sections.forEach(section => {
+            // 添加小標題
+            html += `<h4 style="color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;">${highlightText(section.title)}</h4>`;
+            
+            section.content.forEach(item => {
+                switch (item.type) {
+                    case 'text':
+                        html += `<p>${highlightText(item.text)}</p>`;
+                        break;
+                    case 'list':
+                        if (item.items && item.items.length > 0) {
+                            html += '<ul>';
+                            item.items.forEach(listItem => {
+                                html += `<li>${highlightText(listItem)}</li>`;
+                            });
+                            html += '</ul>';
+                        }
+                        break;
+                    case 'table':
+                        if (item.table_data && item.table_data.length > 0) {
+                            html += '<table style="border-collapse: collapse; width: 100%;"><tbody>';
+                            item.table_data.forEach(row => {
+                                html += '<tr>';
+                                row.forEach(cell => {
+                                    html += `<td style="border: 1px solid #ddd; padding: 8px;">${highlightText(cell)}</td>`;
+                                });
+                                html += '</tr>';
+                            });
+                            html += '</tbody></table>';
+                        }
+                        break;
+                    case 'highlight_number':
+                        // 這些已經由 AI 預先分類，直接使用指定顏色
+                        html += `<p><span style="color: #D6334C; font-weight: bold;">${item.text}</span></p>`;
+                        break;
+                    case 'highlight_condition':
+                        // 這些已經由 AI 預先分類，直接使用指定顏色
+                        html += `<p><span style="color: #F79420; font-weight: bold;">${item.text}</span></p>`;
+                        break;
+                    default:
+                        html += `<p>${highlightText(item.text || '')}</p>`;
+                        break;
+                }
+            });
+        });
+        
+        return html;
     };
     
     const handleSave = async () => {
@@ -740,6 +1064,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             onClose();
             setCurrentStep(0);
             setSelectedFiles([]);
+            setUrls([]);
             setAttachments([]);
             setShowDeleteConfirm(false);
             setFormData({
@@ -838,14 +1163,35 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     <form id="announcement-form" noValidate className="space-y-6">
                         {!isEditMode && (
                             <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
-                                <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-blue-50 rounded-md">步驟一：上傳文件</legend>
-                                <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast}/>
+                                <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-blue-50 rounded-md">步驟一：上傳文件或提供網址</legend>
+                                
+                                <div className="space-y-6">
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-700 mb-3">檔案上傳</h4>
+                                        <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast}/>
+                                    </div>
+                                    
+                                    <div className="relative">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t border-gray-300" />
+                                        </div>
+                                        <div className="relative flex justify-center text-sm">
+                                            <span className="px-2 bg-white text-gray-500">或</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-700 mb-3">網址連結分析</h4>
+                                        <UrlInputArea urls={urls} setUrls={setUrls} disabled={isLoading} showToast={showToast}/>
+                                    </div>
+                                </div>
+                                
                                 <Button
                                     type="button"
                                     variant="warning"
                                     className="w-full mt-6"
                                     onClick={handleAiAnalyze}
-                                    disabled={selectedFiles.length === 0 || isLoading}
+                                    disabled={(selectedFiles.length === 0 && urls.length === 0) || isLoading}
                                     loading={isLoading && currentStep === 1}
                                 >
                                     {isLoading && currentStep === 1 ? '處理中...' : '開始 AI 分析'}
