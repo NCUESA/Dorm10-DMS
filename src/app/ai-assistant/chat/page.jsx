@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { GoogleGenAI } from '@google/genai'
 import StudentInfoForm from '@/components/StudentInfoForm'
@@ -90,13 +90,15 @@ export default function ChatPage() {
     }
   }
 
+  const userInfo = useMemo(() => ({
+    department: user?.user_metadata?.department || '',
+    grade: user?.user_metadata?.year || ''
+  }), [user])
+
   if (phase === 'info') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
-        <StudentInfoForm onSubmit={handleInfoSubmit} initialData={{
-          department: user?.user_metadata?.department || '',
-          grade: user?.user_metadata?.year || ''
-        }} />
+        <StudentInfoForm onSubmit={handleInfoSubmit} initialData={userInfo} />
       </div>
     )
   }
