@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import MarkdownRenderer from './MarkdownRenderer'
 import Toast from './ui/Toast'
+import { authFetch } from '@/lib/authFetch'
 
 // 系統 Prompt - 基於 raw 版本改進
 const SYSTEM_PROMPT = `# 角色 (Persona)
@@ -78,11 +79,8 @@ const ChatInterface = () => {
     if (!user?.id) return null
 
     try {
-      const response = await fetch('/api/chat-history', {
+      const response = await authFetch('/api/chat-history', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           userId: user.id,
           sessionId: currentSessionId,
@@ -98,10 +96,20 @@ const ChatInterface = () => {
         }
         return result
       } else {
-        console.error('保存訊息失敗:', response.status)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('保存訊息失敗:', response.status, errorData)
+        // 顯示具體的錯誤信息給用戶
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: `保存訊息失敗：${errorData.error || '未知錯誤'} (錯誤代碼: ${response.status})`
+        }])
       }
     } catch (error) {
       console.error('保存訊息到數據庫失敗:', error)
+      setMessages(prev => [...prev, {
+        role: 'model',
+        content: `保存訊息失敗：網絡錯誤 - ${error.message}`
+      }])
     }
     return null
   }
@@ -135,7 +143,7 @@ const ChatInterface = () => {
       }
 
       // 從數據庫載入聊天記錄
-      const response = await fetch(`/api/chat-history?userId=${user.id}`)
+      const response = await authFetch(`/api/chat-history?userId=${user.id}`)
       if (response.ok) {
         const result = await response.json()
         if (result.success && result.data.length > 0) {
@@ -221,11 +229,8 @@ const ChatInterface = () => {
     await saveMessageToDatabase('user', userMessage.content)
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await authFetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           message: userMessage.content,
           history: conversationHistory
@@ -274,7 +279,7 @@ const ChatInterface = () => {
       try {
         // 從數據庫中刪除聊天記錄
         if (user?.id) {
-          const response = await fetch(`/api/chat-history?userId=${user.id}`, {
+          const response = await authFetch(`/api/chat-history?userId=${user.id}`, {
             method: 'DELETE'
           })
           
@@ -313,11 +318,8 @@ const ChatInterface = () => {
         timestamp: new Date().toISOString() // 添加時間戳
       }))
 
-      const response = await fetch('/api/send-support-request', {
+      const response = await authFetch('/api/send-support-request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           userEmail: user?.email,
           userName: user?.profile?.name || user?.email?.split('@')[0] || '匿名使用者',
@@ -369,11 +371,8 @@ const ChatInterface = () => {
     setIsSubmittingSupportRequest(true)
 
     try {
-      const response = await fetch('/api/send-support-request', {
+      const response = await authFetch('/api/send-support-request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           userEmail: user?.email,
           userName: user?.profile?.name || user?.email?.split('@')[0],

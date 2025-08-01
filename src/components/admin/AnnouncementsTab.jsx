@@ -9,6 +9,7 @@ import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import { MessageSquare, Send } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 // --- Helper: Email Sending Function ---
 const sendEmailAnnouncement = async (id, showToast) => {
@@ -16,12 +17,9 @@ const sendEmailAnnouncement = async (id, showToast) => {
   
   try {
     showToast('正在透過 Email 發送公告...', 'info');
-    // ** CRITICAL FIX: Added 'credentials: "include"' **
-    const res = await fetch('/api/send-announcement', {
+    const res = await authFetch('/api/send-announcement', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ announcementId: id }),
-      credentials: 'include', // <---  This tells fetch to send cookies
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Email 寄送失敗');
@@ -32,17 +30,14 @@ const sendEmailAnnouncement = async (id, showToast) => {
   }
 };
 
-// ** CRITICAL FIX: Added 'credentials: "include"' **
 const sendLineBroadcast = async (id, showToast) => {
   if (!confirm('確定要透過 LINE 廣播此公告給所有已加入的好友嗎？')) return;
 
   try {
     showToast('正在透過 LINE 廣播公告...', 'info');
-    const res = await fetch('/api/broadcast-line-announcement', {
+    const res = await authFetch('/api/broadcast-line-announcement', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ announcementId: id }),
-      credentials: 'include', // <---  This tells fetch to send cookies
     });
     const data = await res.json();
     if (!res.ok) {

@@ -5,6 +5,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { supabase } from '@/lib/supabase/client';
 import QuillEditor from './QuillEditor';
 import Button from '@/components/ui/Button';
+import { authFetch } from '@/lib/authFetch';
 
 // Stepper component to show the current stage
 const Stepper = ({ currentStep }) => {
@@ -1078,7 +1079,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 });
                 uploadFormData.append('announcementId', announcementId.toString());
 
-                const uploadResponse = await fetch('/api/upload-files', {
+                const uploadResponse = await authFetch('/api/upload-files', {
                     method: 'POST',
                     body: uploadFormData,
                 });

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import QuillEditor from './QuillEditor'
 import Button from '@/components/ui/Button'
+import { authFetch } from '@/lib/authFetch'
 
 // Multiple Files Upload Area component (與 CreateAnnouncementModal 相同)
 const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
@@ -391,7 +392,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         });
         uploadFormData.append('announcementId', updated.id.toString());
 
-        const uploadResponse = await fetch('/api/upload-files', {
+        const uploadResponse = await authFetch('/api/upload-files', {
           method: 'POST',
           body: uploadFormData,
         });

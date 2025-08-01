@@ -43,8 +43,16 @@ export function validateUserInput(data) {
   }
   
   if (data.role !== undefined) {
-    if (!['管理員', '一般使用者', 'admin', 'user'].includes(data.role)) {
+    if (!['管理員', '一般使用者', 'admin', 'user', 'model'].includes(data.role)) {
       errors.push('無效的權限設定');
+    }
+  }
+  
+  if (data.messageContent !== undefined) {
+    if (typeof data.messageContent !== 'string') {
+      errors.push('消息內容必須是字符串');
+    } else if (data.messageContent.length > 10000) {
+      errors.push('消息內容長度不能超過10000字符');
     }
   }
   
@@ -52,12 +60,23 @@ export function validateUserInput(data) {
 }
 
 export function sanitizeUserData(userData) {
-  return {
+  const sanitized = {
     ...userData,
     // XSS 防護
     name: userData.name?.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''),
     studentId: userData.studentId?.replace(/[<>]/g, ''),
   };
+  
+  // 清理消息內容中的潛在危險標籤，但保留基本格式
+  if (userData.messageContent) {
+    sanitized.messageContent = userData.messageContent
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '');
+  }
+  
+  return sanitized;
 }
 
 // 檢查 IP 是否在允許的範圍內 (可選)

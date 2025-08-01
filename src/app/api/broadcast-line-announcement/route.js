@@ -48,7 +48,10 @@ export async function POST(request) {
             requireAdmin: true,
             endpoint: '/api/broadcast-line-announcement'
         });
-        if (!authCheck.success) return newCorsResponse({ error: '未授權' }, 401);
+        if (!authCheck.success) {
+            // 直接返回 verifyUserAuth 提供的錯誤回應
+            return authCheck.error;
+        }
 
         // 3. 驗證請求資料
         const body = await request.json();

@@ -18,13 +18,21 @@ function LoginContent() {
 	const [errors, setErrors] = useState({});
 	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isClient, setIsClient] = useState(false);
 
 	const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 	const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 	const hideToast = () => setToast(prev => ({ ...prev, show: false }));
 
+	// 確保只在客戶端渲染
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
+
 	// 登入頁面動畫計算
 	const particles = useMemo(() => {
+		if (!isClient) return []; // 服務器端返回空陣列避免 hydration 不匹配
+		
 		const colorClasses = ['bg-blue-700', 'bg-teal-500', 'bg-cyan-400'];
 		return [...Array(12)].map((_, i) => ({
 			id: i,
@@ -40,7 +48,7 @@ function LoginContent() {
 			xEnd2: `${Math.random() * 40 - 20}vw`,
 			yEnd2: `${Math.random() * 40 - 20}vh`,
 		}));
-	}, []);
+	}, [isClient]);
 
 	// 頁面載入時讀取記住的用戶資訊
 	useEffect(() => {

@@ -18,12 +18,20 @@ function ForgotPasswordContent() {
 
 	const [cooldown, setCooldown] = useState(0);
 	const [isResending, setIsResending] = useState(false);
+	const [isClient, setIsClient] = useState(false);
 
 	const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 	const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 	const hideToast = () => setToast(prev => ({ ...prev, show: false }));
 
+	// 確保只在客戶端渲染
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
+
 	const particles = useMemo(() => {
+		if (!isClient) return []; // 服務器端返回空陣列避免 hydration 不匹配
+		
 		const colorClasses = ['bg-purple-700', 'bg-rose-500', 'bg-orange-400'];
 		return [...Array(12)].map((_, i) => ({
 			id: i,
@@ -39,7 +47,7 @@ function ForgotPasswordContent() {
 			xEnd2: `${Math.random() * 40 - 20}vw`,
 			yEnd2: `${Math.random() * 40 - 20}vh`,
 		}));
-	}, []);
+	}, [isClient]);
 
 	useEffect(() => {
 		if (isAuthenticated) router.push('/profile');
