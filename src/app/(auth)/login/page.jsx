@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
+import { storage } from '@/utils/helpers';
 
 function LoginContent() {
 	const router = useRouter();
@@ -13,6 +14,7 @@ function LoginContent() {
 	const { signIn, isAuthenticated, loading } = useAuth();
 
 	const [formData, setFormData] = useState({ email: "", password: "" });
+	const [rememberMe, setRememberMe] = useState(false);
 	const [errors, setErrors] = useState({});
 	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +40,16 @@ function LoginContent() {
 			xEnd2: `${Math.random() * 40 - 20}vw`,
 			yEnd2: `${Math.random() * 40 - 20}vh`,
 		}));
+	}, []);
+
+	// 頁面載入時讀取記住的用戶資訊
+	useEffect(() => {
+		const rememberedEmail = storage.get('rememberedEmail');
+		const shouldRemember = storage.get('shouldRememberUser');
+		if (rememberedEmail && shouldRemember) {
+			setFormData(prev => ({ ...prev, email: rememberedEmail }));
+			setRememberMe(true);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -75,6 +87,15 @@ function LoginContent() {
 		try {
 			const result = await signIn(formData.email, formData.password);
 			if (result.success) {
+				// 處理記住我功能
+				if (rememberMe) {
+					storage.set('rememberedEmail', formData.email);
+					storage.set('shouldRememberUser', true);
+				} else {
+					storage.remove('rememberedEmail');
+					storage.remove('shouldRememberUser');
+				}
+				
 				showToast("登入成功！正在將您導向頁面...", 'success');
 				const redirectTo = searchParams.get('redirect') || '/';
 				router.push(redirectTo);
@@ -170,7 +191,14 @@ function LoginContent() {
 
 								<div className="flex items-center justify-between">
 									<div className="flex items-center">
-										<input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+										<input 
+											id="remember-me" 
+											name="remember-me" 
+											type="checkbox" 
+											checked={rememberMe}
+											onChange={(e) => setRememberMe(e.target.checked)}
+											className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" 
+										/>
 										<label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-gray-900">記住我</label>
 									</div>
 									<div className="text-sm">
