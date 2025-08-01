@@ -136,8 +136,13 @@ const Header = forwardRef((props, ref) => {
 								<span>Hi, {user?.user_metadata?.name || '使用者'}</span>
 								<svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
 							</button>
-							<div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-1">
-								<button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md">登出</button>
+							<div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-2">
+								<Link href="/terms-and-privacy" className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
+									服務條款
+								</Link>
+								<button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md">
+									登出
+								</button>
 							</div>
 						</div>
 					)}
@@ -173,7 +178,6 @@ const Header = forwardRef((props, ref) => {
                 transition-all duration-300 ease-in-out
                 ${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}
                 ${pathname === link.href
-									// 當在淺色背景時 (isOverDark 為 false)，使用淺藍色半透明毛玻璃樣式
 									? (isOverDark ? 'bg-white/25 text-white' : 'bg-[#00A6D6]/20 backdrop-blur-sm text-primary font-semibold')
 									: (isOverDark ? 'text-white' : 'text-text')
 								}`
@@ -192,6 +196,14 @@ const Header = forwardRef((props, ref) => {
 							<div className={`text-left px-4 py-2 transition-colors duration-200 ${isOverDark ? 'text-white' : 'text-text'}`}>
 								Hi, {user?.user_metadata?.name || '使用者'}
 							</div>
+							<Link
+								href="/terms-and-privacy"
+								className={`block w-full text-left px-4 py-3 rounded-lg text-lg transition-colors duration-200 ${isOverDark ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
+								onClick={closeMenu}
+							>
+								服務條款
+							</Link>
+							<hr className={`my-1 ${isOverDark ? 'border-white/20' : 'border-t-gray-200'}`} />
 							<button
 								className={`block w-full text-left px-4 py-3 rounded-lg text-lg transition-colors duration-200 ${isOverDark ? 'text-red-400 hover:bg-white/10' : 'text-red-600 hover:bg-red-50'}`}
 								onClick={handleLogout}
