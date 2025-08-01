@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { GoogleGenAI } from '@google/genai'
 import StudentInfoForm from '@/components/StudentInfoForm'
+import PreferenceForm from '@/components/PreferenceForm'
 import Button from '@/components/ui/Button'
 
 const SYSTEM_PROMPT = `# 角色 (Persona)
@@ -23,7 +24,8 @@ const SYSTEM_PROMPT = `# 角色 (Persona)
 export default function ChatPage() {
   const { user } = useAuth()
   const [info, setInfo] = useState(null)
-  const [infoReady, setInfoReady] = useState(false)
+  const [preferences, setPreferences] = useState(null)
+  const [phase, setPhase] = useState('info') // info -> preference -> chat
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const modelRef = useRef(null)
@@ -48,7 +50,12 @@ export default function ChatPage() {
 
   const handleInfoSubmit = (data) => {
     setInfo(data)
-    setInfoReady(true)
+    setPhase('preference')
+  }
+
+  const handlePrefSubmit = (data) => {
+    setPreferences(data)
+    setPhase('chat')
   }
 
   const handleSend = async () => {
@@ -63,7 +70,8 @@ export default function ChatPage() {
     }
 
     const infoLines = Object.entries(info || {}).map(([k, v]) => `${k}: ${v}`).join('\n')
-    const prompt = `${SYSTEM_PROMPT}\n\n# 學生資訊\n${infoLines}\n\n# 問題\n${userMessage}\n\n請以 JSON 物件回覆，格式為 {"reply": "回答內容"}`
+    const prefLines = Object.entries(preferences || {}).map(([k, v]) => `${k}: ${v}`).join('\n')
+    const prompt = `${SYSTEM_PROMPT}\n\n# 學生資訊\n${infoLines}\n\n# 需求偏好\n${prefLines}\n\n# 問題\n${userMessage}\n\n請以 JSON 物件回覆，格式為 {"reply": "回答內容"}`
 
     const config = { responseMimeType: 'application/json' }
     const contents = [{ role: 'user', parts: [{ text: prompt }] }]
@@ -82,13 +90,21 @@ export default function ChatPage() {
     }
   }
 
-  if (!infoReady) {
+  if (phase === 'info') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
         <StudentInfoForm onSubmit={handleInfoSubmit} initialData={{
           department: user?.user_metadata?.department || '',
           grade: user?.user_metadata?.year || ''
         }} />
+      </div>
+    )
+  }
+
+  if (phase === 'preference') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8">
+        <PreferenceForm onSubmit={handlePrefSubmit} />
       </div>
     )
   }
