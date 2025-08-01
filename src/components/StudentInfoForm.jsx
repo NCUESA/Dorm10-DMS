@@ -24,6 +24,32 @@ const familyOptions = [
   '無以上資料但家境清寒'
 ]
 
+// 台灣縣市選項
+const countyOptions = [
+  '台北市',
+  '新北市',
+  '桃園市',
+  '台中市',
+  '台南市',
+  '高雄市',
+  '新竹縣',
+  '新竹市',
+  '苗栗縣',
+  '彰化縣',
+  '南投縣',
+  '雲林縣',
+  '嘉義縣',
+  '嘉義市',
+  '屏東縣',
+  '宜蘭縣',
+  '花蓮縣',
+  '台東縣',
+  '澎湖縣',
+  '金門縣',
+  '連江縣',
+  '其他'
+]
+
 export default function StudentInfoForm({ onSubmit, initialData }) {
   const [form, setForm] = useState({
     educationLevel: '',
@@ -33,6 +59,7 @@ export default function StudentInfoForm({ onSubmit, initialData }) {
     familyStatus: '',
     score80: '否',
     county: '',
+    customCounty: '', // 新增：當選擇「其他」時的自定義縣市輸入
     extensionSchool: '否',
     foreignStudent: '否',
     extended: '否',
@@ -55,7 +82,12 @@ export default function StudentInfoForm({ onSubmit, initialData }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit(form)
+    // 如果選擇「其他」縣市，使用自定義輸入的值
+    const finalForm = {
+      ...form,
+      county: form.county === '其他' ? form.customCounty : form.county
+    }
+    onSubmit(finalForm)
   }
 
   return (
@@ -121,7 +153,22 @@ export default function StudentInfoForm({ onSubmit, initialData }) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">戶籍地縣市</label>
-          <input name="county" value={form.county} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+          <select name="county" value={form.county} onChange={handleChange} className="w-full border rounded px-3 py-2">
+            <option value="">請選擇</option>
+            {countyOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {/* 當選擇「其他」時顯示文字輸入框 */}
+          {form.county === '其他' && (
+            <input
+              name="customCounty"
+              value={form.customCounty}
+              onChange={handleChange}
+              placeholder="請輸入您的戶籍地縣市"
+              className="w-full border rounded px-3 py-2 mt-2"
+            />
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">進修學院學生</label>
