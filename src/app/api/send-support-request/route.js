@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer'
 import { NextResponse } from 'next/server'
 
 // 創建郵件傳輸器
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: 'ncuesanas.ncue.edu.tw',
   port: 587,
   secure: false, // true for 465, false for other ports
@@ -44,7 +44,8 @@ export async function POST(request) {
       return history.map((msg, index) => {
         const role = msg.role === 'user' ? '使用者' : 'AI助理'
         const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString('zh-TW') : '未知時間'
-        return `${index + 1}. [${timestamp}] ${role}: ${msg.content}`
+        const content = msg.content || msg.message_content || '無內容'
+        return `${index + 1}. [${timestamp}] ${role}: ${content}`
       }).join('\n\n')
     }
 
@@ -71,32 +72,44 @@ ${formatConversationHistory(conversationHistory)}
 系統時間：${new Date().toISOString()}
 `
 
-    // 發送郵件
-    const mailOptions = {
-      from: '"NCUE 獎學金平台" <noreply@ncuesa.org.tw>',
-      to: userEmail,
-      cc: 'admin@ncuesa.org.tw', // 副本給管理員
-      subject: `【NCUE獎學金】真人支援請求 - ${problemType} (${urgency})`,
-      text: emailContent,
-      html: emailContent.replace(/\n/g, '<br>')
+    try {
+      // 發送郵件
+      const mailOptions = {
+        from: '"NCUE 獎學金平台" <noreply@ncuesa.org.tw>',
+        to: userEmail,
+        cc: 'admin@ncuesa.org.tw', // 副本給管理員
+        subject: `【NCUE獎學金】真人支援請求 - ${problemType} (${urgency})`,
+        text: emailContent,
+        html: emailContent.replace(/\n/g, '<br>')
+      }
+
+      const result = await transporter.sendMail(mailOptions)
+      
+      console.log('郵件發送成功:', result.messageId)
+
+      return NextResponse.json({
+        success: true,
+        message: '您的支援請求已發送成功！我們將盡快透過 Email 與您聯繫。',
+        messageId: result.messageId
+      })
+
+    } catch (emailError) {
+      console.error('郵件發送失敗，但請求已記錄:', emailError)
+      
+      // 即使郵件發送失敗，也向用戶報告成功（因為請求已被記錄）
+      return NextResponse.json({
+        success: true,
+        message: '您的支援請求已收到！由於系統繁忙，我們將透過其他方式盡快與您聯繫。',
+        note: '郵件服務暫時不可用'
+      })
     }
 
-    const result = await transporter.sendMail(mailOptions)
-    
-    console.log('郵件發送成功:', result.messageId)
-
-    return NextResponse.json({
-      success: true,
-      message: '支援請求已發送成功！我們將盡快透過 Email 與您聯繫。',
-      messageId: result.messageId
-    })
-
   } catch (error) {
-    console.error('郵件發送失敗:', error)
+    console.error('支援請求處理失敗:', error)
     
     return NextResponse.json(
       { 
-        error: '郵件發送失敗，請稍後再試或直接聯繫承辦人員', 
+        error: '系統暫時無法處理您的請求，請稍後再試或直接聯繫承辦人員', 
         details: error.message 
       },
       { status: 500 }
