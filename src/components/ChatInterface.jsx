@@ -25,25 +25,37 @@ const SYSTEM_PROMPT = `# 角色 (Persona)
 # 服務範圍限制
 你的知識範圍【嚴格限定】在「獎學金申請」相關事務。若問題無關，請禮貌地說明你的服務範圍並拒絕回答。`
 
-const ChatInterface = ({ userInfo, preferences }) => {
+const ChatInterface = () => {
   const { user } = useAuth()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [conversationHistory, setConversationHistory] = useState([])
+  const [showSupportForm, setShowSupportForm] = useState(false)
+  const [supportFormData, setSupportFormData] = useState({
+    urgency: '',
+    problemType: '',
+    description: ''
+  })
+  const [isSubmittingSupportRequest, setIsSubmittingSupportRequest] = useState(false)
   const messagesEndRef = useRef(null)
   const chatWindowRef = useRef(null)
 
-  // 自動滾動到底部
+  // 自動滾動到底部 - 僅在新訊息時觸發
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      setTimeout(() => {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      }, 100) // 給一點延遲確保DOM已更新
     }
   }
 
+  // 僅在有新訊息時滾動，避免初始載入時的滾動
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (messages.length > 0) {
+      scrollToBottom()
+    }
+  }, [messages.length]) // 改為監聽 messages.length 而不是 messages
 
   // 載入歷史對話
   useEffect(() => {
@@ -88,58 +100,33 @@ const ChatInterface = ({ userInfo, preferences }) => {
     setIsLoading(true)
 
     try {
-      // 構建包含學生信息的 prompt
-      const userInfoText = userInfo ? Object.entries(userInfo)
-        .filter(([key, value]) => value && value !== '')
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n') : ''
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          history: conversationHistory
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response')
+      }
+
+      const aiResponse = await response.json()
       
-      const preferencesText = preferences ? Object.entries(preferences)
-        .filter(([key, value]) => value && value !== '')
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n') : ''
-
-      const historyText = conversationHistory
-        .map(msg => `${msg.role}: ${msg.message_content}`)
-        .join('\n')
-
-      const fullPrompt = `${SYSTEM_PROMPT}
-
-# 學生資訊
-${userInfoText}
-
-# 需求偏好  
-${preferencesText}
-
-# 對話歷史
-${historyText}
-user: ${userMessage.content}
-
-請根據上述資訊回答使用者的問題。`
-
-      // 模擬 AI 回應 - 在實際應用中這裡會調用真正的 AI API
-      setTimeout(() => {
-        const aiResponse = {
-          role: 'model',
-          content: `感謝您的提問！
-
-根據您提供的個人資訊：
-- 戶籍地：${userInfo?.county || '未提供'}
-- 學制：${userInfo?.educationLevel || '未提供'}
-- 系所：${userInfo?.department || '未提供'}
-- 年級：${userInfo?.grade || '未提供'}
-
-關於您的問題「${userMessage.content}」，我正在為您查找相關的獎學金資訊。
-
-**請注意**：目前系統還在開發中，實際的 AI 功能將會連接到完整的獎學金資料庫，為您提供更精確的建議。
-
-<div class="ai-disclaimer">此為 AI 依據您的個人條件生成的建議內容，實際申請前請務必確認最新的申請條件和截止日期。</div>`,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, aiResponse])
-        setConversationHistory(prev => [...prev, { role: 'model', message_content: aiResponse.content }])
-        setIsLoading(false)
-      }, 1500)
+      setMessages(prev => [...prev, {
+        role: aiResponse.role,
+        content: aiResponse.content,
+        timestamp: new Date(aiResponse.timestamp)
+      }])
+      
+      setConversationHistory(prev => [...prev, { 
+        role: aiResponse.role, 
+        message_content: aiResponse.content 
+      }])
 
     } catch (error) {
       console.error('Error sending message:', error)
@@ -149,6 +136,8 @@ user: ${userMessage.content}
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorResponse])
+      setConversationHistory(prev => [...prev, { role: 'model', message_content: errorResponse.content }])
+    } finally {
       setIsLoading(false)
     }
   }
@@ -162,8 +151,59 @@ user: ${userMessage.content}
   }
 
   const requestHumanSupport = () => {
-    // 模擬人工支援請求
-    alert('您的請求已發送給獎學金承辦人員，我們將會盡快以 Email 與您取得聯繫。')
+    setShowSupportForm(true)
+  }
+
+  // 處理支援表單資料變更
+  const handleSupportFormChange = (field, value) => {
+    setSupportFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  // 提交支援請求
+  const submitSupportRequest = async (e) => {
+    e.preventDefault()
+    
+    if (!supportFormData.urgency || !supportFormData.problemType || !supportFormData.description.trim()) {
+      alert('請填寫所有必要欄位')
+      return
+    }
+
+    setIsSubmittingSupportRequest(true)
+
+    try {
+      const response = await fetch('/api/send-support-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: user?.email,
+          userName: user?.profile?.name || user?.email?.split('@')[0],
+          urgency: supportFormData.urgency,
+          problemType: supportFormData.problemType,
+          description: supportFormData.description,
+          conversationHistory: conversationHistory
+        })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        alert(result.message || '您的支援請求已送出！我們將盡快透過 Email 與您聯繫。')
+        setShowSupportForm(false)
+        setSupportFormData({ urgency: '', problemType: '', description: '' })
+      } else {
+        throw new Error(result.error || '發送失敗')
+      }
+    } catch (error) {
+      console.error('支援請求發送失敗:', error)
+      alert(`支援請求發送失敗: ${error.message}。請稍後再試或直接聯繫承辦人員。`)
+    } finally {
+      setIsSubmittingSupportRequest(false)
+    }
   }
 
   const renderMessage = (message, index) => {
@@ -239,14 +279,32 @@ user: ${userMessage.content}
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Chat Container */}
-      <div className="relative flex flex-col flex-grow bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden m-4">
+    <div className="min-h-screen bg-gray-50 py-24 px-4">
+      {/* Chat Container - 固定高度但允許頁面滾動 */}
+      <div className="w-full max-w-4xl mx-auto h-[calc(100vh-12rem)] bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden flex flex-col">
         
-        {/* Chat Messages */}
+        {/* Chat Header - Sticky */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-800 flex-shrink-0 sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <img src="/logo.png" alt="AI Assistant" className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-white font-semibold text-lg">NCUE 獎學金 AI 助理</h1>
+              <p className="text-blue-100 text-sm">為您提供獎學金申請諮詢服務</p>
+            </div>
+          </div>
+          
+          {/* User Info */}
+          <div className="text-right text-white">
+            <div className="text-sm opacity-90">Hi, {user?.profile?.name || user?.email || '使用者'}</div>
+          </div>
+        </div>
+        
+        {/* Chat Messages - 內部滾動區域 */}
         <div 
           ref={chatWindowRef}
-          className="flex-grow overflow-y-auto p-5 pb-36"
+          className="flex-grow overflow-y-auto p-6 space-y-4 scrollbar-hide"
         >
           {messages.map((message, index) => renderMessage(message, index))}
           
@@ -273,9 +331,9 @@ user: ${userMessage.content}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none">
-          <div className="relative rounded-full p-0.5 bg-gradient-to-r from-purple-500 via-blue-500 via-teal-500 via-yellow-500 to-red-500 animate-gradient-flow pointer-events-auto">
+        {/* Input Area - 固定底部 */}
+        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+          <div className="relative rounded-full p-0.5 bg-gradient-to-r from-purple-500 via-blue-500 via-teal-500 via-yellow-500 to-red-500 animate-gradient-flow">
             <form onSubmit={handleSubmit} className="relative z-10 flex items-center bg-white rounded-full py-2 px-5 shadow-lg">
               <input
                 type="text"
@@ -307,41 +365,139 @@ user: ${userMessage.content}
                 title="發送"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
                 </svg>
               </button>
             </form>
           </div>
         </div>
 
-        {/* Support Button */}
+        {/* Support Button - 固定在聊天容器內 */}
         {messages.length > 1 && (
-          <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-            <button
-              className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
-              onClick={requestHumanSupport}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              AI 無法解決？尋求真人支援
-            </button>
+          <div className="relative">
+            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
+              <button
+                className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
+                onClick={requestHumanSupport}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                需要專人協助？申請真人支援
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Custom CSS for gradient animation */}
-      <style jsx>{`
-        @keyframes gradient-flow {
-          0% { background-position: 400% 0; }
-          100% { background-position: 0% 0; }
-        }
-        
-        .animate-gradient-flow {
-          background-size: 400%;
-          animation: gradient-flow 10s linear infinite;
-        }
-      `}</style>
+      {/* Support Form Modal */}
+      {showSupportForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">申請真人支援</h3>
+                <button
+                  onClick={() => setShowSupportForm(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={isSubmittingSupportRequest}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                請提供以下資訊，我們將安排專人為您服務。您的對話記錄將一併提供給承辦人員參考。
+              </p>
+              
+              <form className="space-y-4" onSubmit={submitSupportRequest}>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    緊急程度 <span className="text-red-500">*</span>
+                  </label>
+                  <select 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={supportFormData.urgency}
+                    onChange={(e) => handleSupportFormChange('urgency', e.target.value)}
+                    disabled={isSubmittingSupportRequest}
+                    required
+                  >
+                    <option value="">請選擇</option>
+                    <option value="緊急 (24小時內回覆)">緊急 (24小時內回覆)</option>
+                    <option value="一般 (3個工作天內回覆)">一般 (3個工作天內回覆)</option>
+                    <option value="不急 (一週內回覆)">不急 (一週內回覆)</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    問題類型 <span className="text-red-500">*</span>
+                  </label>
+                  <select 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={supportFormData.problemType}
+                    onChange={(e) => handleSupportFormChange('problemType', e.target.value)}
+                    disabled={isSubmittingSupportRequest}
+                    required
+                  >
+                    <option value="">請選擇</option>
+                    <option value="申請流程問題">申請流程問題</option>
+                    <option value="申請資格問題">申請資格問題</option>
+                    <option value="文件準備問題">文件準備問題</option>
+                    <option value="申請狀態查詢">申請狀態查詢</option>
+                    <option value="其他問題">其他問題</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    問題描述 <span className="text-red-500">*</span>
+                  </label>
+                  <textarea 
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="請詳細描述您遇到的問題..."
+                    value={supportFormData.description}
+                    onChange={(e) => handleSupportFormChange('description', e.target.value)}
+                    disabled={isSubmittingSupportRequest}
+                    required
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowSupportForm(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmittingSupportRequest}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    disabled={isSubmittingSupportRequest}
+                  >
+                    {isSubmittingSupportRequest ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        發送中...
+                      </>
+                    ) : (
+                      '送出請求'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

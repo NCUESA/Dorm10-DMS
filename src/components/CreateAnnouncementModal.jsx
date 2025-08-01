@@ -798,16 +798,16 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             )}
             
             <div
-                className={`fixed inset-0 bg-black/60 z-50 flex justify-center items-center px-4 pt-20 pb-8 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+                className={`fixed inset-0 bg-black/60 z-50 flex justify-center items-start px-4 pt-24 pb-8 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
                 onClick={handleClose}
                 aria-modal="true"
                 role="dialog"
             >
             <div
-                className={`bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
+                className={`bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl h-[calc(100vh-8rem)] flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
+                <div className="p-5 border-b flex justify-between items-center flex-shrink-0 bg-gray-50 sticky top-0 z-20">
                     <h2 className="text-lg font-bold text-gray-800" id="modal-title">
                         {isEditMode ? '編輯獎學金公告' : '新增獎學金公告'}
                     </h2>
@@ -820,9 +820,18 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                         }
                     `}</style>
                     {isLoading && (
-                        <div className="absolute inset-0 bg-white/70 z-10 flex flex-col items-center justify-center rounded-lg">
-                            <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            <p className="mt-4 text-indigo-700 font-semibold">{loadingText}</p>
+                        <div className="absolute inset-0 bg-white/90 z-30 flex flex-col items-center justify-center">
+                            <div className="bg-white rounded-xl p-6 shadow-2xl border max-w-xs w-full text-center">
+                                <svg className="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <h3 className="text-base font-semibold text-gray-900 mb-2">處理中</h3>
+                                <p className="text-indigo-700 font-medium text-sm leading-relaxed">{loadingText}</p>
+                                <div className="mt-3 text-xs text-gray-500">
+                                    請稍候，這可能需要幾分鐘時間
+                                </div>
+                            </div>
                         </div>
                     )}
                     <Stepper currentStep={currentStep} />
