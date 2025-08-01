@@ -37,17 +37,17 @@ body {
 	right: 0;
 	z-index: 1000;
 	height: var(--header-height);
-	
-	background: rgba(255, 255, 255, 0.85); 
+
+	background: rgba(255, 255, 255, 0.85);
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
-	
+
 	border-bottom: 1px solid rgba(0, 0, 0, 0.07);
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-	transition: background-color var(--transition-speed) ease-in-out, 
-        box-shadow var(--transition-speed) ease-in-out,
-        border-color var(--transition-speed) ease-in-out,
+	transition: background-color var(--transition-speed) ease-in-out,
+		box-shadow var(--transition-speed) ease-in-out,
+		border-color var(--transition-speed) ease-in-out,
 		transform var(--transition-speed) ease-in-out,
 		opacity var(--transition-speed) ease-in-out;
 }
@@ -258,6 +258,7 @@ body {
 	width: 100%;
 }
 
+/* 註冊頁面樣式 */
 @keyframes move-particle {
 	0% {
 		transform: translate(0, 0);
@@ -299,4 +300,33 @@ body {
 .login-link-hover:hover {
 	background-position: 0%;
 	transform: translateX(2px);
+}
+
+/* 登入頁面動畫樣式 */
+
+@keyframes move-particle {
+	0% {
+		transform: translate(0, 0) scale(1);
+		opacity: 0.3;
+	}
+
+	25% {
+		transform: translate(var(--x-end), var(--y-end)) scale(1.2);
+		opacity: 0.8;
+	}
+
+	50% {
+		transform: translate(var(--x-start), var(--y-start)) scale(1);
+		opacity: 0.5;
+	}
+
+	75% {
+		transform: translate(var(--x-end-2), var(--y-end-2)) scale(1.2);
+		opacity: 0.8;
+	}
+
+	100% {
+		transform: translate(0, 0) scale(1);
+		opacity: 0.3;
+	}
 }

@@ -1,256 +1,219 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import Button from "@/components/ui/Button";
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import Toast from '@/components/ui/Toast';
 
 function LoginContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { signIn, resetPassword, isAuthenticated, loading } = useAuth();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const { signIn, isAuthenticated, loading } = useAuth();
 
-  useEffect(() => {
-    // 檢查是否已經登入
-    if (!loading && isAuthenticated) {
-      // 如果有redirect參數，則重定向到該頁面，否則重定向到個人資料頁面
-      const redirectTo = searchParams.get('redirect') || '/profile';
-      router.push(redirectTo);
-    }
-  }, [isAuthenticated, loading, router, searchParams]);
+	const [formData, setFormData] = useState({ email: "", password: "" });
+	const [errors, setErrors] = useState({});
+	const [showPassword, setShowPassword] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // 清除對應的錯誤
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
-    }
-    // 清除訊息
-    if (message) {
-      setMessage("");
-    }
-  };
+	const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+	const showToast = (message, type = 'success') => setToast({ show: true, message, type });
+	const hideToast = () => setToast(prev => ({ ...prev, show: false }));
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = "請輸入電子郵件";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "請輸入有效的電子郵件格式";
-    }
-    
-    if (!formData.password) {
-      newErrors.password = "請輸入密碼";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "密碼至少需要6個字符";
-    }
-    
-    return newErrors;
-  };
+	// 登入頁面動畫計算
+	const particles = useMemo(() => {
+		const colorClasses = ['bg-indigo-500', 'bg-violet-600', 'bg-sky-500'];
+		return [...Array(12)].map((_, i) => ({
+			id: i,
+			size: Math.floor(Math.random() * (220 - 100 + 1) + 100),
+			color: colorClasses[Math.floor(Math.random() * colorClasses.length)],
+			top: `${Math.random() * 100}%`,
+			left: `${Math.random() * 100}%`,
+			animationDuration: `${25 + Math.random() * 20}s`,
+			xStart: `${Math.random() * 20 - 10}vw`,
+			yStart: `${Math.random() * 20 - 10}vh`,
+			xEnd: `${Math.random() * 40 - 20}vw`,
+			yEnd: `${Math.random() * 40 - 20}vh`,
+			xEnd2: `${Math.random() * 40 - 20}vw`,
+			yEnd2: `${Math.random() * 40 - 20}vh`,
+		}));
+	}, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = validateForm();
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    
-    setIsLoading(true);
-    setErrors({});
-    setMessage("");
-    
-    try {
-      const result = await signIn(formData.email, formData.password);
-      
-      if (result.success) {
-        setMessage("登入成功！正在重定向...");
-        setTimeout(() => {
-          // 如果有redirect參數，則重定向到該頁面，否則重定向到個人資料頁面
-          const redirectTo = searchParams.get('redirect') || '/profile';
-          router.push(redirectTo);
-        }, 1000);
-      } else {
-        setErrors({ submit: result.error });
-      }
-      
-    } catch (error) {
-      setErrors({ submit: "登入失敗，請檢查您的網路連線" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+	useEffect(() => {
+		if (!loading && isAuthenticated) {
+			const redirectTo = searchParams.get('redirect') || '/profile';
+			router.push(redirectTo);
+		}
+	}, [isAuthenticated, loading, router, searchParams]);
 
-  return (
-    <div className=" flex items-start justify-center py-4 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--background)' }}>
-      <div className="max-w-sm md:max-w-lg lg:max-w-xl w-full">
-        {/* Logo 和標題 */}
-        <div className="text-center mb-4">
-          <div className="flex justify-center mb-2">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" style={{ color: 'var(--primary)' }} fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--text)' }}>
-            登入您的帳號
-          </h2>
-          <p className="mt-1 text-sm sm:text-base" style={{ color: 'var(--text-muted)' }}>
-            歡迎回到 NCUE 獎助學金資訊平台
-          </p>
-        </div>
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setFormData(prev => ({ ...prev, [name]: value }));
+		if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+	};
 
-        {/* 登錄表單 */}
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {errors.submit && (
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#fee', color: 'var(--error)', border: '1px solid var(--error)' }}>
-                {errors.submit}
-              </div>
-            )}
+	const validateForm = () => {
+		const newErrors = {};
+		if (!formData.email.trim()) newErrors.email = "請輸入電子郵件地址";
+		else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "請輸入有效的電子郵件格式";
+		if (!formData.password) newErrors.password = "請輸入密碼";
+		return newErrors;
+	};
 
-            {message && (
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#e8f5e8', color: '#2d5f2d', border: '1px solid #4caf50' }}>
-                {message}
-              </div>
-            )}
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		const formErrors = validateForm();
+		if (Object.keys(formErrors).length > 0) {
+			setErrors(formErrors);
+			return;
+		}
 
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                電子郵件
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="input-field"
-                placeholder="請輸入您的電子郵件"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && (
-                <p className="form-error">{errors.email}</p>
-              )}
-            </div>
+		setIsSubmitting(true);
+		setErrors({});
 
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
-                密碼
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="input-field"
-                placeholder="請輸入您的密碼"
-                value={formData.password}
-                onChange={handleChange}
-              />
-              {errors.password && (
-                <p className="form-error">{errors.password}</p>
-              )}
-            </div>
+		try {
+			const result = await signIn(formData.email, formData.password);
+			if (result.success) {
+				showToast("登入成功！正在將您導向頁面...", 'success');
+				const redirectTo = searchParams.get('redirect') || '/';
+				router.push(redirectTo);
+			} else {
+				const errorMessage = result.error || "電子郵件或密碼不正確。";
+				showToast(errorMessage, 'error');
+			}
+		} catch (err) {
+			const errorMessage = "發生無法預期的錯誤，請稍後再試。";
+			showToast(errorMessage, 'error');
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300"
-                  style={{ accentColor: 'var(--primary)' }}
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm" style={{ color: 'var(--text)' }}>
-                  記住我
-                </label>
-              </div>
+	return (
+		<>
+			<Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
+			<div className="flex w-full max-w-5xl my-16 sm:my-24 mx-auto overflow-hidden rounded-2xl shadow-2xl bg-white/70 backdrop-blur-xl border border-gray-200/50">
 
-              <Link
-                href="/forgot-password"
-                className="text-sm underline-extend"
-                style={{ color: 'var(--primary)' }}
-              >
-                忘記密碼？
-              </Link>
-            </div>
+				<div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
+					<div className="absolute inset-0 h-full w-full overflow-hidden">
+						{particles.map((p) => (
+							<div
+								key={p.id}
+								className={`absolute rounded-full filter blur-3xl opacity-30 ${p.color}`}
+								style={{
+									width: `${p.size}px`,
+									height: `${p.size}px`,
+									top: p.top,
+									left: p.left,
+									animation: `move-particle ${p.animationDuration} ease-in-out infinite`,
+									'--x-start': p.xStart,
+									'--y-start': p.yStart,
+									'--x-end': p.xEnd,
+									'--y-end': p.yEnd,
+									'--x-end-2': p.xEnd2,
+									'--y-end-2': p.yEnd2,
+								}}
+							/>
+						))}
+					</div>
+					<div className="relative flex h-full flex-col justify-center p-16 text-left text-white z-10">
+						<div className="max-w-lg">
+							<h2 className="text-3xl font-bold leading-tight tracking-tight">
+								Empowering Your Journey
+							</h2>
+							<p className="mt-6 text-lg text-slate-200">
+								立即登入，與 AI 獎學金助理開始對話。我們整合全網資訊與所有校內公告，為您提供最精準的解答 !
+							</p>
+						</div>
+					</div>
+				</div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isLoading}
-              loading={isLoading}
-              className="w-full"
-            >
-              {isLoading ? "登錄中..." : "登入"}
-            </Button>
-          </form>
+				{/* --- 右側登入表單區 --- */}
+				<div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-10 lg:px-16">
+					<div className="mx-auto w-full max-w-md">
+						<div>
+							<h2 className="text-3xl font-bold leading-9 tracking-tight text-gray-900">登入您的帳號</h2>
+							<p className="mt-2 text-sm leading-6 text-gray-500">
+								還沒有帳號嗎？{' '}
+								<Link href="/register" className="font-semibold text-indigo-600 login-link-hover">
+									立即註冊
+								</Link>
+							</p>
+						</div>
+						<div className="mt-10">
+							<form onSubmit={handleSubmit} className="space-y-6">
+								<div>
+									<label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">電子郵件</label>
+									<div className="mt-2 relative">
+										<Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+										<input id="email" name="email" type="email" autoComplete="email" required placeholder="example@mail.com" value={formData.email} onChange={handleChange}
+											className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ${errors.email ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all`}
+										/>
+									</div>
+									{errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
+								</div>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" style={{ borderColor: 'var(--border)' }} />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white" style={{ color: 'var(--text-muted)' }}>
-                  或
-                </span>
-              </div>
-            </div>
+								<div>
+									<label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">密碼</label>
+									<div className="mt-2 relative">
+										<Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+										<input id="password" name="password" required type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="請輸入您的密碼" value={formData.password} onChange={handleChange}
+											className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${errors.password ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all`}
+										/>
+										<button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+											{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+										</button>
+									</div>
+									{errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
+								</div>
 
-            <div className="mt-3 sm:mt-6">
-              <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                還沒有帳號？{' '}
-                <Link
-                  href="/register"
-                  className="font-medium underline-extend"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  立即註冊
-                </Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+								<div className="flex items-center justify-between">
+									<div className="flex items-center">
+										<input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+										<label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-gray-900">記住我</label>
+									</div>
+									<div className="text-sm">
+										<Link href="/forgot-password" className="font-semibold text-indigo-600 login-link-hover">
+											忘記密碼？
+										</Link>
+									</div>
+								</div>
+
+								<div>
+									{/* ** MODIFIED: Button style updated to match the registration page ** */}
+									<button type="submit" disabled={isSubmitting || loading}
+										className={`
+											flex w-full justify-center rounded-md px-3 py-2.5 text-sm font-semibold leading-6
+											border border-indigo-600 bg-transparent text-indigo-600
+											transition-all duration-300 ease-in-out
+											hover:bg-indigo-600 hover:text-white hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/40
+											focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600
+											disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none
+										`}>
+										{isSubmitting || loading ? <Loader2 className="animate-spin" /> : '登入'}
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</>
+	);
 }
 
 export default function Login() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-md text-center">
-          <div className="mb-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-          <p className="text-gray-600">載入中...</p>
-        </div>
-      </div>
-    }>
-      <LoginContent />
-    </Suspense>
-  );
+	return (
+		<Suspense fallback={
+			<div className="w-full flex items-center justify-center p-4">
+				<div className="text-center">
+					<Loader2 className="h-12 w-12 text-indigo-600 animate-spin mx-auto" />
+					<p className="text-gray-600 mt-4">正在載入登入頁面...</p>
+				</div>
+			</div>
+		}>
+			<LoginContent />
+		</Suspense>
+	);
 }
