@@ -333,18 +333,26 @@ body {
 
 /* 隱藏滾動條樣式 */
 .scrollbar-hide {
-	scrollbar-width: none; /* Firefox */
-	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none;
+	/* Firefox */
+	-ms-overflow-style: none;
+	/* IE and Edge */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-	display: none; /* Chrome, Safari, Opera */
+	display: none;
+	/* Chrome, Safari, Opera */
 }
 
 /* 漸變動畫效果 */
 @keyframes gradient-flow {
-	0% { background-position: 400% 0; }
-	100% { background-position: 0% 0; }
+	0% {
+		background-position: 400% 0;
+	}
+
+	100% {
+		background-position: 0% 0;
+	}
 }
 
 .animate-gradient-flow {

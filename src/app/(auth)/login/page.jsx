@@ -25,7 +25,7 @@ function LoginContent() {
 
 	// 登入頁面動畫計算
 	const particles = useMemo(() => {
-		const colorClasses = ['bg-indigo-500', 'bg-violet-600', 'bg-sky-500'];
+		const colorClasses = ['bg-blue-700', 'bg-teal-500', 'bg-cyan-400'];
 		return [...Array(12)].map((_, i) => ({
 			id: i,
 			size: Math.floor(Math.random() * (220 - 100 + 1) + 100),
@@ -87,7 +87,7 @@ function LoginContent() {
 		try {
 			const result = await signIn(formData.email, formData.password);
 			if (result.success) {
-				// 處理記住我功能
+				// 記錄登入狀態功能
 				if (rememberMe) {
 					storage.set('rememberedEmail', formData.email);
 					storage.set('shouldRememberUser', true);
@@ -95,7 +95,7 @@ function LoginContent() {
 					storage.remove('rememberedEmail');
 					storage.remove('shouldRememberUser');
 				}
-				
+
 				showToast("登入成功！正在將您導向頁面...", 'success');
 				const redirectTo = searchParams.get('redirect') || '/';
 				router.push(redirectTo);
@@ -191,15 +191,15 @@ function LoginContent() {
 
 								<div className="flex items-center justify-between">
 									<div className="flex items-center">
-										<input 
-											id="remember-me" 
-											name="remember-me" 
-											type="checkbox" 
+										<input
+											id="remember-me"
+											name="remember-me"
+											type="checkbox"
 											checked={rememberMe}
 											onChange={(e) => setRememberMe(e.target.checked)}
-											className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" 
+											className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
 										/>
-										<label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-gray-900">記住我</label>
+										<label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-gray-900">紀錄登入狀態</label>
 									</div>
 									<div className="text-sm">
 										<Link href="/forgot-password" className="font-semibold text-indigo-600 login-link-hover">
@@ -209,7 +209,6 @@ function LoginContent() {
 								</div>
 
 								<div>
-									{/* ** MODIFIED: Button style updated to match the registration page ** */}
 									<button type="submit" disabled={isSubmitting || loading}
 										className={`
 											flex w-full justify-center rounded-md px-3 py-2.5 text-sm font-semibold leading-6
