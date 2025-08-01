@@ -84,7 +84,7 @@ export default function Register() {
 		const { name, value } = e.target;
 		setFormData(prev => ({ ...prev, [name]: value }));
 		if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
-		if (errors.submit) setErrors(prev => ({...prev, submit: ""}));
+		if (errors.submit) setErrors(prev => ({ ...prev, submit: "" }));
 	};
 
 	const calculatePasswordStrength = (password) => {
@@ -102,7 +102,7 @@ export default function Register() {
 		const finalScore = Math.max(0, Math.min(Math.floor(score / 1.5), 4));
 		return { score: finalScore };
 	};
-	
+
 	const validateForm = () => {
 		const newErrors = {};
 		if (!formData.username.trim()) newErrors.username = "請提供您的姓名";
@@ -119,7 +119,7 @@ export default function Register() {
 		}
 		return newErrors;
 	};
-	
+
 	// ** MODIFIED: The main logic is corrected here for robust error handling **
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -132,38 +132,38 @@ export default function Register() {
 		}
 
 		setIsSubmitting(true);
-                try {
-                        // 步驟 1: 透過後端 API 檢查學號與 Email 是否重複
-                        const res = await fetch('/api/check-duplicate', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: formData.email, student_id: formData.student_id })
-                        });
+		try {
+			// 步驟 1: 透過後端 API 檢查學號與 Email 是否重複
+			const res = await fetch('/api/check-duplicate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: formData.email, student_id: formData.student_id })
+			});
 
-                        if (!res.ok) {
-                                throw new Error('Email重複');
-                        }
+			if (!res.ok) {
+				throw new Error('Email重複');
+			}
 
-                        const { emailExists, studentIdExists } = await res.json();
+			const { emailExists, studentIdExists } = await res.json();
 
-                        if (studentIdExists) {
-                                setErrors({ student_id: '此學號已被註冊，請檢查或直接登入。' });
-                                showToast('此學號已被註冊，請檢查或直接登入。', 'error');
-                                setIsSubmitting(false);
-                                return;
-                        }
+			if (studentIdExists) {
+				setErrors({ student_id: '此學號已被註冊，請檢查或直接登入。' });
+				showToast('此學號已被註冊，請檢查或直接登入。', 'error');
+				setIsSubmitting(false);
+				return;
+			}
 
-                        if (emailExists) {
-                                setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
-                                showToast('此電子郵件已被註冊，請直接登入。', 'error');
-                                setIsSubmitting(false);
-                                return;
-                        }
+			if (emailExists) {
+				setErrors({ email: '此電子郵件已被註冊，請直接登入。' });
+				showToast('此電子郵件已被註冊，請直接登入。', 'error');
+				setIsSubmitting(false);
+				return;
+			}
 
 			// 步驟 3: 呼叫 signUp 並直接處理其回傳結果
 			const result = await signUp(
-				formData.email, 
-				formData.password, 
+				formData.email,
+				formData.password,
 				{ name: formData.username, student_id: formData.student_id }
 			);
 
@@ -204,10 +204,10 @@ export default function Register() {
 						<div className="relative flex h-full flex-col justify-center p-16 text-left text-white">
 							<div className="max-w-lg">
 								<h2 className="text-3xl font-bold leading-tight tracking-tight">
-									Complexity,<br/>Simplified.<br/> Potential,<br/>Amplified.
+									Complexity,<br />Simplified.<br /> Potential,<br />Amplified.
 								</h2>
 								<p className="mt-6 text-lg text-slate-200">
-									新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為無縫的數位體驗 !
+									新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為流暢的數位體驗，助您事半功倍 !
 								</p>
 							</div>
 						</div>
@@ -239,7 +239,18 @@ export default function Register() {
 									<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
 
 									<div>
-										<button type="submit" disabled={isSubmitting || loading} className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">
+										<button
+											type="submit"
+											disabled={isSubmitting || loading}
+											className={`
+												flex w-full justify-center rounded-md px-3 py-2.5 text-sm font-semibold leading-6
+												border border-indigo-600 bg-transparent text-indigo-600
+												transition-all duration-300 ease-in-out
+												hover:bg-indigo-600 hover:text-white hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/40
+												focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600
+												disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none
+											`}
+										>
 											{isSubmitting || loading ? '處理中...' : '同意並註冊帳號'}
 										</button>
 									</div>

@@ -1,141 +1,268 @@
-import { useEffect, useState } from 'react';
+"use client";
+
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import Button from '@/components/ui/Button';
+import { Search, X, ChevronsUpDown, ArrowUp, ArrowDown, Link as LinkIcon, Paperclip } from 'lucide-react';
 import ButtonGroup from '@/components/ui/ButtonGroup';
+import Button from '@/components/ui/Button';
 
+// --- Helper Functions ---
+const categoryStyles = {
+    A: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' },
+    B: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300' },
+    C: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+    D: { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
+    E: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
+    default: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' },
+};
+const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
+
+const calculateSemester = (deadlineStr) => {
+    if (!deadlineStr) return 'N/A';
+    const deadline = new Date(deadlineStr);
+    const year = deadline.getFullYear();
+    const month = deadline.getMonth() + 1; // getMonth() is 0-indexed
+    
+    let academicYear;
+    let semester;
+
+    if (month >= 8 || month === 1) { // Aug-Jan is 1st semester
+        semester = 1;
+        academicYear = month === 1 ? year - 1912 : year - 1911;
+    } else { // Feb-Jul is 2nd semester
+        semester = 2;
+        academicYear = year - 1911;
+    }
+    
+    return `${academicYear}-${semester}`;
+};
+
+
+// --- Main Component ---
 export default function AnnouncementList() {
-  const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('open');
-  const [search, setSearch] = useState('');
+    const searchParams = useSearchParams();
+    
+    const [announcements, setAnnouncements] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('open');
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
+    const [sort, setSort] = useState({ column: 'application_deadline', ascending: true });
+    
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+    const announcementRefs = useRef({});
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*, attachments(*)')
-        .eq('is_active', true)
-        .order('application_deadline', { ascending: true });
-      if (!error) {
-        setAnnouncements(data || []);
-      }
-      setLoading(false);
+    const fetchAnnouncements = useCallback(async () => {
+        setLoading(true);
+        let query = supabase
+            .from('announcements')
+            .select('*, attachments(*)', { count: 'exact' });
+
+        if (search) {
+            query = query.or(`title.ilike.%${search}%,target_audience.ilike.%${search}%,application_limitations.ilike.%${search}%`);
+        }
+        
+        const today = new Date().toISOString().slice(0, 10);
+        if (filter === 'open') {
+            query = query.gte('application_deadline', today);
+        } else if (filter === 'expired') {
+            query = query.lt('application_deadline', today);
+        }
+        
+        query = query.order(sort.column, { ascending: sort.ascending });
+
+        const from = (page - 1) * rowsPerPage;
+        const to = from + rowsPerPage - 1;
+        query = query.range(from, to);
+
+        const { data, error, count } = await query;
+
+        if (!error) {
+            setAnnouncements(data || []);
+            setTotalCount(count || 0);
+        } else {
+            console.error("Error fetching announcements:", error);
+        }
+        setLoading(false);
+    }, [search, filter, page, rowsPerPage, sort]);
+
+    useEffect(() => {
+        fetchAnnouncements();
+    }, [fetchAnnouncements]);
+    
+    useEffect(() => {
+        const announcementId = searchParams.get('announcement_id');
+        if (announcementId && announcements.length > 0) {
+            const target = announcements.find(a => a.id === announcementId);
+            if (target) {
+                setSelectedAnnouncement(target);
+                setTimeout(() => {
+                    announcementRefs.current[announcementId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+        }
+    }, [searchParams, announcements]);
+    
+    const handleSort = (column) => {
+        setSort(prev => ({ column, ascending: prev.column === column ? !prev.ascending : true }));
     };
-    load();
-  }, []);
 
-  const filtered = announcements
-    .filter(a => a.title.toLowerCase().includes(search.toLowerCase()))
-    .filter(a => {
-      const deadline = a.application_deadline ? new Date(a.application_deadline) : null;
-      if (filter === 'open') {
-        return !deadline || deadline >= new Date();
-      }
-      if (filter === 'expired') {
-        return deadline && deadline < new Date();
-      }
-      return true;
-    });
-
-  const categoryColor = cat => {
-    const map = {
-      A: 'bg-red-500',
-      B: 'bg-orange-500',
-      C: 'bg-blue-500',
-      D: 'bg-yellow-500',
-      E: 'bg-green-500',
+    const renderSortIcon = (column) => {
+        if (sort.column !== column) return <ChevronsUpDown className="h-4 w-4 ml-1 text-gray-400" />;
+        return sort.ascending ? <ArrowUp className="h-4 w-4 ml-1 text-indigo-600" /> : <ArrowDown className="h-4 w-4 ml-1 text-indigo-600" />;
     };
-    return map[cat] || 'bg-gray-500';
-  };
 
-  const getPublicUrl = (path) => {
-    const { data } = supabase.storage.from('attachments').getPublicUrl(path)
-    return data.publicUrl
-  }
-
-  return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
-        <div className="relative w-full sm:w-1/3 mb-4 sm:mb-0 sm:mr-4">
-          <input
-            type="text"
-            placeholder="搜尋公告標題、摘要…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <svg className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
-        </div>
-        <ButtonGroup connected={false}>
-          <Button 
-            variant={filter === 'open' ? 'primary' : 'ghost'} 
-            size="sm"
-            onClick={() => setFilter('open')}
-          >
-            開放申請中
-          </Button>
-          <Button 
-            variant={filter === 'all' ? 'primary' : 'ghost'} 
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            全部
-          </Button>
-          <Button 
-            variant={filter === 'expired' ? 'primary' : 'ghost'} 
-            size="sm"
-            onClick={() => setFilter('expired')}
-          >
-            已過期
-          </Button>
-        </ButtonGroup>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden divide-y divide-gray-200">
-        {loading ? (
-          <div className="p-4 text-center text-gray-500">載入中...</div>
-        ) : (
-          filtered.map(item => (
-            <div key={item.id} className="p-4 sm:p-6 hover:bg-gray-50 transition duration-150 ease-in-out cursor-pointer">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                <div className="md:col-span-3">
-                  <div className="flex items-start space-x-4 mb-2">
-                    <span className={`flex-shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full text-white text-sm font-bold ${categoryColor(item.category)}`}>{item.category}</span>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-900">{item.title}</h3>
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.summary}</p>
-                      {item.attachments && item.attachments.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {item.attachments.map(att => (
-                            <a
-                              key={att.id}
-                              href={att.public_url || getPublicUrl(att.stored_file_path)}
-                              target="_blank"
-                              className="text-blue-600 underline text-xs"
-                            >
-                              {att.file_name}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="hidden md:flex justify-end">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-200 text-gray-700 text-sm font-bold">N</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-red-500 text-lg">
-                    {item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('zh-TW') : '-'}
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">{item.application_method || ''}</div>
-                </div>
-              </div>
+    return (
+        <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
+                 <h2 className="text-xl font-bold text-slate-800 mb-4">獎助學金代碼定義</h2>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-slate-600">
+                    <p><strong className="font-semibold text-red-600">A：</strong>各縣市政府獎助學金</p>
+                    <p><strong className="font-semibold text-orange-600">B：</strong>縣市政府以外之各級公家機關及公營單位獎助學金</p>
+                    <p><strong className="font-semibold text-blue-600">C：</strong>宗教及民間各項指定身分獎助學金</p>
+                    <p><strong className="font-semibold text-emerald-600">D：</strong>各民間單位（經濟不利、學業優良等）</p>
+                    <p><strong className="font-semibold text-green-600">E：</strong>獎學金得獎名單公告</p>
+                 </div>
             </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
+
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <div className="relative w-full sm:max-w-xs">
+                    <Search className="h-5 w-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input type="text" placeholder="搜尋公告標題、摘要…" value={search} onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 text-gray-800 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                    />
+                </div>
+                <ButtonGroup>
+                    <Button variant={filter === 'open' ? 'primary' : 'secondary'} onClick={() => setFilter('open')}>開放申請中</Button>
+                    <Button variant={filter === 'all' ? 'primary' : 'secondary'} onClick={() => setFilter('all')}>全部</Button>
+                    <Button variant={filter === 'expired' ? 'primary' : 'secondary'} onClick={() => setFilter('expired')}>已過期</Button>
+                </ButtonGroup>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                {/* Desktop Table */}
+                <table className="hidden md:table w-full">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('semester')}>
+                                <div className="flex items-center">學期 {renderSortIcon('semester')}</div>
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">獎助學金資料</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">適用對象</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">兼領限制</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('application_deadline')}>
+                                <div className="flex items-center">申請期限 / 送件方式 {renderSortIcon('application_deadline')}</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {loading ? (
+                            <tr><td colSpan="5" className="p-10 text-center text-gray-500">載入中...</td></tr>
+                        ) : announcements.map(item => (
+                            <tr key={item.id} ref={el => announcementRefs.current[item.id] = el} className="hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
+                                <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-800">{calculateSemester(item.application_deadline)}</td>
+                                <td className="px-6 py-5 max-w-xs">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`flex-shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md text-xs font-bold ${getCategoryStyle(item.category).bg} ${getCategoryStyle(item.category).text}`}>{item.category}</span>
+                                        <span className="font-semibold text-gray-900 truncate">{item.title}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">{item.target_audience}</td>
+                                <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">{item.application_limitations}</td>
+                                <td className="px-6 py-5 whitespace-nowrap text-sm">
+                                    <div className="font-bold text-red-600">{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : '-'}</div>
+                                    <div className="text-gray-500">{item.submission_method}</div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                {/* Mobile Card List */}
+                <div className="md:hidden divide-y divide-gray-200">
+                     {loading ? (
+                        <div className="p-10 text-center text-gray-500">載入中...</div>
+                     ) : announcements.map(item => (
+                         <div key={item.id} ref={el => announcementRefs.current[item.id] = el} className="p-4 hover:bg-indigo-50 cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
+                            <div className="flex justify-between items-start mb-2">
+                                <h3 className="font-bold text-base text-gray-900 flex-1 pr-4">{item.title}</h3>
+                                <div className="text-right flex-shrink-0">
+                                    <div className="font-bold text-red-600">{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : '-'}</div>
+                                    <div className="text-xs text-gray-500">{calculateSemester(item.application_deadline)}</div>
+                                </div>
+                            </div>
+                            <div className="text-sm space-y-2 text-gray-600">
+                                <p><strong className="font-semibold text-gray-800">適用對象: </strong>{item.target_audience}</p>
+                                <p><strong className="font-semibold text-gray-800">兼領限制: </strong>{item.application_limitations}</p>
+                            </div>
+                         </div>
+                     ))}
+                </div>
+                {announcements.length === 0 && !loading && (
+                    <div className="p-10 text-center text-gray-500">無符合條件的公告。</div>
+                )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+                 <div className="text-sm text-gray-600">
+                    共 {totalCount} 筆資料
+                 </div>
+                 <div className="flex items-center gap-4">
+                    <select value={rowsPerPage} onChange={e => {setRowsPerPage(Number(e.target.value)); setPage(1);}} className="p-2 border border-gray-300 rounded-md text-sm bg-white">
+                        {[10, 25, 50].map(v => <option key={v} value={v}>{v} 筆 / 頁</option>)}
+                    </select>
+                    <ButtonGroup>
+                        <Button variant="secondary" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
+                        <Button variant="secondary" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * rowsPerPage >= totalCount}>下一頁</Button>
+                    </ButtonGroup>
+                 </div>
+            </div>
+            
+            {selectedAnnouncement && (
+                <div className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4 transition-opacity duration-300" onClick={() => setSelectedAnnouncement(null)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="sticky top-0 bg-white/80 backdrop-blur-lg border-b p-5 flex justify-between items-center z-10">
+                            <h2 className="text-xl font-bold text-gray-800">{selectedAnnouncement.title}</h2>
+                            <button onClick={() => setSelectedAnnouncement(null)} className="text-gray-400 hover:text-gray-800 transition-colors"><X /></button>
+                        </div>
+                        <div className="p-6 space-y-8 overflow-y-auto">
+                            {selectedAnnouncement.summary && <div>
+                                <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">公告摘要</h3>
+                                <p className="text-gray-700">{selectedAnnouncement.summary}</p>
+                            </div>}
+                            <div>
+                                <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">詳細內容</h3>
+                                <div className="prose max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: selectedAnnouncement.full_content }} />
+                            </div>
+                            {selectedAnnouncement.attachments?.length > 0 && (
+                                <div>
+                                    <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">相關附件</h3>
+                                    <div className="space-y-2">
+                                    {selectedAnnouncement.attachments.map(att => (
+                                        <a key={att.id} href={att.public_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-blue-50 hover:bg-blue-100 p-3 rounded-lg text-blue-800 font-medium transition-colors">
+                                            <Paperclip className="h-5 w-5 flex-shrink-0" />
+                                            <span className="truncate">{att.file_name}</span>
+                                        </a>
+                                    ))}
+                                    </div>
+                                </div>
+                            )}
+                            {selectedAnnouncement.external_urls && (
+                                <div>
+                                    <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">外部連結</h3>
+                                    <a href={selectedAnnouncement.external_urls} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-blue-600 hover:underline">
+                                        <LinkIcon className="h-4 w-4" />
+                                        <span>{selectedAnnouncement.external_urls}</span>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
