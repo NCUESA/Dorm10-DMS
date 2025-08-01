@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import MarkdownRenderer from './MarkdownRenderer'
+import Toast from './ui/Toast'
 
 // 系統 Prompt - 基於 raw 版本改進
 const SYSTEM_PROMPT = `# 角色 (Persona)
@@ -38,14 +39,26 @@ const ChatInterface = () => {
     description: ''
   })
   const [isSubmittingSupportRequest, setIsSubmittingSupportRequest] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [currentSessionId, setCurrentSessionId] = useState(null)
   const messagesEndRef = useRef(null)
   const chatWindowRef = useRef(null)
 
   // 自動滾動到底部 - 僅在新訊息時觸發
-  const scrollToBottom = () => {
+  const scrollToBottom = (e) => {
+    // 防止事件冒泡到父層
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
     if (messagesEndRef.current) {
       setTimeout(() => {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        })
       }, 100) // 給一點延遲確保DOM已更新
     }
   }
@@ -53,18 +66,103 @@ const ChatInterface = () => {
   // 僅在有新訊息時滾動，避免初始載入時的滾動
   useEffect(() => {
     if (messages.length > 0) {
-      scrollToBottom()
+      // 使用 requestAnimationFrame 確保在下一個渲染周期執行
+      requestAnimationFrame(() => {
+        scrollToBottom()
+      })
     }
   }, [messages.length]) // 改為監聽 messages.length 而不是 messages
 
+  // 保存訊息到數據庫
+  const saveMessageToDatabase = async (role, content) => {
+    if (!user?.id) return null
+
+    try {
+      const response = await fetch('/api/chat-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          sessionId: currentSessionId,
+          role: role,
+          messageContent: content
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.sessionId && !currentSessionId) {
+          setCurrentSessionId(result.sessionId)
+        }
+        return result
+      } else {
+        console.error('保存訊息失敗:', response.status)
+      }
+    } catch (error) {
+      console.error('保存訊息到數據庫失敗:', error)
+    }
+    return null
+  }
+
   // 載入歷史對話
   useEffect(() => {
-    loadHistory()
-  }, [])
+    if (user?.id !== undefined) { // 確保用戶狀態已經載入
+      loadHistory()
+    }
+  }, [user?.id]) // 當用戶ID變化時重新載入
 
   const loadHistory = async () => {
     try {
-      // 模擬 API 調用 - 在實際應用中這裡會調用真正的 API
+      if (!user?.id) {
+        // 如果用戶未登入，顯示歡迎訊息
+        const welcomeMessage = {
+          role: 'model',
+          content: `歡迎使用 NCUE 獎學金 AI 助理，很高興為您服務。
+
+為了節省您的寶貴時間，我能提供以下協助：
+*   **搜尋平台公告**：為您快速查找最新的獎學金申請資格、時程與辦法。
+*   **搜尋網路資訊**：當平台內沒有答案時，我會搜尋外部網站，提供最相關的資訊。
+*   **自動保存對話**：您的所有提問都會被妥善保存，方便您隨時回來查閱。
+
+現在，請直接輸入您的問題開始吧！`,
+          timestamp: new Date()
+        }
+        setMessages([welcomeMessage])
+        setConversationHistory([])
+        return
+      }
+
+      // 從數據庫載入聊天記錄
+      const response = await fetch(`/api/chat-history?userId=${user.id}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data.length > 0) {
+          // 轉換數據庫記錄為組件格式
+          const dbMessages = result.data.map(record => ({
+            role: record.role,
+            content: record.message_content,
+            timestamp: new Date(record.timestamp)
+          }))
+          
+          const dbHistory = result.data.map(record => ({
+            role: record.role,
+            message_content: record.message_content
+          }))
+
+          setMessages(dbMessages)
+          setConversationHistory(dbHistory)
+          
+          // 設置當前會話ID（使用最新記錄的會話ID）
+          if (result.data.length > 0) {
+            setCurrentSessionId(result.data[result.data.length - 1].session_id)
+          }
+          return
+        }
+      }
+
+      // 如果沒有歷史記錄或載入失敗，顯示歡迎訊息
       const welcomeMessage = {
         role: 'model',
         content: `歡迎使用 NCUE 獎學金 AI 助理，很高興為您服務。
@@ -79,8 +177,28 @@ const ChatInterface = () => {
       }
       setMessages([welcomeMessage])
       setConversationHistory([])
+      
+      // 保存歡迎訊息到數據庫
+      await saveMessageToDatabase('model', welcomeMessage.content)
+      
     } catch (error) {
       console.error('Failed to load history:', error)
+      
+      // 載入失敗時仍顯示歡迎訊息
+      const welcomeMessage = {
+        role: 'model',
+        content: `歡迎使用 NCUE 獎學金 AI 助理，很高興為您服務。
+
+為了節省您的寶貴時間，我能提供以下協助：
+*   **搜尋平台公告**：為您快速查找最新的獎學金申請資格、時程與辦法。
+*   **搜尋網路資訊**：當平台內沒有答案時，我會搜尋外部網站，提供最相關的資訊。
+*   **自動保存對話**：您的所有提問都會被妥善保存，方便您隨時回來查閱。
+
+現在，請直接輸入您的問題開始吧！`,
+        timestamp: new Date()
+      }
+      setMessages([welcomeMessage])
+      setConversationHistory([])
     }
   }
 
@@ -98,6 +216,9 @@ const ChatInterface = () => {
     setConversationHistory(prev => [...prev, { role: 'user', message_content: userMessage.content }])
     setInput('')
     setIsLoading(true)
+
+    // 保存用戶訊息到數據庫
+    await saveMessageToDatabase('user', userMessage.content)
 
     try {
       const response = await fetch('/api/chat', {
@@ -128,6 +249,9 @@ const ChatInterface = () => {
         message_content: aiResponse.content 
       }])
 
+      // 保存 AI 回應到數據庫
+      await saveMessageToDatabase(aiResponse.role, aiResponse.content)
+
     } catch (error) {
       console.error('Error sending message:', error)
       const errorResponse = {
@@ -137,21 +261,92 @@ const ChatInterface = () => {
       }
       setMessages(prev => [...prev, errorResponse])
       setConversationHistory(prev => [...prev, { role: 'model', message_content: errorResponse.content }])
+      
+      // 保存錯誤回應到數據庫
+      await saveMessageToDatabase('model', errorResponse.content)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const clearHistory = () => {
+  const clearHistory = async () => {
     if (window.confirm('確定要清除所有對話紀錄嗎？此操作無法復原！')) {
-      setMessages([])
-      setConversationHistory([])
-      loadHistory() // 重新顯示歡迎訊息
+      try {
+        // 從數據庫中刪除聊天記錄
+        if (user?.id) {
+          const response = await fetch(`/api/chat-history?userId=${user.id}`, {
+            method: 'DELETE'
+          })
+          
+          if (!response.ok) {
+            console.error('刪除數據庫記錄失敗')
+          }
+        }
+
+        // 清除本地狀態
+        setMessages([])
+        setConversationHistory([])
+        setCurrentSessionId(null)
+        
+        // 重新顯示歡迎訊息
+        loadHistory()
+      } catch (error) {
+        console.error('清除歷史記錄失敗:', error)
+        
+        // 即使數據庫操作失敗，也清除本地狀態
+        setMessages([])
+        setConversationHistory([])
+        setCurrentSessionId(null)
+        loadHistory()
+      }
     }
   }
 
-  const requestHumanSupport = () => {
-    setShowSupportForm(true)
+  const requestHumanSupport = async () => {
+    setIsSubmittingSupportRequest(true)
+    
+    try {
+      // 準備對話歷史 - 轉換格式以匹配 API 期望
+      const formattedHistory = conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.message_content,
+        timestamp: new Date().toISOString() // 添加時間戳
+      }))
+
+      const response = await fetch('/api/send-support-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: user?.email,
+          userName: user?.profile?.name || user?.email?.split('@')[0] || '匿名使用者',
+          urgency: '中等',
+          problemType: 'AI助理無法解決的問題',
+          description: '使用者透過聊天介面申請真人協助，對話記錄請見下方。',
+          conversationHistory: formattedHistory
+        })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setToast({
+          message: result.message || '您的支援請求已送出！我們將盡快透過 Email 與您聯繫。',
+          type: 'success'
+        })
+      } else {
+        throw new Error(result.error || `伺服器錯誤 (${response.status})`)
+      }
+    } catch (error) {
+      console.error('支援請求發送失敗:', error)
+      setToast({
+        message: `支援請求發送失敗: ${error.message}。請稍後再試或直接聯繫承辦人員。`,
+        type: 'error'
+      })
+    } finally {
+      setIsSubmittingSupportRequest(false)
+    }
   }
 
   // 處理支援表單資料變更
@@ -305,6 +500,8 @@ const ChatInterface = () => {
         <div 
           ref={chatWindowRef}
           className="flex-grow overflow-y-auto p-6 space-y-4 scrollbar-hide"
+          onScroll={(e) => e.stopPropagation()}
+          style={{ scrollBehavior: 'smooth' }}
         >
           {messages.map((message, index) => renderMessage(message, index))}
           
@@ -357,6 +554,22 @@ const ChatInterface = () => {
                 <span>清除紀錄</span>
               </button>
 
+              {/* Support Button */}
+              {messages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={requestHumanSupport}
+                  disabled={isSubmittingSupportRequest}
+                  className="flex-shrink-0 bg-transparent text-gray-500 hover:text-blue-500 hover:bg-blue-50 border-none rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-2 mr-2"
+                  title="申請真人協助"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>協助</span>
+                </button>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -371,23 +584,6 @@ const ChatInterface = () => {
             </form>
           </div>
         </div>
-
-        {/* Support Button - 固定在聊天容器內 */}
-        {messages.length > 1 && (
-          <div className="relative">
-            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 pointer-events-auto z-10">
-              <button
-                className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
-                onClick={requestHumanSupport}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                需要專人協助？申請真人支援
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Support Form Modal */}
@@ -497,6 +693,16 @@ const ChatInterface = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Toast Notifications */}
+      {toast && toast.message && (
+        <Toast
+          show={true}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   )
