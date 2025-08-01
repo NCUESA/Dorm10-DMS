@@ -7,10 +7,12 @@ import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
 import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import Button from '@/components/ui/Button';
 import IconButton from '@/components/ui/IconButton';
+import Toast from '@/components/ui/Toast';
 
 // 寄送公告給所有使用者
-const sendAnnouncement = async (id) => {
+const sendAnnouncement = async (id, showToast) => {
   try {
+    showToast('正在發送公告...', 'info');
     const res = await fetch('/api/send-announcement', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -18,10 +20,10 @@ const sendAnnouncement = async (id) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '寄送失敗');
-    alert('寄送成功');
+    showToast(data.message || '公告寄送成功！', 'success');
   } catch (err) {
     console.error(err);
-    alert('寄送失敗');
+    showToast(err.message || '寄送失敗，請稍後再試', 'error');
   }
 };
 
@@ -31,6 +33,19 @@ export default function AnnouncementsTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [toast, setToast] = useState({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, show: false }));
+  };
 
   // 【新】從 Supabase 獲取公告資料
   const fetchAnnouncements = useCallback(async () => {
@@ -45,7 +60,7 @@ export default function AnnouncementsTab() {
       setAnnouncements(data || []);
     } catch (error) {
       console.error('Error fetching announcements:', error);
-      alert('無法載入公告列表，請稍後再試。');
+      showToast('無法載入公告列表，請稍後再試', 'error');
     } finally {
       setLoading(false);
     }
@@ -124,7 +139,7 @@ export default function AnnouncementsTab() {
                         <Button
                           variant="link"
                           className="text-green-600 p-0"
-                          onClick={() => sendAnnouncement(announcement.id)}
+                          onClick={() => sendAnnouncement(announcement.id, showToast)}
                         >
                           寄送
                         </Button>
@@ -154,6 +169,12 @@ export default function AnnouncementsTab() {
         onClose={handleCloseDelete}
         announcementId={deletingId}
         refreshAnnouncements={fetchAnnouncements}
+      />
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={hideToast} 
       />
     </div>
   );
