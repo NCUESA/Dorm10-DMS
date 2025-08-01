@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Mail, GraduationCap, Eye, EyeOff } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
+
 // --- UI 元件: 輸入框 ---
 const InputField = ({ id, name, type, placeholder, value, onChange, error, icon: Icon }) => (
 	<div>
@@ -68,7 +69,6 @@ const PasswordField = ({ id, name, placeholder, value, onChange, error, password
 // --- 主要註冊元件 ---
 export default function Register() {
 	const router = useRouter();
-	// ** MODIFIED: We still get loading state from context to disable the button correctly **
 	const { signUp, isAuthenticated, loading } = useAuth();
 	const [formData, setFormData] = useState({ username: "", email: "", student_id: "", password: "", confirmPassword: "" });
 	const [errors, setErrors] = useState({});
@@ -120,7 +120,6 @@ export default function Register() {
 		return newErrors;
 	};
 
-	// ** MODIFIED: The main logic is corrected here for robust error handling **
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setErrors({});
@@ -133,7 +132,7 @@ export default function Register() {
 
 		setIsSubmitting(true);
 		try {
-			// 步驟 1: 透過後端 API 檢查學號與 Email 是否重複
+			// 透過後端 API 檢查學號與 Email 是否重複
 			const res = await fetch('/api/check-duplicate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -160,14 +159,14 @@ export default function Register() {
 				return;
 			}
 
-			// 步驟 3: 呼叫 signUp 並直接處理其回傳結果
+			// 呼叫 signUp 並直接處理其回傳結果
 			const result = await signUp(
 				formData.email,
 				formData.password,
 				{ name: formData.username, student_id: formData.student_id }
 			);
 
-			// 步驟 4: 根據回傳結果決定下一步
+			// 根據回傳結果決定下一步
 			if (result.success) {
 				router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
 			} else {
@@ -197,9 +196,9 @@ export default function Register() {
 					{/* --- 左側面板 --- */}
 					<div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
 						<div className="absolute inset-0 h-full w-full overflow-hidden">
-							<div className="absolute w-64 h-64 bg-violet-500 rounded-full filter blur-3xl opacity-20" style={{ top: '-5%', left: '-10%', animation: 'move-particle 20s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '100px', '--y-end': '80px', '--x-end-2': '-100px', '--y-end-2': '-150px' }} />
-							<div className="absolute w-72 h-72 bg-sky-500 rounded-full filter blur-3xl opacity-20" style={{ top: '50%', left: '50%', animation: 'move-particle 25s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-100px', '--y-end': '50px', '--x-end-2': '50px', '--y-end-2': '-50px' }} />
-							<div className="absolute w-56 h-56 bg-pink-500 rounded-full filter blur-3xl opacity-20" style={{ bottom: '-5%', right: '-10%', animation: 'move-particle 18s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-80px', '--y-end': '-120px', '--x-end-2': '120px', '--y-end-2': '80px' }} />
+							<div className="absolute w-64 h-64 bg-green-700 rounded-full filter blur-3xl opacity-20" style={{ top: '-5%', left: '-10%', animation: 'move-particle 20s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '100px', '--y-end': '80px', '--x-end-2': '-100px', '--y-end-2': '-150px' }} />
+							<div className="absolute w-72 h-72 bg-lime-500 rounded-full filter blur-3xl opacity-20" style={{ top: '50%', left: '50%', animation: 'move-particle 25s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-100px', '--y-end': '50px', '--x-end-2': '50px', '--y-end-2': '-50px' }} />
+							<div className="absolute w-56 h-56 bg-sky-600 rounded-full filter blur-3xl opacity-20" style={{ bottom: '-5%', right: '-10%', animation: 'move-particle 18s infinite alternate', '--x-start': '0px', '--y-start': '0px', '--x-end': '-80px', '--y-end': '-120px', '--x-end-2': '120px', '--y-end-2': '80px' }} />
 						</div>
 						<div className="relative flex h-full flex-col justify-center p-16 text-left text-white">
 							<div className="max-w-lg">
