@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server'
 
 // 創建郵件傳輸器
 const transporter = nodemailer.createTransport({
-  host: 'ncuesanas.ncue.edu.tw',
-  port: 587,
-  secure: false, // true for 465, false for other ports
+  host: process.env.NCUE_SMTP_HOST || 'ncuesanas.ncue.edu.tw',
+  port: parseInt(process.env.NCUE_SMTP_PORT || '587', 10),
+  secure: process.env.NCUE_SMTP_SECURE === 'true', // true for 465, false for other ports
   auth: {
-    user: 'ncuesu',
-    pass: 'Ncuesa23!'
+    user: process.env.NCUE_SMTP_USER || 'ncuesu',
+    pass: process.env.NCUE_SMTP_PASSWORD || 'Ncuesa23!'
   },
   tls: {
     rejectUnauthorized: false // 允許自簽名證書
