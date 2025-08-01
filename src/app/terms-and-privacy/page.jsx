@@ -350,12 +350,12 @@ export default function TermsAndPrivacyPage() {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20 max-w-4xl mx-auto lg:pl-80">
                         <p className="text-sm text-slate-500">最新修訂：2025年7月31日</p>
-                        <button
-                            onClick={closeWindow}
+                        <a
+                            href="/"
                             className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors"
                         >
-                            我已了解，關閉頁面
-                        </button>
+                            回到首頁
+                        </a>
                     </div>
                 </div>
             </footer>
