@@ -1,329 +1,244 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import Button from "@/components/ui/Button";
 import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, User as UserIcon, Lock, ShieldCheck, Edit3, Save, LogOut, Loader2, AtSign, Fingerprint, Calendar, Clock, FileText } from "lucide-react";
+import Toast from '@/components/ui/Toast';
 
-// 設定 zxcvbn
+// --- zxcvbn 設定 ---
 zxcvbnOptions.setOptions({
-  dictionary: {
-    userInputs: ['ncue', 'scholarship', 'changhua', 'student']
-  }
+	dictionary: { userInputs: ['ncue', 'scholarship', 'changhua', 'student'] }
 });
 
-// 密碼輸入框元件，含強度顯示
-const PasswordField = ({ id, name, placeholder, value, onChange, error, passwordStrength, isConfirmField = false }) => {
-  const [showPassword, setShowPassword] = useState(false);
-  const strength = !isConfirmField && value ? passwordStrength(value) : null;
+// --- 子元件: 密碼輸入框 ---
+const PasswordField = ({ id, name, placeholder, value, onChange, error, isConfirmField = false }) => {
+	const [showPassword, setShowPassword] = useState(false);
+	const strength = useMemo(() => (!isConfirmField && value) ? zxcvbn(value) : null, [value, isConfirmField]);
 
-  const strengthLevels = [
-    { text: '非常弱', lightColor: 'bg-red-200', color: 'bg-red-500', textColor: 'text-red-600' },
-    { text: '弱', lightColor: 'bg-orange-200', color: 'bg-orange-500', textColor: 'text-orange-600' },
-    { text: '中等', lightColor: 'bg-yellow-200', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
-    { text: '強', lightColor: 'bg-green-200', color: 'bg-green-500', textColor: 'text-green-600' },
-    { text: '非常強', lightColor: 'bg-emerald-200', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
-  ];
+	const strengthLevels = [
+		{ text: '非常弱', lightColor: 'bg-red-200', color: 'bg-red-500', textColor: 'text-red-700' },
+		{ text: '弱', lightColor: 'bg-orange-200', color: 'bg-orange-500', textColor: 'text-orange-700' },
+		{ text: '中等', lightColor: 'bg-yellow-200', color: 'bg-yellow-500', textColor: 'text-yellow-700' },
+		{ text: '強', lightColor: 'bg-green-200', color: 'bg-green-500', textColor: 'text-green-700' },
+		{ text: '非常強', lightColor: 'bg-emerald-200', color: 'bg-emerald-500', textColor: 'text-emerald-700' },
+	];
+	const currentStrength = strength ? strengthLevels[strength.score] : null;
 
-  const currentStrength = strength ? strengthLevels[strength.score] : null;
-  const widthPercentage = strength ? (strength.score + 1) * 20 : 0;
-
-  return (
-    <div>
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.993.883L4 8v10a1 1 0 00.883.993L5 19h10a1 1 0 00.993-.883L16 18V8a1 1 0 00-.883-.993L15 7h-1V6a4 4 0 00-4-4zm0 1.5a2.5 2.5 0 012.5 2.5V7h-5V6a2.5 2.5 0 012.5-2.5z" clipRule="evenodd" />
-          </svg>
-        </div>
-        <input
-          id={id}
-          name={name}
-          type={showPassword ? 'text' : 'password'}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
-          required
-        />
-        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
-          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-        </button>
-      </div>
-
-      {!isConfirmField && currentStrength && (
-        <div className="mt-2">
-          <div className={`h-1.5 w-full rounded-full ${currentStrength.lightColor}`}>
-            <div className={`h-full rounded-full ${currentStrength.color} transition-all duration-300`} style={{ width: `${widthPercentage}%` }} />
-          </div>
-          <p className={`mt-1 text-xs font-medium ${currentStrength.textColor}`}>{currentStrength.text}</p>
-        </div>
-      )}
-
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-    </div>
-  );
+	return (
+		<div className="w-full space-y-2">
+			<div className="relative">
+				<Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+				<input id={id} name={name} type={showPassword ? 'text' : 'password'} placeholder={placeholder} value={value} onChange={onChange} required
+					className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all`}
+				/>
+				<button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600">
+					{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+				</button>
+			</div>
+			{!isConfirmField && currentStrength && (
+				<div className="flex items-center gap-2 px-1">
+					<div className={`h-1.5 flex-grow rounded-full ${currentStrength.lightColor}`}>
+						<div className={`h-full rounded-full ${currentStrength.color} transition-all duration-300`} style={{ width: `${(strength.score + 1) * 20}%` }} />
+					</div>
+					<p className={`text-xs font-medium ${currentStrength.textColor}`}>{currentStrength.text}</p>
+				</div>
+			)}
+			{error && <p className="mt-1 text-xs text-red-600 px-1">{error}</p>}
+		</div>
+	);
 };
 
+// --- Helper function to render input fields ---
+const renderInputField = (label, name, value, placeholder, onChange) => (
+	<div>
+		<label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+		<input type="text" id={name} name={name} value={value} onChange={onChange} placeholder={placeholder}
+			className="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all"
+		/>
+	</div>
+);
+
+// --- 主要頁面元件 ---
 export default function ProfilePage() {
-  const router = useRouter();
-  const { user, isAuthenticated, loading, signOut, updatePassword } = useAuth();
-  const [profileData, setProfileData] = useState(null);
-  const [passwordData, setPasswordData] = useState({ password: '', confirmPassword: '' });
-  const [pwErrors, setPwErrors] = useState({});
-  const [pwLoading, setPwLoading] = useState(false);
-  const [pwMessage, setPwMessage] = useState('');
+	const router = useRouter();
+	const { user, isAuthenticated, loading, signOut, updateProfile, updatePassword } = useAuth();
 
-  useEffect(() => {
-    // 如果未登入，重定向到登入頁面
-    if (!loading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, loading, router]);
+	const [isEditing, setIsEditing] = useState(false);
+	const [formData, setFormData] = useState({ name: "", student_id: "" });
+	const [passwordData, setPasswordData] = useState({ password: '', confirmPassword: '' });
 
-  useEffect(() => {
-    // 從用戶物件中提取個人資料
-    if (user) {
-      setProfileData({
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.name || '',
-        student_id: user.user_metadata?.student_id || '',
-        department: user.user_metadata?.department || '',
-        year: user.user_metadata?.year || '',
-        email_verified: user.email_confirmed_at !== null,
-        created_at: user.created_at,
-        last_sign_in: user.last_sign_in_at
-      });
-    }
-  }, [user]);
+	const [errors, setErrors] = useState({});
+	const [isSavingProfile, setIsSavingProfile] = useState(false);
+	const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
-  };
+	const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+	const showToast = (message, type = 'success') => setToast({ show: true, message, type });
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData(prev => ({ ...prev, [name]: value }));
-    if (pwErrors[name]) setPwErrors(prev => ({ ...prev, [name]: '' }));
-    if (pwErrors.submit) setPwErrors(prev => ({ ...prev, submit: '' }));
-    if (pwMessage) setPwMessage('');
-  };
+	useEffect(() => {
+		if (!loading && !isAuthenticated) {
+			router.push('/login');
+		}
+	}, [isAuthenticated, loading, router]);
 
-  const getPasswordStrength = (password) => zxcvbn(password);
+	useEffect(() => {
+		if (user?.user_metadata) {
+			setFormData({
+				name: user.user_metadata.name || "",
+				student_id: user.user_metadata.student_id || "",
+			});
+		}
+	}, [user]);
 
-  const validatePasswordForm = () => {
-    const newErrors = {};
-    if (getPasswordStrength(passwordData.password).score < 2) newErrors.password = '密碼強度不足，請嘗試更複雜的組合';
-    if (passwordData.password !== passwordData.confirmPassword) newErrors.confirmPassword = '兩次輸入的密碼不一致';
-    return newErrors;
-  };
+	const handleProfileChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+	const handlePasswordChange = (e) => {
+		setPasswordData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+		if (errors[e.target.name] || errors.passwordSubmit) setErrors({});
+	};
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = validatePasswordForm();
-    if (Object.keys(newErrors).length > 0) {
-      setPwErrors(newErrors);
-      return;
-    }
-    setPwLoading(true);
-    setPwErrors({});
-    try {
-      const result = await updatePassword(passwordData.password);
-      if (result.success) {
-        setPwMessage('密碼已更新');
-        setPasswordData({ password: '', confirmPassword: '' });
-      } else {
-        setPwErrors({ submit: result.error });
-      }
-    } catch (error) {
-      setPwErrors({ submit: '更新密碼失敗，請稍後再試' });
-    } finally {
-      setPwLoading(false);
-    }
-  };
+	const handleProfileSubmit = async (e) => {
+		e.preventDefault();
+		setIsSavingProfile(true);
+		setErrors({});
+		const result = await updateProfile(formData);
+		if (result.success) {
+			showToast('個人資料已成功更新', 'success');
+			setIsEditing(false);
+		} else {
+			showToast(result.error || '更新失敗，請稍後再試', 'error');
+		}
+		setIsSavingProfile(false);
+	};
 
-  // 載入中狀態
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入中...</p>
-        </div>
-      </div>
-    );
-  }
+	const handlePasswordSubmit = async (e) => {
+		e.preventDefault();
+		let newErrors = {};
+		if (zxcvbn(passwordData.password).score < 2) newErrors.password = '密碼強度不足，請嘗試更複雜的組合';
+		if (passwordData.password !== passwordData.confirmPassword) newErrors.confirmPassword = '兩次輸入的密碼不一致';
 
-  // 未登入時不顯示任何內容（會被重定向）
-  if (!isAuthenticated) {
-    return null;
-  }
+		if (Object.keys(newErrors).length > 0) {
+			setErrors(newErrors);
+			return;
+		}
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">個人資料</h1>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => router.push('/profile/edit')}>編輯資料</Button>
-              <button
-                onClick={handleSignOut}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-              >
-                登出
-              </button>
-            </div>
-          </div>
+		setIsUpdatingPassword(true);
+		setErrors({});
+		const result = await updatePassword(passwordData.password);
+		if (result.success) {
+			showToast('密碼已成功更新', 'success');
+			setPasswordData({ password: '', confirmPassword: '' });
+		} else {
+			const errorMsg = result.error || '更新失敗，請稍後再試';
+			setErrors({ passwordSubmit: errorMsg });
+			showToast(errorMsg, 'error');
+		}
+		setIsUpdatingPassword(false);
+	};
 
-          {profileData && (
-            <div className="space-y-6">
-              {/* 基本資訊 */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h2 className="text-lg font-semibold text-blue-900 mb-4">
-                  基本資訊
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      電子郵件
-                    </label>
-                    <div className="flex items-center">
-                      <span className="text-gray-900">{profileData.email}</span>
-                      {profileData.email_verified ? (
-                        <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          已驗證
-                        </span>
-                      ) : (
-                        <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          待驗證
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {profileData.name && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        姓名
-                      </label>
-                      <span className="text-gray-900">{profileData.name}</span>
-                    </div>
-                  )}
-                  
-                  {profileData.student_id && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        學號
-                      </label>
-                      <span className="text-gray-900">{profileData.student_id}</span>
-                    </div>
-                  )}
-                  
-                  {profileData.department && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        系所
-                      </label>
-                      <span className="text-gray-900">{profileData.department}</span>
-                    </div>
-                  )}
-                  
-                  {profileData.year && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        年級
-                      </label>
-                      <span className="text-gray-900">{profileData.year}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+	if (loading || !isAuthenticated) {
+		return (
+			<div className="flex items-center justify-center p-4">
+				<Loader2 className="h-12 w-12 text-indigo-600 animate-spin" />
+			</div>
+		);
+	}
 
-              {/* 帳號狀態 */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  帳號狀態
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      用戶ID
-                    </label>
-                    <span className="text-sm text-gray-900 font-mono">{profileData.id}</span>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      註冊時間
-                    </label>
-                    <span className="text-gray-900">
-                      {new Date(profileData.created_at).toLocaleString('zh-TW')}
-                    </span>
-                  </div>
-                  
-                  {profileData.last_sign_in && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        最後登入時間
-                      </label>
-                      <span className="text-gray-900">
-                        {new Date(profileData.last_sign_in).toLocaleString('zh-TW')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+	const ghostButtonClasses = "flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border transition-all duration-300 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:transform-none disabled:shadow-none";
+	const primaryGhostButton = `${ghostButtonClasses} border-indigo-600 bg-transparent text-indigo-600 hover:bg-indigo-600 hover:text-white hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/40 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200`;
 
-              {/* 重設密碼 */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                <h2 className="text-lg font-semibold text-yellow-900 mb-4">
-                  重設密碼
-                </h2>
-                <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                  <PasswordField
-                    id="password"
-                    name="password"
-                    placeholder="設定新密碼"
-                    value={passwordData.password}
-                    onChange={handlePasswordChange}
-                    error={pwErrors.password}
-                    passwordStrength={getPasswordStrength}
-                  />
-                  <PasswordField
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    placeholder="再次輸入新密碼"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    error={pwErrors.confirmPassword}
-                    isConfirmField={true}
-                  />
-                  {pwErrors.submit && (
-                    <p className="text-sm text-red-600">{pwErrors.submit}</p>
-                  )}
-                  {pwMessage && (
-                    <p className="text-sm text-green-600">{pwMessage}</p>
-                  )}
-                  <div className="flex justify-end">
-                    <Button type="submit" loading={pwLoading}>更新密碼</Button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+	return (
+		<>
+			<Toast show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast(p => ({ ...p, show: false }))} />
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16 sm:my-24">
+				<div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
+					<aside className="lg:col-span-1 flex flex-col">
+						<div className="w-full flex flex-col flex-grow bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+							<div className="p-6">
+								<div className="flex items-center gap-4">
+									<div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+										<UserIcon className="h-8 w-8 text-indigo-600" />
+									</div>
+									<div>
+										<h2 className="text-xl font-bold text-gray-900 truncate">{user.user_metadata?.name || '使用者'}</h2>
+										<p className="text-sm text-gray-500 truncate">{user.email}</p>
+									</div>
+								</div>
+							</div>
+
+							<div className="p-6 border-t border-gray-100">
+								<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-3"><Fingerprint className="h-5 w-5 text-indigo-600" />帳號狀態</h3>
+								<dl className="space-y-4">
+									<div className="flex flex-col"><dt className="text-sm font-medium text-gray-500 flex items-center gap-2"><AtSign size={16} />用戶ID</dt><dd className="text-sm text-gray-900 break-all mt-1">{user.id}</dd></div>
+									<div className="flex flex-col"><dt className="text-sm font-medium text-gray-500 flex items-center gap-2"><Calendar size={16} />註冊時間</dt><dd className="text-sm text-gray-900 mt-1">{new Date(user.created_at).toLocaleString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}</dd></div>
+									{user.last_sign_in_at && <div className="flex flex-col"><dt className="text-sm font-medium text-gray-500 flex items-center gap-2"><Clock size={16} />最後登入時間</dt><dd className="text-sm text-gray-900 mt-1">{new Date(user.last_sign_in_at).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })}</dd></div>}
+								</dl>
+							</div>
+
+							<div className="mt-auto p-6 border-t border-gray-100">
+								<button onClick={signOut} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors">
+									<LogOut className="h-5 w-5" />
+									<span>登出</span>
+								</button>
+							</div>
+						</div>
+					</aside>
+
+					<main className="lg:col-span-2 flex flex-col gap-8 mt-8 lg:mt-0">
+						<div className="bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+							<form onSubmit={handleProfileSubmit}>
+								<div className="p-8 border-b border-gray-100">
+									<div className="flex justify-between items-start">
+										<div>
+											<h2 className="text-xl font-bold text-gray-900 flex items-center gap-3"><FileText className="h-6 w-6 text-indigo-600" />個人資料</h2>
+											<p className="mt-1 text-sm text-gray-500">管理您的個人聯絡資訊。</p>
+										</div>
+										{!isEditing ? (
+											<button type="button" onClick={() => setIsEditing(true)} className={primaryGhostButton}><Edit3 className="h-4 w-4" />編輯</button>
+										) : (
+											<div className="flex gap-2">
+												<button type="button" onClick={() => setIsEditing(false)} className={`${ghostButtonClasses} border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100`}>取消</button>
+												<button type="submit" disabled={isSavingProfile} className={primaryGhostButton}>
+													{isSavingProfile ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}儲存變更
+												</button>
+											</div>
+										)}
+									</div>
+								</div>
+								<div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+									{isEditing
+										? renderInputField('姓名', 'name', formData.name, '請輸入您的姓名', handleProfileChange)
+										: <div className="flex flex-col"><dt className="text-sm font-medium text-gray-500">姓名</dt><dd className="text-base text-gray-900 mt-1">{formData.name || '未設定'}</dd></div>
+									}
+									{isEditing
+										? renderInputField('學號', 'student_id', formData.student_id, '請輸入您的學號', handleProfileChange)
+										: <div className="flex flex-col"><dt className="text-sm font-medium text-gray-500">學號</dt><dd className="text-base text-gray-900 mt-1">{formData.student_id || '未設定'}</dd></div>
+									}
+								</div>
+							</form>
+						</div>
+
+						<div className="bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+							<form onSubmit={handlePasswordSubmit}>
+								<div className="p-8">
+									<h2 className="text-xl font-bold text-gray-900 flex items-center gap-3"><Lock className="h-6 w-6 text-indigo-600" />帳號安全</h2>
+									<p className="mt-1 text-sm text-gray-500">建議您定期更換密碼以保護您的帳號安全。</p>
+									<div className="mt-6 border-t border-gray-100 pt-6 space-y-6">
+										<PasswordField id="password" name="password" placeholder="設定新密碼" value={passwordData.password} onChange={handlePasswordChange} error={errors.password} />
+										<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入新密碼" value={passwordData.confirmPassword} onChange={handlePasswordChange} error={errors.confirmPassword} isConfirmField={true} />
+										{errors.passwordSubmit && <p className="text-sm text-red-600">{errors.passwordSubmit}</p>}
+									</div>
+								</div>
+								<div className="bg-gray-50 px-8 py-4 rounded-b-xl flex justify-end">
+									<button type="submit" disabled={isUpdatingPassword} className={primaryGhostButton}>
+										{isUpdatingPassword ? <Loader2 className="animate-spin h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}更新密碼
+									</button>
+								</div>
+							</form>
+						</div>
+					</main>
+				</div>
+			</div>
+		</>
+	);
 }
