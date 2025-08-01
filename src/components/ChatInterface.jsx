@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import MarkdownRenderer from './MarkdownRenderer'
+import Toast from './ui/Toast'
 
 // 系統 Prompt - 基於 raw 版本改進
 const SYSTEM_PROMPT = `# 角色 (Persona)
@@ -38,6 +39,7 @@ const ChatInterface = () => {
     description: ''
   })
   const [isSubmittingSupportRequest, setIsSubmittingSupportRequest] = useState(false)
+  const [toast, setToast] = useState(null)
   const messagesEndRef = useRef(null)
   const chatWindowRef = useRef(null)
 
@@ -150,8 +152,44 @@ const ChatInterface = () => {
     }
   }
 
-  const requestHumanSupport = () => {
-    setShowSupportForm(true)
+  const requestHumanSupport = async () => {
+    setIsSubmittingSupportRequest(true)
+    
+    try {
+      const response = await fetch('/api/send-support-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: user?.email,
+          userName: user?.profile?.name || user?.email?.split('@')[0],
+          urgency: '中等',
+          problemType: 'AI助理無法解決的問題',
+          description: '使用者透過聊天介面申請真人協助，對話記錄請見附件。',
+          conversationHistory: conversationHistory
+        })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setToast({
+          message: '您的支援請求已送出！我們將盡快透過 Email 與您聯繫。',
+          type: 'success'
+        })
+      } else {
+        throw new Error(result.error || '發送失敗')
+      }
+    } catch (error) {
+      console.error('支援請求發送失敗:', error)
+      setToast({
+        message: `支援請求發送失敗: ${error.message}。請稍後再試或直接聯繫承辦人員。`,
+        type: 'error'
+      })
+    } finally {
+      setIsSubmittingSupportRequest(false)
+    }
   }
 
   // 處理支援表單資料變更
@@ -379,11 +417,24 @@ const ChatInterface = () => {
               <button
                 className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
                 onClick={requestHumanSupport}
+                disabled={isSubmittingSupportRequest}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                需要專人協助？申請真人支援
+                {isSubmittingSupportRequest ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    發送中...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    申請真人協助
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -497,6 +548,15 @@ const ChatInterface = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Toast Notifications */}
+      {toast && toast.message && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   )
