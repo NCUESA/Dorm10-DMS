@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import { NextResponse } from 'next/server'
+import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
 
 // 創建郵件傳輸器
 const transporter = nodemailer.createTransport({
@@ -17,7 +18,35 @@ const transporter = nodemailer.createTransport({
 
 export async function POST(request) {
   try {
-    const body = await request.json()
+    // 1. Rate limiting 檢查（支援請求限制較嚴格）
+    const rateLimitCheck = checkRateLimit(request, 'send-support-request', 3, 300000); // 每5分鐘3次
+    if (!rateLimitCheck.success) {
+      return rateLimitCheck.error;
+    }
+
+    // 2. 用戶身份驗證（發送支援請求需要登入）
+    const authCheck = await verifyUserAuth(request, {
+      requireAuth: true,
+      requireAdmin: false,
+      endpoint: '/api/send-support-request'
+    });
+    
+    if (!authCheck.success) {
+      return authCheck.error;
+    }
+
+    // 3. 驗證請求資料
+    const body = await request.json();
+    const dataValidation = validateRequestData(
+      body,
+      ['userEmail', 'urgency', 'problemType', 'description'], // 必填欄位
+      ['userName', 'conversationHistory'] // 可選欄位
+    );
+    
+    if (!dataValidation.success) {
+      return dataValidation.error;
+    }
+
     const { 
       userEmail, 
       userName, 
@@ -25,14 +54,22 @@ export async function POST(request) {
       problemType, 
       description, 
       conversationHistory 
-    } = body
+    } = dataValidation.data;
 
-    // 驗證必要欄位
-    if (!userEmail || !urgency || !problemType || !description) {
-      return NextResponse.json(
-        { error: '請填寫所有必要欄位' },
-        { status: 400 }
-      )
+    // 4. 額外驗證
+    const validUrgencies = ['低', '中', '高', '緊急'];
+    const validProblemTypes = ['技術問題', '帳號問題', '功能建議', '其他'];
+    
+    if (!validUrgencies.includes(urgency)) {
+      return NextResponse.json({ error: '無效的緊急程度' }, { status: 400 });
+    }
+    
+    if (!validProblemTypes.includes(problemType)) {
+      return NextResponse.json({ error: '無效的問題類型' }, { status: 400 });
+    }
+
+    if (description.length > 2000) {
+      return NextResponse.json({ error: '問題描述過長' }, { status: 400 });
     }
 
     // 格式化對話歷史
@@ -87,9 +124,18 @@ ${formatConversationHistory(conversationHistory)}
       
       console.log('郵件發送成功:', result.messageId)
 
+      // 記錄成功的支援請求
+      logSuccessAction('SUPPORT_REQUEST_SENT', '/api/send-support-request', {
+        userId: authCheck.user.id,
+        userEmail,
+        urgency,
+        problemType,
+        messageId: result.messageId
+      });
+
       return NextResponse.json({
         success: true,
-        message: '您的支援請求已發送成功！我們將盡快透過 Email 與您聯繫。',
+        message: '支援請求已成功發送！我們會盡快回覆您。',
         messageId: result.messageId
       })
 
@@ -105,14 +151,6 @@ ${formatConversationHistory(conversationHistory)}
     }
 
   } catch (error) {
-    console.error('支援請求處理失敗:', error)
-    
-    return NextResponse.json(
-      { 
-        error: '系統暫時無法處理您的請求，請稍後再試或直接聯繫承辦人員', 
-        details: error.message 
-      },
-      { status: 500 }
-    )
+    return handleApiError(error, '/api/send-support-request');
   }
 }

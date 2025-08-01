@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
 
 // 模擬的系統 prompt
 const SYSTEM_PROMPT = `# 角色 (Persona)
@@ -114,13 +115,57 @@ async function generateAIResponse(prompt) {
 
 export async function POST(request) {
   try {
-    const { message, history = [] } = await request.json()
+    // 1. Rate limiting 檢查
+    const rateLimitCheck = checkRateLimit(request, 'chat', 30, 60000); // 每分鐘30次
+    if (!rateLimitCheck.success) {
+      return rateLimitCheck.error;
+    }
+
+    // 2. 用戶身份驗證（聊天需要登入）
+    const authCheck = await verifyUserAuth(request, {
+      requireAuth: true,
+      requireAdmin: false,
+      endpoint: '/api/chat'
+    });
     
+    if (!authCheck.success) {
+      return authCheck.error;
+    }
+
+    // 3. 驗證請求資料
+    const body = await request.json();
+    const dataValidation = validateRequestData(
+      body,
+      ['message'], // 必填欄位
+      ['history'] // 可選欄位
+    );
+    
+    if (!dataValidation.success) {
+      return dataValidation.error;
+    }
+
+    const { message, history = [] } = dataValidation.data;
+    
+    // 4. 額外的訊息驗證
     if (!message || !message.trim()) {
       return NextResponse.json(
         { error: '訊息內容不可為空' },
         { status: 400 }
-      )
+      );
+    }
+
+    if (message.length > 1000) {
+      return NextResponse.json(
+        { error: '訊息長度不能超過1000字符' },
+        { status: 400 }
+      );
+    }
+
+    if (history.length > 50) {
+      return NextResponse.json(
+        { error: '對話歷史過長' },
+        { status: 400 }
+      );
     }
 
     // 1. 意圖檢測
@@ -194,6 +239,14 @@ ${contextText}`
       }
     }
 
+    // 記錄成功的聊天操作
+    logSuccessAction('CHAT_RESPONSE', '/api/chat', {
+      userId: authCheck.user.id,
+      messageLength: message.length,
+      sourceType,
+      hasHistory: history.length > 0
+    });
+
     return NextResponse.json({
       role: 'model',
       content: aiResponse,
@@ -202,10 +255,6 @@ ${contextText}`
     })
 
   } catch (error) {
-    console.error('Chat API Error:', error)
-    return NextResponse.json(
-      { error: '處理請求時發生錯誤' },
-      { status: 500 }
-    )
+    return handleApiError(error, '/api/chat');
   }
 }

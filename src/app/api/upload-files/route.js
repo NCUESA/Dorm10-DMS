@@ -2,21 +2,74 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { createHash } from 'crypto';
+import { verifyUserAuth, checkRateLimit, handleApiError, logSuccessAction } from '@/lib/apiMiddleware';
 
 export async function POST(request) {
     try {
+        // 1. Rate limiting 檢查（文件上傳限制）
+        const rateLimitCheck = checkRateLimit(request, 'upload-files', 10, 60000); // 每分鐘10次
+        if (!rateLimitCheck.success) {
+            return rateLimitCheck.error;
+        }
+
+        // 2. 用戶身份驗證（上傳文件需要登入）
+        const authCheck = await verifyUserAuth(request, {
+            requireAuth: true,
+            requireAdmin: false,
+            endpoint: '/api/upload-files'
+        });
+        
+        if (!authCheck.success) {
+            return authCheck.error;
+        }
+
         const formData = await request.formData();
         const files = formData.getAll('files');
         const announcementId = formData.get('announcementId');
         
+        // 3. 基本驗證
         if (!files || files.length === 0) {
             return NextResponse.json({ error: '沒有檔案被上傳' }, { status: 400 });
         }
 
+        if (files.length > 10) {
+            return NextResponse.json({ error: '一次最多只能上傳10個檔案' }, { status: 400 });
+        }
+
         const uploadedFiles = [];
+        const allowedTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/jpeg',
+            'image/png',
+            'image/gif'
+        ];
+        const maxFileSize = 10 * 1024 * 1024; // 10MB
         
         for (const file of files) {
             if (!file || !file.name) continue;
+            
+            // 4. 檔案安全檢查
+            if (!allowedTypes.includes(file.type)) {
+                return NextResponse.json({ 
+                    error: `不支援的檔案格式: ${file.type}` 
+                }, { status: 400 });
+            }
+
+            if (file.size > maxFileSize) {
+                return NextResponse.json({ 
+                    error: `檔案 ${file.name} 太大，最大允許 10MB` 
+                }, { status: 400 });
+            }
+
+            // 5. 檔案名稱安全檢查
+            const sanitizedName = file.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5._-]/g, '');
+            if (sanitizedName !== file.name) {
+                return NextResponse.json({ 
+                    error: `檔案名稱包含不安全字符: ${file.name}` 
+                }, { status: 400 });
+            }
             
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
@@ -48,13 +101,20 @@ export async function POST(request) {
             });
         }
 
+        // 6. 記錄成功的文件上傳
+        logSuccessAction('FILES_UPLOADED', '/api/upload-files', {
+            userId: authCheck.user.id,
+            fileCount: uploadedFiles.length,
+            totalSize: uploadedFiles.reduce((sum, file) => sum + file.size, 0),
+            announcementId: announcementId || 'temp'
+        });
+
         return NextResponse.json({
             success: true,
             files: uploadedFiles
         });
         
     } catch (error) {
-        console.error('檔案上傳錯誤:', error);
-        return NextResponse.json({ error: '檔案上傳失敗' }, { status: 500 });
+        return handleApiError(error, '/api/upload-files');
     }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { supabaseServer } from '@/lib/supabase/server';
+import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware';
 
 // 創建郵件傳輸器
 const transporter = nodemailer.createTransport({
@@ -18,9 +19,40 @@ const transporter = nodemailer.createTransport({
 
 export async function POST(request) {
   try {
-    const { announcementId } = await request.json();
-    if (!announcementId) {
-      return NextResponse.json({ error: '缺少公告 ID' }, { status: 400 });
+    // 1. Rate limiting 檢查（郵件發送限制更嚴格）
+    const rateLimitCheck = checkRateLimit(request, 'send-announcement', 5, 300000); // 每5分鐘5次
+    if (!rateLimitCheck.success) {
+      return rateLimitCheck.error;
+    }
+
+    // 2. 管理員身份驗證（只有管理員可以發送公告）
+    const authCheck = await verifyUserAuth(request, {
+      requireAuth: true,
+      requireAdmin: true,
+      endpoint: '/api/send-announcement'
+    });
+    
+    if (!authCheck.success) {
+      return authCheck.error;
+    }
+
+    // 3. 驗證請求資料
+    const body = await request.json();
+    const dataValidation = validateRequestData(
+      body,
+      ['announcementId'], // 必填欄位
+      [] // 可選欄位
+    );
+    
+    if (!dataValidation.success) {
+      return dataValidation.error;
+    }
+
+    const { announcementId } = dataValidation.data;
+
+    // 4. 驗證 announcementId 格式
+    if (typeof announcementId !== 'string' || announcementId.trim().length === 0) {
+      return NextResponse.json({ error: '無效的公告 ID' }, { status: 400 });
     }
 
     // 取得公告資訊
@@ -134,6 +166,14 @@ ${announcement.external_urls ? `\n相關連結：${announcement.external_urls}` 
 
     const result = await transporter.sendMail(mailOptions);
     
+    // 記錄成功的郵件發送
+    logSuccessAction('ANNOUNCEMENT_SENT', '/api/send-announcement', {
+      adminId: authCheck.user.id,
+      announcementId,
+      recipientCount: emails.length,
+      messageId: result.messageId
+    });
+
     console.log('公告郵件發送成功:', result.messageId);
 
     return NextResponse.json({ 
@@ -144,7 +184,6 @@ ${announcement.external_urls ? `\n相關連結：${announcement.external_urls}` 
     });
 
   } catch (err) {
-    console.error('寄送公告失敗', err);
-    return NextResponse.json({ error: '寄送失敗：' + err.message }, { status: 500 });
+    return handleApiError(err, '/api/send-announcement');
   }
 }
