@@ -6,24 +6,49 @@ import CreateAnnouncementModal from '@/components/CreateAnnouncementModal';
 import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
 import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import Button from '@/components/ui/Button';
-import IconButton from '@/components/ui/IconButton';
 import Toast from '@/components/ui/Toast';
+import { MessageSquare, Send } from 'lucide-react';
 
-// 寄送公告給所有使用者
-const sendAnnouncement = async (id, showToast) => {
+// --- Helper: Email Sending Function ---
+// ** MODIFIED: Updated to use supabase.functions.invoke for auth **
+const sendEmailAnnouncement = async (id, showToast) => {
+  if (!confirm('確定要透過 Email 將此公告寄送給所有使用者嗎？')) return;
+  
   try {
-    showToast('正在發送公告...', 'info');
-    const res = await fetch('/api/send-announcement', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ announcementId: id }),
+    showToast('正在透過 Email 發送公告...', 'info');
+
+    // Use supabase.functions.invoke to automatically handle authentication
+    const { data, error } = await supabase.functions.invoke('send-announcement', {
+        body: { announcementId: id },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '寄送失敗');
-    showToast(data.message || '公告寄送成功！', 'success');
+
+    if (error) throw new Error(error.message || 'Email 寄送失敗');
+    
+    showToast(data.message || '公告已成功透過 Email 寄送！', 'success');
   } catch (err) {
     console.error(err);
-    showToast(err.message || '寄送失敗，請稍後再試', 'error');
+    showToast(err.message || 'Email 寄送失敗，請稍後再試', 'error');
+  }
+};
+
+// ** MODIFIED: LINE Broadcast Function updated to use supabase.functions.invoke for auth **
+const sendLineBroadcast = async (id, showToast) => {
+  if (!confirm('確定要透過 LINE 廣播此公告給所有已加入的好友嗎？')) return;
+
+  try {
+    showToast('正在透過 LINE 廣播公告...', 'info');
+
+    // Use supabase.functions.invoke to automatically handle authentication
+    const { data, error } = await supabase.functions.invoke('broadcast-line-announcement', {
+        body: { announcementId: id },
+    });
+    
+    if (error) throw new Error(error.message || 'LINE 廣播失敗');
+
+    showToast(data.message || '公告已成功透過 LINE 廣播！', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || 'LINE 廣播失敗，請稍後再試', 'error');
   }
 };
 
@@ -33,11 +58,7 @@ export default function AnnouncementsTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [toast, setToast] = useState({
-    show: false,
-    message: '',
-    type: 'success'
-  });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -47,7 +68,6 @@ export default function AnnouncementsTab() {
     setToast(prev => ({ ...prev, show: false }));
   };
 
-  // 【新】從 Supabase 獲取公告資料
   const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
@@ -55,7 +75,6 @@ export default function AnnouncementsTab() {
         .from('announcements')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setAnnouncements(data || []);
     } catch (error) {
@@ -66,7 +85,6 @@ export default function AnnouncementsTab() {
     }
   }, []);
 
-  // 組件載入時，自動獲取一次資料
   useEffect(() => {
     fetchAnnouncements();
   }, [fetchAnnouncements]);
@@ -82,9 +100,7 @@ export default function AnnouncementsTab() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800">公告列表</h2>
-        <Button
-          onClick={handleOpenModal}
-          leftIcon={
+        <Button onClick={handleOpenModal} leftIcon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -119,30 +135,42 @@ export default function AnnouncementsTab() {
                     <td className="p-4 align-middle text-gray-600">{announcement.category}</td>
                     <td className="p-4 align-middle text-gray-600">{announcement.application_deadline || 'N/A'}</td>
                     <td className="p-4 align-middle">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        announcement.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${ announcement.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }`}>
                         {announcement.is_active ? '上架' : '下架'}
                       </span>
                     </td>
                     <td className="p-4 align-middle text-gray-600">{new Date(announcement.created_at).toLocaleDateString()}</td>
                     <td className="p-4 align-middle">
-                      <div className="flex gap-2">
-                        <Button variant="link" className="text-indigo-600 p-0" onClick={() => handleOpenEdit(announcement)}>
+                      <div className="flex items-center gap-4">
+                        <Button variant="link" className="text-indigo-600 p-0 h-auto" onClick={() => handleOpenEdit(announcement)}>
                           編輯
                         </Button>
-                        <Button variant="link" className="text-red-600 p-0" onClick={() => handleOpenDelete(announcement.id)}>
+                        <Button variant="link" className="text-red-600 p-0 h-auto" onClick={() => handleOpenDelete(announcement.id)}>
                           刪除
                         </Button>
-                        <Button
-                          variant="link"
-                          className="text-green-600 p-0"
-                          onClick={() => sendAnnouncement(announcement.id, showToast)}
-                        >
-                          寄送
-                        </Button>
+                        
+                        <div className="flex items-center gap-2 border-l pl-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                onClick={() => sendEmailAnnouncement(announcement.id, showToast)}
+                                leftIcon={<Send size={14} />}
+                            >
+                                寄送
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                onClick={() => sendLineBroadcast(announcement.id, showToast)}
+                                leftIcon={<MessageSquare size={14} />}
+                            >
+                                LINE
+                            </Button>
+                        </div>
+
                       </div>
                     </td>
                   </tr>
@@ -153,29 +181,10 @@ export default function AnnouncementsTab() {
         </div>
       </div>
       
-      <CreateAnnouncementModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refreshAnnouncements={fetchAnnouncements} // 【重要】將刷新函式傳遞下去
-      />
-      <UpdateAnnouncementModal
-        isOpen={!!editing}
-        onClose={handleCloseEdit}
-        announcement={editing}
-        refreshAnnouncements={fetchAnnouncements}
-      />
-      <DeleteAnnouncementModal
-        isOpen={!!deletingId}
-        onClose={handleCloseDelete}
-        announcementId={deletingId}
-        refreshAnnouncements={fetchAnnouncements}
-      />
-      <Toast 
-        show={toast.show} 
-        message={toast.message} 
-        type={toast.type} 
-        onClose={hideToast} 
-      />
+      <CreateAnnouncementModal isOpen={isModalOpen} onClose={handleCloseModal} refreshAnnouncements={fetchAnnouncements} />
+      <UpdateAnnouncementModal isOpen={!!editing} onClose={handleCloseEdit} announcement={editing} refreshAnnouncements={fetchAnnouncements} />
+      <DeleteAnnouncementModal isOpen={!!deletingId} onClose={handleCloseDelete} announcementId={deletingId} refreshAnnouncements={fetchAnnouncements} />
+      <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
     </div>
   );
 }
