@@ -3,6 +3,18 @@
 import { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 
+// 年級選項
+const gradeOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+// 系所選項（節錄部分系所供示例使用）
+const departmentOptions = [
+  '教育學系',
+  '國文學系',
+  '英語學系',
+  '數學系',
+  '資訊工程學系',
+  '其他'
+]
+
 const familyOptions = [
   '低收',
   '中低收',
@@ -62,7 +74,17 @@ export default function StudentInfoForm({ onSubmit, initialData = {} }) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">系所名稱</label>
-          <input name="department" value={form.department} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+          <select
+            name="department"
+            value={form.department}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          >
+            <option value="">請選擇</option>
+            {departmentOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">新生</label>
@@ -73,7 +95,17 @@ export default function StudentInfoForm({ onSubmit, initialData = {} }) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">年級</label>
-          <input type="number" min="1" max="9" name="grade" value={form.grade} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+          <select
+            name="grade"
+            value={form.grade}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          >
+            <option value="">請選擇</option>
+            {gradeOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">家境</label>
