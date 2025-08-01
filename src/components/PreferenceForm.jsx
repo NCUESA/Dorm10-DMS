@@ -12,14 +12,17 @@ const categoryOptions = [
   { value: 'E', label: 'E: 得獎名單' }
 ];
 
-export default function PreferenceForm({ onSubmit, initialData = {} }) {
+export default function PreferenceForm({ onSubmit, initialData }) {
   const [form, setForm] = useState({
     preferredCategory: '',
     note: ''
   });
 
+  // 如果有提供初始值，僅在初次載入時套用
   useEffect(() => {
-    setForm(prev => ({ ...prev, ...initialData }));
+    if (initialData) {
+      setForm(prev => ({ ...prev, ...initialData }));
+    }
   }, [initialData]);
 
   const handleChange = (e) => {

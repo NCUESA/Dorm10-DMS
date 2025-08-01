@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 
 // 年級選項
-const gradeOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+const gradeOptions = ['大一', '大二', '大三', '大四', '碩', '博']
 // 系所選項（節錄部分系所供示例使用）
 const departmentOptions = [
   '教育學系',
@@ -24,10 +24,9 @@ const familyOptions = [
   '無以上資料但家境清寒'
 ]
 
-export default function StudentInfoForm({ onSubmit, initialData = {} }) {
+export default function StudentInfoForm({ onSubmit, initialData }) {
   const [form, setForm] = useState({
     educationLevel: '',
-    college: '',
     department: '',
     freshman: '否',
     grade: '',
@@ -42,8 +41,11 @@ export default function StudentInfoForm({ onSubmit, initialData = {} }) {
   })
 
   // 載入初始資料（若提供）
+  // 若有初始資料，僅於初次載入時套用
   useEffect(() => {
-    setForm(prev => ({ ...prev, ...initialData }))
+    if (initialData) {
+      setForm(prev => ({ ...prev, ...initialData }))
+    }
   }, [initialData])
 
   const handleChange = (e) => {
@@ -67,10 +69,6 @@ export default function StudentInfoForm({ onSubmit, initialData = {} }) {
             <option value="碩班">碩班</option>
             <option value="博班">博班</option>
           </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">就讀學院</label>
-          <input name="college" value={form.college} onChange={handleChange} className="w-full border rounded px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">系所名稱</label>
