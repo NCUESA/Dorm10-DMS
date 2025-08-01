@@ -1,305 +1,302 @@
 @import "tailwindcss";
 
 :root {
-  --header-height: 60px;
-  --transition-speed: 0.3s;
-  
-  /* 自定義顏色系統 */
-  --primary: #005A9C;
-  --primary-hover: #004875;
-  --secondary: #00A6D6;
-  --accent: #F7B538;
-  --background: #F8F9FA;
-  --surface: #FFFFFF;
-  --text: #343A40;
-  --text-muted: #6C757D;
-  --border: #DEE2E6;
-  --success: #28a745;
-  --error: #dc3545;
+	--header-height: 60px;
+	--transition-speed: 0.6s;
+	--primary: #005A9C;
+	--primary-hover: #004875;
+	--primary-light: #64B5F6;
+	--secondary: #00A6D6;
+	--accent: #F7B538;
+	--background: #F8F9FA;
+	--surface: #FFFFFF;
+	--text: #343A40;
+	--text-muted: #6C757D;
+	--border: #DEE2E6;
+	--success: #28a745;
+	--error: #dc3545;
 }
 
 @media (min-width: 640px) {
-  :root {
-    --header-height: 70px;
-  }
+	:root {
+		--header-height: 70px;
+	}
 }
 
 body {
-  background-color: var(--background);
-  color: var(--text);
-  font-family: var(--font-noto-sans), Arial, Helvetica, sans-serif;
-  /* padding-top: var(--header-height); */ /* 已移除 */
+	background-color: var(--background);
+	color: var(--text);
+	font-family: var(--font-noto-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Header 固定和玻璃模糊效果 */
-/* 1. 修改 .header-fixed */
+/* --- Header 本體毛玻璃效果 --- */
 .header-fixed {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  height: var(--header-height);
-  background: var(--surface); /* <-- 將原來的 rgba(...) 修改為 var(--surface) 或 #FFFFFF */
-  /* backdrop-filter: blur(20px); -- 可以移除 */
-  /* -webkit-backdrop-filter: blur(20px); -- 可以移除 */
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: all var(--transition-speed) ease-in-out;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+	height: var(--header-height);
+	
+	background: rgba(255, 255, 255, 0.85); 
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	
+	border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+	transition: background-color var(--transition-speed) ease-in-out, 
+        box-shadow var(--transition-speed) ease-in-out,
+        border-color var(--transition-speed) ease-in-out,
+		transform var(--transition-speed) ease-in-out,
+		opacity var(--transition-speed) ease-in-out;
 }
 
-/* 2. 在您的 CSS 文件中【新增】以下規則 */
-/* 讓 active 狀態的連結底線恆常顯示 */
+
 .nav-link.active.underline-extend::after {
-  width: 75%; /* 保持和 hover 效果一致的寬度 */
+	width: 75%;
 }
 
-/* 當手機版選單展開時，隱藏 header 底部邊界 */
+/* 當手機版選單展開時，Header 本身將變為完全透明，並移除自身的模糊效果。此時，毛玻璃效果將完全由下方的選單容器接管，從而解決衝突。*/
 .header-fixed.menu-open {
-  border-bottom: none;
-  box-shadow: none;
+	background: transparent;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border-bottom-color: transparent;
+	box-shadow: none;
 }
 
 /* 底線延伸效果 */
 .underline-extend {
-  position: relative;
+	position: relative;
 }
 
 .underline-extend::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background-color: var(--primary);
-  transition: all 0.3s ease-out;
-  transform: translateX(-50%);
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	width: 0;
+	height: 2px;
+	background-color: var(--primary);
+	transition: all 0.3s ease-out;
+	transform: translateX(-50%);
 }
 
 .underline-extend:hover::after {
-  width: 100%;
+	width: 100%;
 }
 
-/* Navbar 專用的底線效果 - 考慮 focus 狀態，使用較窄的底線 */
 .underline-extend.navbar-link:hover::after {
-  width: 75%;
+	width: 75%;
 }
 
-/* 按鈕樣式 */
 .btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
+	padding: 10px 20px;
+	border-radius: 8px;
+	font-weight: 500;
+	transition: all 0.3s ease;
+	border: none;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	text-decoration: none;
 }
 
 .btn:hover {
-  transform: translateY(-1px);
+	transform: translateY(-1px);
 }
 
 .btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+	outline: none;
+	box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
 }
 
-
 .btn-primary {
-  background-color: var(--primary);
-  color: white;
+	background-color: var(--primary);
+	color: white;
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover);
+	background-color: var(--primary-hover);
 }
 
 .btn-secondary {
-  background: transparent;
-  color: var(--primary);
-  border: 1px solid var(--primary);
+	background: transparent;
+	color: var(--primary);
+	border: 1px solid var(--primary);
 }
 
 .btn-secondary:hover {
-  background-color: var(--primary);
-  color: white;
+	background-color: var(--primary);
+	color: white;
 }
 
-
-/* 輸入框樣式 */
 .input-field {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background-color: var(--surface);
-  color: var(--text);
-  transition: all 0.3s ease;
-  font-size: 16px;
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background-color: var(--surface);
+	color: var(--text);
+	transition: all 0.3s ease;
+	font-size: 16px;
 }
 
 @media (min-width: 640px) {
-  .input-field {
-    padding: 12px 16px;
-  }
+	.input-field {
+		padding: 12px 16px;
+	}
 }
 
 .input-field:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+	outline: none;
+	border-color: var(--primary);
+	box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
 }
 
 .input-field::placeholder {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
-/* 卡片樣式 */
 .card {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 16px;
+	background-color: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	padding: 16px;
 }
 
 @media (min-width: 640px) {
-  .card {
-    padding: 24px;
-  }
+	.card {
+		padding: 24px;
+	}
 }
 
-/* 導航連結樣式 */
 .nav-link {
-  color: var(--text-muted);
-  font-weight: 500;
-  text-decoration: none;
-  padding: 6px 8px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+	color: var(--text-muted);
+	font-weight: 500;
+	text-decoration: none;
+	padding: 6px 8px;
+	border-radius: 8px;
+	transition: all 0.3s ease;
 }
 
 @media (min-width: 768px) {
-  .nav-link {
-    padding: 8px 12px;
-  }
+	.nav-link {
+		padding: 8px 12px;
+	}
 }
 
 .nav-link:hover {
-  color: var(--primary);
+	color: var(--primary);
 }
 
 .nav-link:focus {
-  outline: none;
+	outline: none;
 }
 
-/* 只在非 navbar 的 nav-link 上顯示 focus 樣式 */
 .nav-link:not(.navbar-link):focus {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
+	box-shadow: 0 0 0 2px white, 0 0 0 4px var(--primary);
 }
 
 .nav-link.active {
-  color: var(--primary);
-  font-weight: 600;
+	color: var(--primary);
+	font-weight: 600;
 }
 
-/* 表單樣式 */
 .form-group {
-  margin-bottom: 16px;
+	margin-bottom: 16px;
 }
 
 @media (min-width: 640px) {
-  .form-group {
-    margin-bottom: 24px;
-  }
+	.form-group {
+		margin-bottom: 24px;
+	}
 }
 
 .form-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--text);
-  font-weight: 500;
-  font-size: 14px;
+	display: block;
+	margin-bottom: 6px;
+	color: var(--text);
+	font-weight: 500;
+	font-size: 14px;
 }
 
 @media (min-width: 640px) {
-  .form-label {
-    margin-bottom: 8px;
-    font-size: 16px;
-  }
+	.form-label {
+		margin-bottom: 8px;
+		font-size: 16px;
+	}
 }
 
 .form-error {
-  color: var(--error);
-  font-size: 14px;
-  margin-top: 8px;
+	color: var(--error);
+	font-size: 14px;
+	margin-top: 8px;
 }
 
-/* --- Footer 專用樣式 --- */
 .footer-link-underline {
-  position: relative;
-  display: inline-block;
-  padding-bottom: 2px;
+	position: relative;
+	display: inline-block;
+	padding-bottom: 2px;
 }
 
 .footer-link-underline::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px; 
-  bottom: 0;
-  left: 0;
-  background-color: var(--accent);
-  transition: width 0.3s ease-out;
+	content: '';
+	position: absolute;
+	width: 0;
+	height: 2px;
+	bottom: 0;
+	left: 0;
+	background-color: var(--accent);
+	transition: width 0.3s ease-out;
 }
 
 .footer-link-underline:hover::after {
-  width: 100%;
+	width: 100%;
 }
 
-
-/* 註冊模組 */
-
 @keyframes move-particle {
-  0% {
-    transform: translate(0, 0);
-    opacity: 0.5;
-  }
-  25% {
-    transform: translate(var(--x-end), var(--y-end));
-    opacity: 1;
-  }
-  50% {
-    transform: translate(var(--x-start), var(--y-start));
-    opacity: 0.7;
-  }
-  75% {
-    transform: translate(var(--x-end-2), var(--y-end-2));
-    opacity: 1;
-  }
-  100% {
-    transform: translate(0, 0);
-    opacity: 0.5;
-  }
+	0% {
+		transform: translate(0, 0);
+		opacity: 0.5;
+	}
+
+	25% {
+		transform: translate(var(--x-end), var(--y-end));
+		opacity: 1;
+	}
+
+	50% {
+		transform: translate(var(--x-start), var(--y-start));
+		opacity: 0.7;
+	}
+
+	75% {
+		transform: translate(var(--x-end-2), var(--y-end-2));
+		opacity: 1;
+	}
+
+	100% {
+		transform: translate(0, 0);
+		opacity: 0.5;
+	}
 }
 
 .login-link-hover {
-  display: inline-block;
-  color: transparent;
-  background-clip: text;
-  -webkit-background-clip: text;
-  background-image: linear-gradient(to left, #4338ca, #4338ca 50%, #FFB900 50%);
-  background-size: 200% 100%;
-  background-position: 100%;
-  transition: background-position 0.3s ease-out, transform 0.3s ease-out;
+	display: inline-block;
+	color: transparent;
+	background-clip: text;
+	-webkit-background-clip: text;
+	background-image: linear-gradient(to left, #4338ca, #4338ca 50%, #FFB900 50%);
+	background-size: 200% 100%;
+	background-position: 100%;
+	transition: background-position 0.3s ease-out, transform 0.3s ease-out;
 }
 
 .login-link-hover:hover {
-  background-position: 0%;
-  transform: translateX(2px);
+	background-position: 0%;
+	transform: translateX(2px);
 }
