@@ -17,102 +17,102 @@ import { rateLimit, logSecurityEvent, validateUserInput, sanitizeUserData } from
  * @returns {Object} { success: boolean, error?: NextResponse, user?: Object, profile?: Object }
  */
 export async function verifyUserAuth(request, options = {}) {
-  const {
-    requireAuth = true,
-    requireAdmin = false,
-    endpoint = 'unknown'
-  } = options;
+	const {
+		requireAuth = true,
+		requireAdmin = false,
+		endpoint = 'unknown'
+	} = options;
 
-  try {
-    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+	try {
+		const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
 
-    // 如果不需要驗證，直接返回成功
-    if (!requireAuth) {
-      return { success: true };
-    }
+		// 如果不需要驗證，直接返回成功
+		if (!requireAuth) {
+			return { success: true };
+		}
 
-    // 1. 檢查是否有 Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logSecurityEvent('UNAUTHORIZED_ACCESS', { ip, endpoint, reason: 'no_auth_header' });
-      return {
-        success: false,
-        error: NextResponse.json(
-          { error: '未授權：請先登入' },
-          { status: 401 }
-        )
-      };
-    }
+		// 1. 檢查是否有 Authorization header
+		const authHeader = request.headers.get('authorization');
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			logSecurityEvent('UNAUTHORIZED_ACCESS', { ip, endpoint, reason: 'no_auth_header' });
+			return {
+				success: false,
+				error: NextResponse.json(
+					{ error: '未授權：請先登入' },
+					{ status: 401 }
+				)
+			};
+		}
 
-    const token = authHeader.replace('Bearer ', '');
-    const supabase = supabaseServer;
-    
-    // 2. 驗證 JWT Token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      logSecurityEvent('INVALID_TOKEN', { ip, endpoint, error: authError?.message });
-      return {
-        success: false,
-        error: NextResponse.json(
-          { error: '未授權：無效的驗證令牌' },
-          { status: 401 }
-        )
-      };
-    }
+		const token = authHeader.replace('Bearer ', '');
+		const supabase = supabaseServer;
 
-    // 3. 獲取用戶資料
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, student_id, username, role, created_at')
-      .eq('id', user.id)
-      .single();
+		// 2. 驗證 JWT Token
+		const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (profileError || !userProfile) {
-      logSecurityEvent('PROFILE_NOT_FOUND', { ip, endpoint, userId: user.id });
-      return {
-        success: false,
-        error: NextResponse.json(
-          { error: '用戶資料不存在' },
-          { status: 404 }
-        )
-      };
-    }
+		if (authError || !user) {
+			logSecurityEvent('INVALID_TOKEN', { ip, endpoint, error: authError?.message });
+			return {
+				success: false,
+				error: NextResponse.json(
+					{ error: '未授權：無效的驗證令牌' },
+					{ status: 401 }
+				)
+			};
+		}
 
-    // 4. 檢查管理員權限（如果需要）
-    if (requireAdmin && userProfile.role !== 'admin') {
-      logSecurityEvent('INSUFFICIENT_PERMISSIONS', { 
-        ip, 
-        endpoint, 
-        userId: user.id, 
-        role: userProfile.role 
-      });
-      return {
-        success: false,
-        error: NextResponse.json(
-          { error: '權限不足：需要管理員權限' },
-          { status: 403 }
-        )
-      };
-    }
+		// 3. 獲取用戶資料
+		const { data: userProfile, error: profileError } = await supabase
+			.from('profiles')
+			.select('id, student_id, username, role, created_at')
+			.eq('id', user.id)
+			.single();
 
-    return {
-      success: true,
-      user,
-      profile: userProfile
-    };
+		if (profileError || !userProfile) {
+			logSecurityEvent('PROFILE_NOT_FOUND', { ip, endpoint, userId: user.id });
+			return {
+				success: false,
+				error: NextResponse.json(
+					{ error: '用戶資料不存在' },
+					{ status: 404 }
+				)
+			};
+		}
 
-  } catch (error) {
-    console.error('Auth verification error:', error);
-    logSecurityEvent('AUTH_ERROR', { endpoint, error: error.message });
-    return {
-      success: false,
-      error: NextResponse.json(
-        { error: '驗證過程發生錯誤' },
-        { status: 500 }
-      )
-    };
-  }
+		// 4. 檢查管理員權限
+		if (requireAdmin && userProfile.role !== 'admin') {
+			logSecurityEvent('INSUFFICIENT_PERMISSIONS', {
+				ip,
+				endpoint,
+				userId: user.id,
+				role: userProfile.role
+			});
+			return {
+				success: false,
+				error: NextResponse.json(
+					{ error: '權限不足：需要管理員權限' },
+					{ status: 403 }
+				)
+			};
+		}
+
+		return {
+			success: true,
+			user,
+			profile: userProfile
+		};
+
+	} catch (error) {
+		console.error('Auth verification error:', error);
+		logSecurityEvent('AUTH_ERROR', { endpoint, error: error.message });
+		return {
+			success: false,
+			error: NextResponse.json(
+				{ error: '驗證過程發生錯誤' },
+				{ status: 500 }
+			)
+		};
+	}
 }
 
 /**
@@ -124,20 +124,20 @@ export async function verifyUserAuth(request, options = {}) {
  * @returns {Object} { success: boolean, error?: NextResponse }
  */
 export function checkRateLimit(request, endpoint, limit = 60, windowMs = 60000) {
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
-  
-  if (!rateLimit(`${endpoint}-${ip}`, limit, windowMs)) {
-    logSecurityEvent('RATE_LIMIT_EXCEEDED', { ip, endpoint, limit, windowMs });
-    return {
-      success: false,
-      error: NextResponse.json(
-        { error: '請求過於頻繁，請稍後再試' },
-        { status: 429 }
-      )
-    };
-  }
-  
-  return { success: true };
+	const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+
+	if (!rateLimit(`${endpoint}-${ip}`, limit, windowMs)) {
+		logSecurityEvent('RATE_LIMIT_EXCEEDED', { ip, endpoint, limit, windowMs });
+		return {
+			success: false,
+			error: NextResponse.json(
+				{ error: '請求過於頻繁，請稍後再試' },
+				{ status: 429 }
+			)
+		};
+	}
+
+	return { success: true };
 }
 
 /**
@@ -148,60 +148,60 @@ export function checkRateLimit(request, endpoint, limit = 60, windowMs = 60000) 
  * @returns {Object} { success: boolean, error?: NextResponse, data?: Object }
  */
 export function validateRequestData(data, requiredFields = [], optionalFields = []) {
-  try {
-    // 檢查必填欄位
-    for (const field of requiredFields) {
-      if (!data[field] && data[field] !== 0 && data[field] !== false) {
-        return {
-          success: false,
-          error: NextResponse.json(
-            { error: `缺少必填欄位：${field}` },
-            { status: 400 }
-          )
-        };
-      }
-    }
+	try {
+		// 檢查必填欄位
+		for (const field of requiredFields) {
+			if (!data[field] && data[field] !== 0 && data[field] !== false) {
+				return {
+					success: false,
+					error: NextResponse.json(
+						{ error: `缺少必填欄位：${field}` },
+						{ status: 400 }
+					)
+				};
+			}
+		}
 
-    // 過濾允許的欄位
-    const allowedFields = [...requiredFields, ...optionalFields];
-    const filteredData = {};
-    
-    for (const field of allowedFields) {
-      if (data[field] !== undefined) {
-        filteredData[field] = data[field];
-      }
-    }
+		// 過濾允許的欄位
+		const allowedFields = [...requiredFields, ...optionalFields];
+		const filteredData = {};
 
-    // 驗證資料格式
-    const validationErrors = validateUserInput(filteredData);
-    if (validationErrors.length > 0) {
-      return {
-        success: false,
-        error: NextResponse.json(
-          { error: validationErrors.join(', ') },
-          { status: 400 }
-        )
-      };
-    }
+		for (const field of allowedFields) {
+			if (data[field] !== undefined) {
+				filteredData[field] = data[field];
+			}
+		}
 
-    // 清理資料
-    const sanitizedData = sanitizeUserData(filteredData);
+		// 驗證資料格式
+		const validationErrors = validateUserInput(filteredData);
+		if (validationErrors.length > 0) {
+			return {
+				success: false,
+				error: NextResponse.json(
+					{ error: validationErrors.join(', ') },
+					{ status: 400 }
+				)
+			};
+		}
 
-    return {
-      success: true,
-      data: sanitizedData
-    };
+		// 清理資料
+		const sanitizedData = sanitizeUserData(filteredData);
 
-  } catch (error) {
-    console.error('Data validation error:', error);
-    return {
-      success: false,
-      error: NextResponse.json(
-        { error: '資料驗證失敗' },
-        { status: 400 }
-      )
-    };
-  }
+		return {
+			success: true,
+			data: sanitizedData
+		};
+
+	} catch (error) {
+		console.error('Data validation error:', error);
+		return {
+			success: false,
+			error: NextResponse.json(
+				{ error: '資料驗證失敗' },
+				{ status: 400 }
+			)
+		};
+	}
 }
 
 /**
@@ -211,13 +211,13 @@ export function validateRequestData(data, requiredFields = [], optionalFields = 
  * @returns {NextResponse} 錯誤回應
  */
 export function handleApiError(error, endpoint) {
-  console.error(`API Error in ${endpoint}:`, error);
-  logSecurityEvent('API_ERROR', { endpoint, error: error.message });
-  
-  return NextResponse.json(
-    { error: '伺服器錯誤，請稍後再試' },
-    { status: 500 }
-  );
+	console.error(`API Error in ${endpoint}:`, error);
+	logSecurityEvent('API_ERROR', { endpoint, error: error.message });
+
+	return NextResponse.json(
+		{ error: '伺服器錯誤，請稍後再試' },
+		{ status: 500 }
+	);
 }
 
 /**
@@ -227,10 +227,10 @@ export function handleApiError(error, endpoint) {
  * @param {Object} details - 詳細資訊
  */
 export function logSuccessAction(action, endpoint, details = {}) {
-  logSecurityEvent('API_SUCCESS', {
-    action,
-    endpoint,
-    timestamp: new Date().toISOString(),
-    ...details
-  });
+	logSecurityEvent('API_SUCCESS', {
+		action,
+		endpoint,
+		timestamp: new Date().toISOString(),
+		...details
+	});
 }

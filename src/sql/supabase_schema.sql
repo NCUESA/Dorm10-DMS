@@ -1,5 +1,5 @@
 -- ===============================
--- 🔰 安全清除舊資料（表存在時才刪除）
+-- 安全清除舊資料（表存在時才刪除）
 -- ===============================
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chat_history') THEN
@@ -17,7 +17,7 @@ DO $$ BEGIN
 END $$;
 
 -- ===============================
--- 1️⃣ 建立 profiles 表
+-- 建立 profiles 表
 -- ===============================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 COMMENT ON TABLE public.profiles IS 'Stores public user profile information, extending the auth.users table.';
 
 -- ===============================
--- 2️⃣ 建立 announcements 表
+-- 建立 announcements 表
 -- ===============================
 CREATE TABLE IF NOT EXISTS public.announcements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.announcements (
 );
 
 -- ===============================
--- 3️⃣ 建立 attachments 表
+-- 建立 attachments 表
 -- ===============================
 CREATE TABLE IF NOT EXISTS public.attachments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS public.attachments (
 );
 
 -- ===============================
--- 4️⃣ 建立 chat_history 表
+-- 建立 chat_history 表
 -- ===============================
 CREATE TABLE IF NOT EXISTS public.chat_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS public.chat_history (
 );
 
 -- ===============================
--- 5️⃣ 設定 Row Level Security（RLS）
+-- 設定 Row Level Security（RLS）
 -- ===============================
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -94,7 +94,7 @@ CREATE POLICY "Users can update their own profile." ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
 -- ===============================
--- 6️⃣ 建立觸發函式：handle_new_user()
+-- 建立觸發函式：handle_new_user()
 -- ===============================
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
@@ -111,7 +111,7 @@ BEGIN
 END;
 $$;
 -- ===============================
--- 7️⃣ 建立觸發器：on_auth_user_created
+-- 建立觸發器：on_auth_user_created
 -- ===============================
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

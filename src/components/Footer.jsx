@@ -1,4 +1,4 @@
-"use client"; // 因為要使用 usePathname hook，所以需要宣告為客戶端元件
+"use client";
 
 import Link from "next/link";
 import { usePathname } from 'next/navigation'; // 導入 Next.js 的 usePathname hook

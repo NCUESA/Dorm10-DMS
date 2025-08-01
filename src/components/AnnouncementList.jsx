@@ -23,7 +23,7 @@ const calculateSemester = (deadlineStr) => {
     const deadline = new Date(deadlineStr);
     const year = deadline.getFullYear();
     const month = deadline.getMonth() + 1; // getMonth() is 0-indexed
-    
+
     let academicYear;
     let semester;
 
@@ -34,7 +34,7 @@ const calculateSemester = (deadlineStr) => {
         semester = 2;
         academicYear = year - 1911;
     }
-    
+
     return `${academicYear}-${semester}`;
 };
 
@@ -42,7 +42,7 @@ const calculateSemester = (deadlineStr) => {
 // --- Main Component ---
 export default function AnnouncementList() {
     const searchParams = useSearchParams();
-    
+
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('open');
@@ -51,7 +51,7 @@ export default function AnnouncementList() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
     const [sort, setSort] = useState({ column: 'application_deadline', ascending: true });
-    
+
     const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
     const announcementRefs = useRef({});
 
@@ -64,14 +64,14 @@ export default function AnnouncementList() {
         if (search) {
             query = query.or(`title.ilike.%${search}%,target_audience.ilike.%${search}%,application_limitations.ilike.%${search}%`);
         }
-        
+
         const today = new Date().toISOString().slice(0, 10);
         if (filter === 'open') {
             query = query.gte('application_deadline', today);
         } else if (filter === 'expired') {
             query = query.lt('application_deadline', today);
         }
-        
+
         query = query.order(sort.column, { ascending: sort.ascending });
 
         const from = (page - 1) * rowsPerPage;
@@ -92,7 +92,7 @@ export default function AnnouncementList() {
     useEffect(() => {
         fetchAnnouncements();
     }, [fetchAnnouncements]);
-    
+
     useEffect(() => {
         const announcementId = searchParams.get('announcement_id');
         if (announcementId && announcements.length > 0) {
@@ -105,7 +105,7 @@ export default function AnnouncementList() {
             }
         }
     }, [searchParams, announcements]);
-    
+
     const handleSort = (column) => {
         setSort(prev => ({ column, ascending: prev.column === column ? !prev.ascending : true }));
     };
@@ -118,14 +118,14 @@ export default function AnnouncementList() {
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
-                 <h2 className="text-xl font-bold text-slate-800 mb-4">獎助學金代碼定義</h2>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-slate-600">
+                <h2 className="text-xl font-bold text-slate-800 mb-4">獎助學金代碼定義</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-slate-600">
                     <p><strong className="font-semibold text-red-600">A：</strong>各縣市政府獎助學金</p>
                     <p><strong className="font-semibold text-orange-600">B：</strong>縣市政府以外之各級公家機關及公營單位獎助學金</p>
                     <p><strong className="font-semibold text-blue-600">C：</strong>宗教及民間各項指定身分獎助學金</p>
                     <p><strong className="font-semibold text-emerald-600">D：</strong>各民間單位（經濟不利、學業優良等）</p>
                     <p><strong className="font-semibold text-green-600">E：</strong>獎學金得獎名單公告</p>
-                 </div>
+                </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
@@ -141,7 +141,7 @@ export default function AnnouncementList() {
                     <Button variant={filter === 'expired' ? 'primary' : 'secondary'} onClick={() => setFilter('expired')}>已過期</Button>
                 </ButtonGroup>
             </div>
-            
+
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 {/* Desktop Table */}
                 <table className="hidden md:table w-full">
@@ -183,10 +183,10 @@ export default function AnnouncementList() {
 
                 {/* Mobile Card List */}
                 <div className="md:hidden divide-y divide-gray-200">
-                     {loading ? (
+                    {loading ? (
                         <div className="p-10 text-center text-gray-500">載入中...</div>
-                     ) : announcements.map(item => (
-                         <div key={item.id} ref={el => announcementRefs.current[item.id] = el} className="p-4 hover:bg-indigo-50 cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
+                    ) : announcements.map(item => (
+                        <div key={item.id} ref={el => announcementRefs.current[item.id] = el} className="p-4 hover:bg-indigo-50 cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
                             <div className="flex justify-between items-start mb-2">
                                 <h3 className="font-bold text-base text-gray-900 flex-1 pr-4">{item.title}</h3>
                                 <div className="text-right flex-shrink-0">
@@ -198,8 +198,8 @@ export default function AnnouncementList() {
                                 <p><strong className="font-semibold text-gray-800">適用對象: </strong>{item.target_audience}</p>
                                 <p><strong className="font-semibold text-gray-800">兼領限制: </strong>{item.application_limitations}</p>
                             </div>
-                         </div>
-                     ))}
+                        </div>
+                    ))}
                 </div>
                 {announcements.length === 0 && !loading && (
                     <div className="p-10 text-center text-gray-500">無符合條件的公告。</div>
@@ -207,20 +207,20 @@ export default function AnnouncementList() {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
-                 <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600">
                     共 {totalCount} 筆資料
-                 </div>
-                 <div className="flex items-center gap-4">
-                    <select value={rowsPerPage} onChange={e => {setRowsPerPage(Number(e.target.value)); setPage(1);}} className="p-2 border border-gray-300 rounded-md text-sm bg-white">
+                </div>
+                <div className="flex items-center gap-4">
+                    <select value={rowsPerPage} onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1); }} className="p-2 border border-gray-300 rounded-md text-sm bg-white">
                         {[10, 25, 50].map(v => <option key={v} value={v}>{v} 筆 / 頁</option>)}
                     </select>
                     <ButtonGroup>
                         <Button variant="secondary" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>上一頁</Button>
                         <Button variant="secondary" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * rowsPerPage >= totalCount}>下一頁</Button>
                     </ButtonGroup>
-                 </div>
+                </div>
             </div>
-            
+
             {selectedAnnouncement && (
                 <div className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4 transition-opacity duration-300" onClick={() => setSelectedAnnouncement(null)}>
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -241,12 +241,12 @@ export default function AnnouncementList() {
                                 <div>
                                     <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">相關附件</h3>
                                     <div className="space-y-2">
-                                    {selectedAnnouncement.attachments.map(att => (
-                                        <a key={att.id} href={att.public_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-blue-50 hover:bg-blue-100 p-3 rounded-lg text-blue-800 font-medium transition-colors">
-                                            <Paperclip className="h-5 w-5 flex-shrink-0" />
-                                            <span className="truncate">{att.file_name}</span>
-                                        </a>
-                                    ))}
+                                        {selectedAnnouncement.attachments.map(att => (
+                                            <a key={att.id} href={att.public_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-blue-50 hover:bg-blue-100 p-3 rounded-lg text-blue-800 font-medium transition-colors">
+                                                <Paperclip className="h-5 w-5 flex-shrink-0" />
+                                                <span className="truncate">{att.file_name}</span>
+                                            </a>
+                                        ))}
                                     </div>
                                 </div>
                             )}
