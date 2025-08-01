@@ -215,43 +215,97 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
         const currentFilesCount = selectedFiles.length;
         
         for (const file of fileArray) {
-            // 檢查是否已經存在相同名稱的檔案
-            if (selectedFiles.some(existingFile => existingFile.name === file.name)) {
-                showToast(`檔案 "${file.name}" 已經存在`, 'warning');
-                continue;
+            try {
+                // 基本檔案檢查
+                if (!file || !file.name) {
+                    showToast('發現無效的檔案', 'error');
+                    continue;
+                }
+                
+                // 檔案名稱安全檢查
+                const fileName = file.name.trim();
+                if (!fileName) {
+                    showToast('檔案名稱不能為空', 'error');
+                    continue;
+                }
+                
+                // 檢查檔案名稱長度
+                if (fileName.length > 255) {
+                    showToast(`檔案名稱過長: ${fileName}`, 'error');
+                    continue;
+                }
+                
+                // 檢查是否包含非法字符（針對檔案系統路徑安全）
+                const illegalChars = /[<>:"|?*\x00-\x1f]/;
+                if (illegalChars.test(fileName)) {
+                    showToast(`檔案名稱包含非法字符: ${fileName}`, 'error');
+                    continue;
+                }
+                
+                // 檢查是否已經存在相同名稱的檔案
+                if (selectedFiles.some(existingFile => existingFile.name === fileName)) {
+                    showToast(`檔案 "${fileName}" 已經存在`, 'warning');
+                    continue;
+                }
+                
+                // 檢查檔案數量限制（包括現有檔案）
+                if (currentFilesCount + validFiles.length >= maxFiles) {
+                    showToast(`最多只能上傳 ${maxFiles} 個檔案`, 'warning');
+                    break;
+                }
+                
+                // 檢查文件類型
+                if (!supportedTypes[file.type]) {
+                    showToast(`檔案 "${fileName}" 格式不支援。請上傳 PDF、DOCX、DOC 或圖片文件。`, 'warning');
+                    continue;
+                }
+                
+                // 檢查文件大小
+                if (file.size > maxFileSize) {
+                    showToast(`檔案 "${fileName}" 大小超過限制。請選擇小於 10MB 的文件。`, 'warning');
+                    continue;
+                }
+                
+                // 檢查檔案是否可讀
+                if (file.size === 0) {
+                    showToast(`檔案 "${fileName}" 是空檔案`, 'warning');
+                    continue;
+                }
+                
+                validFiles.push(file);
+                
+            } catch (error) {
+                console.error('檔案驗證錯誤:', error);
+                showToast(`檔案處理錯誤: ${file.name || '未知檔案'} - ${error.message}`, 'error');
             }
-            
-            // 檢查檔案數量限制（包括現有檔案）
-            if (currentFilesCount + validFiles.length >= maxFiles) {
-                showToast(`最多只能上傳 ${maxFiles} 個檔案`, 'warning');
-                break;
-            }
-            
-            // 檢查文件類型
-            if (!supportedTypes[file.type]) {
-                showToast(`檔案 "${file.name}" 格式不支援。請上傳 PDF、DOCX、DOC 或圖片文件。`, 'warning');
-                continue;
-            }
-            
-            // 檢查文件大小
-            if (file.size > maxFileSize) {
-                showToast(`檔案 "${file.name}" 大小超過限制。請選擇小於 10MB 的文件。`, 'warning');
-                continue;
-            }
-            
-            validFiles.push(file);
         }
         
         if (validFiles.length > 0) {
             setSelectedFiles(prev => [...prev, ...validFiles]);
+            showToast(`成功選擇 ${validFiles.length} 個檔案`, 'success');
         }
     };
     
     const handleFileChange = (event) => {
-        const files = event.target.files;
-        if (files && files.length > 0) {
-            validateAndAddFiles(files);
+        try {
+            const files = event.target.files;
+            console.log('Selected files:', {
+                length: files?.length || 0,
+                items: files ? Array.from(files).map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size
+                })) : []
+            });
+            
+            if (files && files.length > 0) {
+                validateAndAddFiles(files);
+            }
+        } catch (error) {
+            console.error('檔案選擇錯誤:', error);
+            showToast(`檔案選擇失敗: ${error.message}`, 'error');
         }
+        
         // 重置 input value 以允許重新選擇相同檔案
         event.target.value = '';
     };
@@ -261,9 +315,24 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
     const handleDrop = (event) => {
         event.preventDefault();
         if (disabled) return;
-        const files = event.dataTransfer.files;
-        if (files && files.length > 0) {
-            validateAndAddFiles(files);
+        
+        try {
+            const files = event.dataTransfer.files;
+            console.log('Dropped files:', {
+                length: files.length,
+                items: Array.from(files).map(f => ({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size
+                }))
+            });
+            
+            if (files && files.length > 0) {
+                validateAndAddFiles(files);
+            }
+        } catch (error) {
+            console.error('檔案拖放錯誤:', error);
+            showToast(`檔案拖放失敗: ${error.message}`, 'error');
         }
     };
     
@@ -443,15 +512,37 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             
             // 將現有附件轉換為顯示格式
             if (attachments && attachments.length > 0) {
-                const existingFiles = attachments.map(attachment => ({
-                    id: attachment.id,
-                    name: attachment.file_name,
-                    size: attachment.file_size,
-                    type: attachment.mime_type,
-                    path: attachment.stored_file_path,
-                    isExisting: true // 標記為現有檔案
-                }));
-                setSelectedFiles(existingFiles);
+                const existingFiles = attachments.map(attachment => {
+                    // 清理和驗證檔案路徑
+                    let cleanPath = attachment.stored_file_path;
+                    
+                    // 檢查路徑有效性
+                    if (!cleanPath || cleanPath === 'null' || cleanPath === 'undefined') {
+                        console.warn(`Invalid path for attachment ${attachment.id}:`, cleanPath);
+                        cleanPath = null;
+                    } else {
+                        // 清理路徑中的非法字符
+                        cleanPath = cleanPath.trim().replace(/[<>"|?*]/g, '');
+                    }
+                    
+                    return {
+                        id: attachment.id,
+                        name: attachment.file_name || '未知檔案',
+                        size: attachment.file_size || 0,
+                        type: attachment.mime_type || 'application/octet-stream',
+                        path: cleanPath,
+                        isExisting: true // 標記為現有檔案
+                    };
+                });
+                
+                // 過濾掉路徑無效的檔案
+                const validFiles = existingFiles.filter(file => file.path);
+                if (validFiles.length < existingFiles.length) {
+                    const invalidCount = existingFiles.length - validFiles.length;
+                    showToast(`發現 ${invalidCount} 個檔案路徑無效，已跳過`, 'warning');
+                }
+                
+                setSelectedFiles(validFiles);
             }
         } catch (error) {
             console.error('載入附件失敗:', error);
@@ -464,14 +555,36 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         try {
             // 對於現有檔案，使用儲存的路徑
             if (file.isExisting && file.path) {
-                // 構建完整的檔案 URL
-                const fileUrl = file.path.startsWith('/') ? file.path : `/${file.path}`;
+                // 驗證和清理檔案路徑
+                let cleanPath = file.path.trim();
+                
+                // 檢查路徑是否為空或包含非法字符
+                if (!cleanPath || cleanPath === 'null' || cleanPath === 'undefined') {
+                    showToast('檔案路徑無效', 'error');
+                    return;
+                }
+                
+                // 移除可能的非法字符，只保留安全的路徑字符
+                cleanPath = cleanPath.replace(/[<>"|?*]/g, '');
+                
+                // 確保路徑以 / 開頭
+                const fileUrl = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+                
+                // 驗證路徑格式
+                try {
+                    new URL(fileUrl, window.location.origin);
+                } catch (urlError) {
+                    console.error('Invalid file URL:', fileUrl, urlError);
+                    showToast('檔案路徑格式錯誤', 'error');
+                    return;
+                }
                 
                 // 創建下載連結
                 const link = document.createElement('a');
                 link.href = fileUrl;
-                link.download = file.name;
+                link.download = file.name || 'download';
                 link.target = '_blank';
+                link.rel = 'noopener noreferrer';
                 
                 // 觸發下載
                 document.body.appendChild(link);
@@ -480,11 +593,11 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 
                 showToast(`正在下載檔案: ${file.name}`, 'success');
             } else {
-                showToast('無法下載此檔案', 'error');
+                showToast('無法下載此檔案：檔案路徑不存在', 'error');
             }
         } catch (error) {
             console.error('下載失敗:', error);
-            showToast('檔案下載失敗', 'error');
+            showToast(`檔案下載失敗: ${error.message}`, 'error');
         }
     };
 
