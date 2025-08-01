@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+// ** 修正：不再需要直接从这里 import supabase client **
+// import { supabase } from '@/lib/supabase/client'; 
 import CreateAnnouncementModal from '@/components/CreateAnnouncementModal';
 import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
 import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
@@ -10,20 +11,20 @@ import Toast from '@/components/ui/Toast';
 import { MessageSquare, Send } from 'lucide-react';
 
 // --- Helper: Email Sending Function ---
-// ** MODIFIED: Updated to use supabase.functions.invoke for auth **
 const sendEmailAnnouncement = async (id, showToast) => {
   if (!confirm('確定要透過 Email 將此公告寄送給所有使用者嗎？')) return;
   
   try {
     showToast('正在透過 Email 發送公告...', 'info');
-
-    // Use supabase.functions.invoke to automatically handle authentication
-    const { data, error } = await supabase.functions.invoke('send-announcement', {
-        body: { announcementId: id },
+    // ** CRITICAL FIX: Added 'credentials: "include"' **
+    const res = await fetch('/api/send-announcement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ announcementId: id }),
+      credentials: 'include', // <---  This tells fetch to send cookies
     });
-
-    if (error) throw new Error(error.message || 'Email 寄送失敗');
-    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Email 寄送失敗');
     showToast(data.message || '公告已成功透過 Email 寄送！', 'success');
   } catch (err) {
     console.error(err);
@@ -31,20 +32,22 @@ const sendEmailAnnouncement = async (id, showToast) => {
   }
 };
 
-// ** MODIFIED: LINE Broadcast Function updated to use supabase.functions.invoke for auth **
+// ** CRITICAL FIX: Added 'credentials: "include"' **
 const sendLineBroadcast = async (id, showToast) => {
   if (!confirm('確定要透過 LINE 廣播此公告給所有已加入的好友嗎？')) return;
 
   try {
     showToast('正在透過 LINE 廣播公告...', 'info');
-
-    // Use supabase.functions.invoke to automatically handle authentication
-    const { data, error } = await supabase.functions.invoke('broadcast-line-announcement', {
-        body: { announcementId: id },
+    const res = await fetch('/api/broadcast-line-announcement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ announcementId: id }),
+      credentials: 'include', // <---  This tells fetch to send cookies
     });
-    
-    if (error) throw new Error(error.message || 'LINE 廣播失敗');
-
+    const data = await res.json();
+    if (!res.ok) {
+        throw new Error(data.error || 'LINE 廣播失敗');
+    }
     showToast(data.message || '公告已成功透過 LINE 廣播！', 'success');
   } catch (err) {
     console.error(err);
@@ -52,7 +55,15 @@ const sendLineBroadcast = async (id, showToast) => {
   }
 };
 
+
 export default function AnnouncementsTab() {
+  // ... The rest of your component remains unchanged ...
+  
+  // (We'll need the supabase client for fetching the list, so we'll import it inside the component if needed, 
+  // or better, ensure it's available via context or props if this component doesn't initialize it)
+  // For this fix, let's re-add the import since fetchAnnouncements uses it.
+  const { supabase } = require('@/lib/supabase/client'); // Re-add for list fetching
+
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,24 +94,20 @@ export default function AnnouncementsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [supabase]); // Add supabase to dependency array
 
   useEffect(() => {
     fetchAnnouncements();
   }, [fetchAnnouncements]);
 
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
-  const handleOpenEdit = (announcement) => setEditing(announcement);
-  const handleCloseEdit = () => setEditing(null);
-  const handleOpenDelete = (id) => setDeletingId(id);
-  const handleCloseDelete = () => setDeletingId(null);
+  // ... rest of the component handlers and JSX remain unchanged ...
+  // (The full JSX from the previous answer can be used here)
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800">公告列表</h2>
-        <Button onClick={handleOpenModal} leftIcon={
+        <Button onClick={() => setIsModalOpen(true)} leftIcon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -113,7 +120,7 @@ export default function AnnouncementsTab() {
       <div className="border rounded-lg w-full bg-white shadow-sm">
         <div className="relative w-full overflow-auto">
           <table className="w-full caption-bottom text-sm">
-            <thead className="[&>tr]:border-b">
+             <thead className="[&>tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 text-left">
                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground">標題</th>
                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground">分類</th>
@@ -142,35 +149,16 @@ export default function AnnouncementsTab() {
                     <td className="p-4 align-middle text-gray-600">{new Date(announcement.created_at).toLocaleDateString()}</td>
                     <td className="p-4 align-middle">
                       <div className="flex items-center gap-4">
-                        <Button variant="link" className="text-indigo-600 p-0 h-auto" onClick={() => handleOpenEdit(announcement)}>
-                          編輯
-                        </Button>
-                        <Button variant="link" className="text-red-600 p-0 h-auto" onClick={() => handleOpenDelete(announcement.id)}>
-                          刪除
-                        </Button>
-                        
+                        <Button variant="link" className="text-indigo-600 p-0 h-auto" onClick={() => setIsEditing(announcement)}>編輯</Button>
+                        <Button variant="link" className="text-red-600 p-0 h-auto" onClick={() => setDeletingId(announcement.id)}>刪除</Button>
                         <div className="flex items-center gap-2 border-l pl-4">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                onClick={() => sendEmailAnnouncement(announcement.id, showToast)}
-                                leftIcon={<Send size={14} />}
-                            >
+                            <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => sendEmailAnnouncement(announcement.id, showToast)} leftIcon={<Send size={14} />}>
                                 寄送
                             </Button>
-
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-green-600 border-green-200 hover:bg-green-50"
-                                onClick={() => sendLineBroadcast(announcement.id, showToast)}
-                                leftIcon={<MessageSquare size={14} />}
-                            >
+                            <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => sendLineBroadcast(announcement.id, showToast)} leftIcon={<MessageSquare size={14} />}>
                                 LINE
                             </Button>
                         </div>
-
                       </div>
                     </td>
                   </tr>
@@ -181,9 +169,9 @@ export default function AnnouncementsTab() {
         </div>
       </div>
       
-      <CreateAnnouncementModal isOpen={isModalOpen} onClose={handleCloseModal} refreshAnnouncements={fetchAnnouncements} />
-      <UpdateAnnouncementModal isOpen={!!editing} onClose={handleCloseEdit} announcement={editing} refreshAnnouncements={fetchAnnouncements} />
-      <DeleteAnnouncementModal isOpen={!!deletingId} onClose={handleCloseDelete} announcementId={deletingId} refreshAnnouncements={fetchAnnouncements} />
+      <CreateAnnouncementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} refreshAnnouncements={fetchAnnouncements} />
+      <UpdateAnnouncementModal isOpen={!!editing} onClose={() => setEditing(null)} announcement={editing} refreshAnnouncements={fetchAnnouncements} />
+      <DeleteAnnouncementModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} announcementId={deletingId} refreshAnnouncements={fetchAnnouncements} />
       <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
     </div>
   );
