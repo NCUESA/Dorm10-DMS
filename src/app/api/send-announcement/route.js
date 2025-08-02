@@ -87,9 +87,10 @@ export async function POST(request) {
 
     // 準備郵件內容
     const cleanSummary = stripHtml(announcement.summary);
-    const deadline = announcement.application_deadline 
+    const deadline = announcement.application_deadline
       ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW')
       : '未指定';
+    const platformUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/?announcement_id=${announcementId}`; // 使用 GET 參數連結公告
 
     const emailContent = `
 【NCUE 獎學金資訊平台 - 新公告通知】
@@ -106,8 +107,9 @@ ${cleanSummary}
 
 ${announcement.external_urls ? `\n相關連結：${announcement.external_urls}` : ''}
 
+查看完整資訊與附件：${platformUrl}
+
 ---
-請至 NCUE 獎學金資訊整合平台查看完整內容及附件
 發送時間：${new Date().toLocaleString('zh-TW')}
 此郵件由系統自動發送，請勿直接回覆
 `;
@@ -141,11 +143,11 @@ ${announcement.external_urls ? `\n相關連結：${announcement.external_urls}` 
       <a href="${announcement.external_urls}" style="color: #27ae60; text-decoration: none;">${announcement.external_urls}</a>
     </div>
     ` : ''}
-    
+
     <div style="text-align: center; margin: 20px 0;">
-      <p style="background: #3498db; color: white; padding: 15px; border-radius: 5px; margin: 0;">
-        <strong>📱 請至 NCUE 獎學金資訊整合平台查看完整內容及下載附件</strong>
-      </p>
+      <a href="${platformUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px; border-radius: 5px; text-decoration: none;">
+        📱 查看完整內容及附件
+      </a>
     </div>
   </div>
   
