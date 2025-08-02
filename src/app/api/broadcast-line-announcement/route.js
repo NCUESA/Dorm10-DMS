@@ -74,7 +74,20 @@ export async function POST(request) {
         const deadline = announcement.application_deadline
             ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW') : '未指定';
         const platformUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/?announcement_id=${announcementId}`;
-        const lineMessageText = `🎓 獎學金新公告\n\n【${announcement.title}】\n\n- 截止日期：${deadline}\n- 適用對象：${announcement.target_audience || '所有學生'}\n\n👇 點擊下方連結查看完整資訊與附件\n${platformUrl}`;
+        const stripHtml = (html) => {
+            if (!html) return '';
+            return html.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim(); // 移除 HTML 標籤
+        };
+        const cleanSummary = stripHtml(announcement.summary);
+        const lineMessageText = [
+            '🎓 獎學金新公告',
+            `【${announcement.title}】`,
+            cleanSummary ? `\n${cleanSummary}` : '',
+            `\n⏰ 截止日期：${deadline}`,
+            `👥 適用對象：${announcement.target_audience || '所有學生'}`,
+            '',
+            `🔗 詳情：${platformUrl}`
+        ].join('\n');
 
         // 6. 呼叫 LINE API
         const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;

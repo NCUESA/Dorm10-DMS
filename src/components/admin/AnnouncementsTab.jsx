@@ -8,6 +8,7 @@ import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import Toast from '@/components/ui/Toast';
 import { Plus, Search, ChevronsUpDown, ArrowDown, ArrowUp, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
+import AnnouncementPreviewModal from '@/components/AnnouncementPreviewModal';
 
 const LineIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="16" height="16" viewBox="0 0 50 50" className="inline-block">
@@ -22,7 +23,6 @@ const GmailIcon = () => (
 
 // --- Helper Functions for Notifications ---
 const sendEmailAnnouncement = async (id, showToast) => {
-    if (!confirm('確定透過 mail 將此公告寄送給所有使用者嗎？')) return;
     try {
         showToast('正在透過 mail 發送公告...', 'info');
         const res = await authFetch('/api/send-announcement', { method: 'POST', body: JSON.stringify({ announcementId: id }) });
@@ -33,7 +33,6 @@ const sendEmailAnnouncement = async (id, showToast) => {
 };
 
 const sendLineBroadcast = async (id, showToast) => {
-    if (!confirm('確定要透過 LINE 將此公告寄送給所有已加入官方帳號的使用者嗎？')) return;
     try {
         showToast('正在透過 LINE 發送公告...', 'info');
         const res = await authFetch('/api/broadcast-line-announcement', { method: 'POST', body: JSON.stringify({ announcementId: id }) });
@@ -50,6 +49,7 @@ export default function AnnouncementsTab() {
     const [editing, setEditing] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [preview, setPreview] = useState({ open: false, type: '', html: '', text: '', id: null });
 
     const [searchTerm, setSearchTerm] = useState('');
     const [sort, setSort] = useState({ column: 'created_at', direction: 'desc' });
@@ -105,6 +105,65 @@ export default function AnnouncementsTab() {
         return sort.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1 text-indigo-600" /> : <ArrowDown className="h-4 w-4 ml-1 text-indigo-600" />;
     };
 
+    // --- 開啟預覽視窗 ---
+    const openPreview = (type, ann) => {
+        const deadline = ann.application_deadline ? new Date(ann.application_deadline).toLocaleDateString('zh-TW') : '未指定';
+        const platformUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/?announcement_id=${ann.id}`;
+        if (type === 'email') {
+            const html = `<div style="font-family: 'Microsoft JhengHei', Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="margin: 0; font-size: 24px;">🎓 NCUE 獎學金新公告</h1>
+  </div>
+  <div style="background: #f8f9fa; padding: 20px; border: 1px solid #e9ecef;">
+    <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+      ${ann.title}
+    </h2>
+    <div style="background: white; padding: 15px; border-radius: 5px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      ${ann.category ? `<p><strong>📋 分類：</strong>${ann.category}</p>` : ''}
+      ${ann.application_deadline ? `<p><strong>⏰ 申請截止：</strong><span style="color: #e74c3c; font-weight: bold;">${deadline}</span></p>` : ''}
+      ${ann.target_audience ? `<p><strong>👥 適用對象：</strong>${ann.target_audience}</p>` : ''}
+      ${ann.submission_method ? `<p><strong>📨 送件方式：</strong>${ann.submission_method}</p>` : ''}
+    </div>
+    <div style="background: white; padding: 15px; border-radius: 5px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="color: #2c3e50; margin-top: 0;">📄 公告內容</h3>
+      ${ann.summary || '<p>請至平台查看詳細內容</p>'}
+    </div>
+    ${ann.external_urls ? `<div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #27ae60;"><p><strong>🔗 相關連結：</strong></p><a href="${ann.external_urls}" style="color: #27ae60; text-decoration: none;">${ann.external_urls}</a></div>` : ''}
+    <div style="text-align: center; margin: 20px 0;">
+      <a href="${platformUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px; border-radius: 5px; text-decoration: none;">📱 查看完整內容及附件</a>
+    </div>
+  </div>
+  <div style="background: #34495e; color: #ecf0f1; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; font-size: 12px;">
+    <p style="margin: 0;">發送時間：${new Date().toLocaleString('zh-TW')}</p>
+    <p style="margin: 5px 0 0 0;">此郵件由 NCUE 獎學金資訊平台系統自動發送，請勿直接回覆</p>
+  </div>
+</div>`;
+            setPreview({ open: true, type: 'email', html, text: '', id: ann.id });
+        } else {
+            const stripHtml = (html) => {
+                if (!html) return '';
+                return html.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+            };
+            const cleanSummary = stripHtml(ann.summary);
+            const text = [
+                '🎓 獎學金新公告',
+                `【${ann.title}】`,
+                cleanSummary ? `\n${cleanSummary}` : '',
+                `\n⏰ 截止日期：${deadline}`,
+                `👥 適用對象：${ann.target_audience || '所有學生'}`,
+                '',
+                `🔗 詳情：${platformUrl}`
+            ].join('\n');
+            setPreview({ open: true, type: 'line', html: '', text, id: ann.id });
+        }
+    };
+
+    const handlePreviewConfirm = async () => {
+        if (preview.type === 'email') await sendEmailAnnouncement(preview.id, showToast);
+        else if (preview.type === 'line') await sendLineBroadcast(preview.id, showToast);
+        setPreview(prev => ({ ...prev, open: false }));
+    };
+
 const ghostButtonBase = "flex items-center justify-center gap-1.5 rounded-lg border transition-all duration-300 ease-in-out transform disabled:transform-none disabled:shadow-none";
 const buttonStyles = {
     add: `${ghostButtonBase} px-4 py-2 text-sm font-semibold border-indigo-200 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/40`,
@@ -153,8 +212,8 @@ const buttonStyles = {
                                             <button onClick={() => setEditing(ann)} className={buttonStyles.edit}>編輯</button>
                                             <button onClick={() => setDeletingId(ann.id)} className={buttonStyles.delete}>刪除</button>
                                             <div className="border-l h-5 mx-1 border-gray-200"></div>
-                                            <button onClick={() => sendEmailAnnouncement(ann.id, showToast)} className={buttonStyles.send}><GmailIcon /></button>
-                                            <button onClick={() => sendLineBroadcast(ann.id, showToast)} className={buttonStyles.line}><LineIcon /></button>
+                                            <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
+                                            <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
                                         </div></td>
                                     </tr>
                                 ))
@@ -170,7 +229,7 @@ const buttonStyles = {
                                 <div className="text-sm space-y-2 text-gray-600 border-t pt-3"><p><strong className="font-semibold text-gray-800">分類: </strong>{ann.category}</p><p><strong className="font-semibold text-gray-800">申請截止: </strong>{ann.application_deadline || 'N/A'}</p><p><strong className="font-semibold text-gray-800">最後更新: </strong>{new Date(ann.created_at).toLocaleDateString()}</p></div>
                                 <div className="flex items-center justify-between border-t pt-3">
                                     <div className="flex gap-2"><button onClick={() => setEditing(ann)} className={buttonStyles.edit}>編輯</button><button onClick={() => setDeletingId(ann.id)} className={buttonStyles.delete}>刪除</button></div>
-                                    <div className="flex gap-2"><button onClick={() => sendEmailAnnouncement(ann.id, showToast)} className={buttonStyles.send}><GmailIcon /></button><button onClick={() => sendLineBroadcast(ann.id, showToast)} className={buttonStyles.line}><LineIcon /></button></div>
+                                    <div className="flex gap-2"><button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button><button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button></div>
                                 </div>
                             </div>
                         ))
@@ -210,6 +269,14 @@ const buttonStyles = {
             <CreateAnnouncementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} refreshAnnouncements={fetchAnnouncements} />
             <UpdateAnnouncementModal isOpen={!!editing} onClose={() => setEditing(null)} announcement={editing} refreshAnnouncements={fetchAnnouncements} />
             <DeleteAnnouncementModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} announcementId={deletingId} refreshAnnouncements={fetchAnnouncements} />
+            <AnnouncementPreviewModal
+                isOpen={preview.open}
+                type={preview.type}
+                contentHtml={preview.html}
+                contentText={preview.text}
+                onConfirm={handlePreviewConfirm}
+                onClose={() => setPreview(prev => ({ ...prev, open: false }))}
+            />
             <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
         </div>
     );
