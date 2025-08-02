@@ -2,21 +2,51 @@ import { NextResponse } from 'next/server'
 import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
 import { GoogleGenAI, Type } from "@google/genai"
 
-// 模擬的系統 prompt
+// 模擬的系統 prompt - 與前端保持一致
 const SYSTEM_PROMPT = `# 角色 (Persona)
 你是一位專為「NCUE 獎學金資訊整合平台」設計的**頂尖AI助理**。你的個性是專業、精確且樂於助人。
 
 # 你的核心任務
-你的任務是根據我提供給你的「# 參考資料」（這可能來自內部公告或外部網路搜尋），用**自然、流暢的繁體中文**總結並回答使用者關於獎學金的問題。
+你的核心任務是根據我提供給你的「# 參考資料」（這可能來自內部公告或外部網路搜尋），用**自然、流暢的繁體中文**總結並回答使用者關於獎學金的問題。
+
+# JSON 輸出格式要求
+當需要結構化回應時，請按照以下 JSON 格式輸出：
+{
+  "title": "公告標題，簡潔明瞭地概括公告主要內容",
+  "summary": "公告摘要，3-5句話概括重點內容",
+  "category": "獎學金|助學金|工讀金|競賽獎金|交換計畫|其他",
+  "applicationDeadline": "YYYY-MM-DD 或 null",
+  "announcementEndDate": "YYYY-MM-DD 或 null", 
+  "targetAudience": "適用對象描述",
+  "applicationLimitations": "申請限制條件",
+  "submissionMethod": "申請方式說明",
+  "requiredDocuments": ["所需文件清單"],
+  "contactInfo": {
+    "department": "承辦單位",
+    "phone": "聯絡電話",
+    "email": "聯絡信箱", 
+    "office": "辦公室位置"
+  },
+  "amount": {
+    "currency": "TWD",
+    "min": 最低金額數字,
+    "max": 最高金額數字,
+    "fixed": 固定金額數字
+  }
+}
 
 # 表達與格式化規則
-1.  **直接回答:** 請直接以對話的方式回答問題，不要說「根據我找到的資料...」。
-2.  **結構化輸出:** 當資訊包含多個項目時，請**務必使用結構化的方式**來呈現。
-3.  **引用來源:** 
-    -   如果參考資料來源是「外部網頁搜尋結果」，你【必須】在回答的適當位置，以連結的格式自然地嵌入來源連結。
+1.  **智能回應模式:** 根據問題複雜度選擇輸出格式：
+    - 簡單問答：直接用自然語言回答
+    - 複雜資訊整理：使用上述 JSON 格式結構化輸出
+2.  **直接回答:** 請直接以對話的方式回答問題，不要說「根據我找到的資料...」。
+3.  **結構化輸出:** 當資訊包含多個項目時，請**務必使用 Markdown 的列表或表格**來呈現。
+4.  **引用來源:** 
+    -   如果參考資料來源是「外部網頁搜尋結果」，你【必須】在回答的適當位置，以 \`[參考連結](URL)\` 的格式自然地嵌入來源連結。
     -   如果參考資料來源是「內部公告」，你【絕對不能】生成任何連結。
-4.  **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】提供參考的公告 ID。
-5.  **嚴禁事項:**
+5.  **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】加上 \`[ANNOUNCEMENT_CARD:id1,id2,...]\` 這樣的標籤，其中 id 是你參考的公告 ID。
+6.  **嚴禁事項:**
+    -   【絕對禁止】輸出任何非指定格式的 JSON 程式碼或物件。
     -   如果「# 參考資料」為空或與問題無關，就直接回答：「抱歉，關於您提出的問題，我目前找不到相關的資訊。」
 
 # 服務範圍限制
@@ -26,79 +56,101 @@ const SYSTEM_PROMPT = `# 角色 (Persona)
 const chatResponseSchema = {
   type: Type.OBJECT,
   properties: {
-    answer_type: {
+    title: {
       type: Type.STRING,
-      description: "回答類型",
-      enum: ["scholarship_info", "application_guide", "document_requirements", "eligibility_criteria", "contact_info", "general_help", "rejection"]
+      description: "公告標題，簡潔明瞭地概括公告主要內容"
     },
-    content: {
+    summary: {
+      type: Type.STRING,
+      description: "公告摘要，3-5句話概括重點內容"
+    },
+    category: {
+      type: Type.STRING,
+      description: "公告類別",
+      enum: ["獎學金", "助學金", "工讀金", "競賽獎金", "交換計畫", "其他"]
+    },
+    applicationDeadline: {
+      type: Type.STRING,
+      description: "申請截止日期，格式: YYYY-MM-DD，如果沒有明確日期則為 null",
+      nullable: true
+    },
+    announcementEndDate: {
+      type: Type.STRING,
+      description: "公告結束日期，格式: YYYY-MM-DD，如果沒有明確日期則為 null",
+      nullable: true
+    },
+    targetAudience: {
+      type: Type.STRING,
+      description: "適用對象描述，例如：大學部學生、研究生、特定科系等"
+    },
+    applicationLimitations: {
+      type: Type.STRING,
+      description: "申請限制條件，包括成績要求、家庭狀況等"
+    },
+    submissionMethod: {
+      type: Type.STRING,
+      description: "申請方式說明，包括線上申請、紙本申請等"
+    },
+    requiredDocuments: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.STRING
+      },
+      description: "所需文件清單"
+    },
+    contactInfo: {
       type: Type.OBJECT,
       properties: {
-        sections: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: {
-                type: Type.STRING,
-                description: "段落標題"
-              },
-              content: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    type: {
-                      type: Type.STRING,
-                      description: "內容類型：text, list, table, highlight_important, highlight_deadline, source_link, contact_info"
-                    },
-                    text: {
-                      type: Type.STRING,
-                      description: "文字內容"
-                    },
-                    items: {
-                      type: Type.ARRAY,
-                      items: {
-                        type: Type.STRING
-                      },
-                      description: "列表項目，當type為list時使用"
-                    },
-                    table_data: {
-                      type: Type.ARRAY,
-                      items: {
-                        type: Type.ARRAY,
-                        items: {
-                          type: Type.STRING
-                        }
-                      },
-                      description: "表格數據，當type為table時使用"
-                    },
-                    link_url: {
-                      type: Type.STRING,
-                      description: "連結網址，當type為source_link時使用"
-                    },
-                    link_text: {
-                      type: Type.STRING, 
-                      description: "連結文字，當type為source_link時使用"
-                    },
-                    deadline: {
-                      type: Type.STRING,
-                      description: "截止日期，當type為highlight_deadline時使用"
-                    },
-                    amount: {
-                      type: Type.STRING,
-                      description: "金額資訊，當type為highlight_important時使用"
-                    }
-                  },
-                  required: ["type"]
-                }
-              }
-            },
-            required: ["title", "content"]
-          }
+        department: {
+          type: Type.STRING,
+          description: "承辦單位"
+        },
+        phone: {
+          type: Type.STRING,
+          description: "聯絡電話",
+          nullable: true
+        },
+        email: {
+          type: Type.STRING,
+          description: "聯絡信箱",
+          nullable: true
+        },
+        office: {
+          type: Type.STRING,
+          description: "辦公室位置",
+          nullable: true
         }
-      },
-      required: ["sections"]
+      }
+    },
+    amount: {
+      type: Type.OBJECT,
+      properties: {
+        currency: {
+          type: Type.STRING,
+          description: "貨幣單位，通常為 TWD"
+        },
+        min: {
+          type: Type.INTEGER,
+          description: "最低金額",
+          nullable: true
+        },
+        max: {
+          type: Type.INTEGER,
+          description: "最高金額",
+          nullable: true
+        },
+        fixed: {
+          type: Type.INTEGER,
+          description: "固定金額",
+          nullable: true
+        }
+      }
+    },
+    // 額外的 metadata 欄位
+    response_type: {
+      type: Type.STRING,
+      description: "回應類型",
+      enum: ["structured_info", "conversational", "error"]
     },
     referenced_announcements: {
       type: Type.ARRAY,
@@ -107,59 +159,13 @@ const chatResponseSchema = {
       },
       description: "參考的內部公告ID列表"
     },
-    source_type: {
-      type: Type.STRING,
-      description: "資料來源類型",
-      enum: ["internal", "external", "none"]
-    },
     confidence_level: {
       type: Type.STRING,
       description: "回答可信度",
       enum: ["high", "medium", "low"]
-    },
-    follow_up_suggestions: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.STRING
-      },
-      description: "後續建議問題"
     }
   },
-  required: ["answer_type", "content", "source_type", "confidence_level"]
-}
-
-// 模擬檢查意圖相關性
-async function checkIntent(message) {
-  // 簡單的關鍵字檢查 - 在實際應用中這裡會調用 Gemini API
-  const scholarshipKeywords = [
-    '獎學金', '補助', '申請', '資格', '條件', '截止', '期限', '文件', '證明', 
-    '低收', '中低收', '清寒', '助學金', '學雜費', '生活費', '彰師', 'NCUE',
-    '申請表', '推薦函', '成績', '戶籍', '所得', '財產'
-  ]
-  
-  const isRelated = scholarshipKeywords.some(keyword => 
-    message.toLowerCase().includes(keyword)
-  )
-  
-  return isRelated ? 'RELATED' : 'UNRELATED'
-}
-
-// 模擬 SERP API 搜尋
-async function searchWithSerpAPI(query) {
-  // 這裡會調用真正的 SERP API
-  // 目前返回模擬資料
-  return [
-    {
-      title: "教育部獎助學金申請指南",
-      link: "https://www.edu.tw/scholarship",
-      snippet: "提供各類獎助學金申請資訊，包含申請條件、時程和必要文件..."
-    },
-    {
-      title: "大專院校弱勢學生助學計畫",
-      link: "https://www.edu.tw/assist",
-      snippet: "針對低收入戶、中低收入戶學生提供學雜費減免和生活助學金..."
-    }
-  ]
+  required: ["summary", "response_type"]
 }
 
 // 模擬相關性檢索
@@ -264,8 +270,8 @@ function generateMarkdownFromStructure(responseData) {
 async function generateStructuredAIResponse(prompt, sourceType = 'none', searchResults = null, relevantAnnouncements = null) {
   try {
     // 如果有 API key，使用真正的 Gemini API
-    if (process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY) {
-      const genAI = new GoogleGenAI(process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY);
+    if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+      const genAI = new GoogleGenAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
       
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
@@ -297,143 +303,67 @@ async function generateStructuredAIResponse(prompt, sourceType = 'none', searchR
 
 // 模擬結構化回應（當 API 不可用時）
 function generateMockStructuredResponse(prompt, sourceType = 'none', searchResults = null, relevantAnnouncements = null) {
-  // 根據 prompt 內容判斷回應類型
+  // 簡化的模擬回應，直接返回可讀的文本
   if (prompt.includes('低收') || prompt.includes('減免')) {
-    return {
-      answer_type: "scholarship_info",
-      content: {
-        sections: [
-          {
-            title: "申請資格與對象",
-            content: [
-              {
-                type: "highlight_important",
-                text: "低收入戶學雜費減免申請"
-              },
-              {
-                type: "list",
-                items: [
-                  "持有低收入戶證明之在學學生",
-                  "須為本校正式學籍學生", 
-                  "每學期均需重新申請"
-                ]
-              }
-            ]
-          },
-          {
-            title: "申請時程與流程",
-            content: [
-              {
-                type: "highlight_deadline",
-                deadline: "每學期開學前一個月"
-              },
-              {
-                type: "table",
-                table_data: [
-                  ["申請期間", "每學期開學前一個月"],
-                  ["申請地點", "學務處生輔組"],
-                  ["處理時間", "約7-10個工作天"]
-                ]
-              }
-            ]
-          },
-          {
-            title: "應備文件",
-            content: [
-              {
-                type: "list",
-                items: [
-                  "申請表（可至學務處索取或網站下載）",
-                  "低收入戶證明正本（三個月內有效）",
-                  "學生證正反面影本",
-                  "印章"
-                ]
-              }
-            ]
-          },
-          {
-            title: "聯絡資訊",
-            content: [
-              {
-                type: "contact_info",
-                text: "學務處生輔組\n電話：04-7232105 轉 1221\n辦公室：行政大樓2樓"
-              }
-            ]
-          }
-        ]
-      },
-      referenced_announcements: relevantAnnouncements ? relevantAnnouncements.map(ann => ann.id) : [],
-      source_type: sourceType,
-      confidence_level: "high",
-      follow_up_suggestions: [
-        "其他經濟不利學生補助有哪些？",
-        "如何申請校內工讀金？", 
-        "獎學金申請的注意事項有哪些？"
-      ]
-    };
+    return "## 低收入戶學雜費減免申請\n\n" +
+           "**申請對象：**\n" +
+           "- 持有低收入戶證明之在學學生\n" +
+           "- 須為本校正式學籍學生\n" +
+           "- 每學期均需重新申請\n\n" +
+           "**申請期間：** 每學期開學前一個月\n\n" +
+           "**應備文件：**\n" +
+           "1. 申請表\n" +
+           "2. 低收入戶證明\n" +
+           "3. 學生證影本\n\n" +
+           "**承辦單位：** 學務處生活輔導組\n" +
+           "**聯絡電話：** 04-7232105 轉 1221\n\n";
   }
-
-  // 無關問題的拒絕回應
-  if (!prompt.includes('獎學金') && !prompt.includes('補助') && !prompt.includes('申請')) {
-    return {
-      answer_type: "rejection",
-      content: {
-        sections: [
-          {
-            title: "服務範圍說明",
-            content: [
-              {
-                type: "text",
-                text: "🤖 哎呀！我目前只專精於獎學金相關問題呢~"
-              },
-              {
-                type: "text",
-                text: "對於您提出的問題，我可能無法提供準確的回答。不過別擔心，我們有專業的承辦人員可以為您提供協助！"
-              },
-              {
-                type: "text",
-                text: "如果您需要更詳細的協助，歡迎使用真人支援服務 👇"
-              }
-            ]
-          }
-        ]
-      },
-      referenced_announcements: [],
-      source_type: "none",
-      confidence_level: "high",
-      follow_up_suggestions: [
-        "查詢可申請的獎學金有哪些？",
-        "獎學金申請條件說明",
-        "申請獎學金需要什麼文件？"
-      ]
-    };
+  
+  if (prompt.includes('獎學金')) {
+    return "## 獎學金申請資訊\n\n" +
+           "目前有多種獎學金可供申請，包括：\n\n" +
+           "**政府獎學金：**\n" +
+           "- 教育部學產基金低收入戶學生助學金\n" +
+           "- 各縣市政府獎助學金\n\n" +
+           "**校內獎學金：**\n" +
+           "- 優秀學生獎學金\n" +
+           "- 特殊才能獎學金\n\n" +
+           "**民間獎學金：**\n" +
+           "- 各企業及基金會提供之獎助學金\n\n" +
+           "請關注學校公告了解最新申請資訊。";
   }
+  
+  // 預設回應
+  return "謝謝您的提問！我是專門協助獎學金申請相關問題的AI助理。\n\n" +
+         "我可以協助您了解：\n" +
+         "- 各類獎學金申請條件\n" +
+         "- 申請流程與所需文件\n" +
+         "- 申請期間與截止日期\n" +
+         "- 聯絡方式與承辦單位\n\n" +
+         "請告訴我您想了解哪方面的獎學金資訊？";
+}
 
-  // 預設一般回應
-  return {
-    answer_type: "general_help",
-    content: {
-      sections: [
-        {
-          title: "系統回應",
-          content: [
-            {
-              type: "text",
-              text: "感謝您的提問！我正在學習中，目前提供的是模擬回應。實際的 AI 功能將會整合完整的獎學金資料庫，為您提供更精確的建議。"
-            }
-          ]
-        }
-      ]
-    },
-    referenced_announcements: [],
-    source_type: sourceType,
-    confidence_level: "low",
-    follow_up_suggestions: [
-      "查詢獎學金申請條件",
-      "了解申請流程",
-      "查看最新公告"
-    ]
-  };
+// 新的簡化意圖檢測
+async function checkIntent(message) {
+  const scholarshipKeywords = ['獎學金', '助學金', '補助', '減免', '申請', '文件', '資格', '條件', '期間', '截止', '聯絡'];
+  
+  const hasScholarshipKeyword = scholarshipKeywords.some(keyword => 
+    message.includes(keyword)
+  );
+  
+  return hasScholarshipKeyword ? 'SCHOLARSHIP' : 'UNRELATED';
+}
+
+// 模擬的網路搜尋功能
+async function searchWithSerpAPI(query) {
+  // 模擬搜尋結果
+  return [
+    {
+      title: "教育部學產基金設置急難慰問金實施要點",
+      link: "https://www.edu.tw/News_Content.aspx?n=9E7AC85F1954DDA8&s=Example123",
+      snippet: "針對低收入戶、中低收入戶學生提供學雜費減免和生活助學金..."
+    }
+  ];
 }
 
 export async function POST(request) {
@@ -495,12 +425,11 @@ export async function POST(request) {
     const intent = await checkIntent(message)
     
     if (intent === 'UNRELATED') {
-      const rejectionData = generateMockStructuredResponse('拒絕回應', 'none', null, null);
-      const rejectionMessage = generateMarkdownFromStructure(rejectionData);
+      const rejectionMessage = "抱歉，我專門協助獎學金相關問題。如果您有獎學金申請的疑問，我很樂意為您解答！";
 
       return NextResponse.json({
-        role: 'model',
-        content: rejectionMessage,
+        response: rejectionMessage,
+        structured_response: false,
         timestamp: new Date().toISOString()
       })
     }
@@ -528,12 +457,12 @@ ${contextText}
 
 請根據以上資料，用結構化的方式回答用戶問題。`
 
-      const aiResponseData = await generateStructuredAIResponse(fullPrompt, 'internal', null, relevantData.announcements)
-      aiResponse = generateMarkdownFromStructure(aiResponseData)
+      aiResponse = await generateStructuredAIResponse(fullPrompt, 'internal', null, relevantData.announcements)
       
       // 添加公告卡片標籤
-      if (aiResponseData.referenced_announcements && aiResponseData.referenced_announcements.length > 0) {
-        aiResponse += `\n\n[ANNOUNCEMENT_CARD:${aiResponseData.referenced_announcements.join(',')}]`
+      if (relevantData.announcements && relevantData.announcements.length > 0) {
+        const announcementIds = relevantData.announcements.map(ann => ann.id).join(',')
+        aiResponse += `\n\n[ANNOUNCEMENT_CARD:${announcementIds}]`
       }
     } else {
       // 使用外部搜尋
@@ -556,11 +485,9 @@ ${contextText}
 
 請根據以上資料，用結構化的方式回答用戶問題，並在適當位置加入來源連結。`
 
-        const aiResponseData = await generateStructuredAIResponse(fullPrompt, 'external', searchResults, null)
-        aiResponse = generateMarkdownFromStructure(aiResponseData)
+        aiResponse = await generateStructuredAIResponse(fullPrompt, 'external', searchResults, null)
       } else {
-        const aiResponseData = await generateStructuredAIResponse(message, 'none', null, null)
-        aiResponse = generateMarkdownFromStructure(aiResponseData) || '抱歉，關於您提出的問題，我目前找不到相關的資訊。'
+        aiResponse = await generateStructuredAIResponse(message, 'none', null, null)
       }
     }
 
@@ -573,8 +500,8 @@ ${contextText}
     });
 
     return NextResponse.json({
-      role: 'model',
-      content: aiResponse,
+      response: aiResponse,
+      structured_response: false,
       timestamp: new Date().toISOString(),
       sourceType
     })
