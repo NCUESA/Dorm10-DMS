@@ -67,18 +67,45 @@ const ChatInterface = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // 處理滾動容器的事件，阻擋冒泡和預設行為
-  const handleScrollContainerEvent = (e) => {
-    // 只阻擋在滾動容器邊界時的冒泡
+  // 記錄觸控起始 Y 座標
+  const touchStartY = useRef(0)
+
+  // 處理觸控開始事件
+  const handleTouchStart = (e) => {
+    // 紀錄使用者觸控位置
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  // 處理觸控移動事件，避免事件冒泡
+  const handleTouchMove = (e) => {
     const target = e.currentTarget
     const { scrollTop, scrollHeight, clientHeight } = target
-    
-    // 如果滾動到頂部或底部，阻擋冒泡防止觸發父元素滾動
-    if ((scrollTop === 0 && e.deltaY < 0) || 
-        (scrollTop + clientHeight >= scrollHeight && e.deltaY > 0)) {
+    const currentY = e.touches[0].clientY
+    const deltaY = touchStartY.current - currentY
+    const atTop = scrollTop <= 0
+    const atBottom = scrollTop + clientHeight >= scrollHeight
+
+    // 若在邊界且繼續往外滑動，阻止預設行為
+    if ((atTop && deltaY < 0) || (atBottom && deltaY > 0)) {
       e.preventDefault()
-      e.stopPropagation()
     }
+    // 無論是否在邊界都阻止冒泡
+    e.stopPropagation()
+  }
+
+  // 處理滑鼠滾輪事件，避免滾動冒泡
+  const handleScrollContainerEvent = (e) => {
+    const target = e.currentTarget
+    const { scrollTop, scrollHeight, clientHeight } = target
+    const atTop = scrollTop <= 0
+    const atBottom = scrollTop + clientHeight >= scrollHeight
+
+    // 若在頂部往上或底部往下滾動，阻止預設行為
+    if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+      e.preventDefault()
+    }
+    // 阻止事件往外層冒泡
+    e.stopPropagation()
   }
 
   useEffect(() => {
@@ -212,7 +239,8 @@ const ChatInterface = () => {
         },
         body: JSON.stringify({
           message: messageText,
-          conversationHistory: messages
+          // 將最新訊息一併送至後端，避免遺漏
+          conversationHistory: [...messages, userMessage]
         })
       })
 
@@ -285,9 +313,11 @@ const ChatInterface = () => {
       </div>
 
       {/* Messages Area - 輕量化容器 */}
-      <div 
+      <div
         className="flex-1 overflow-y-auto"
         onWheel={handleScrollContainerEvent}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         style={{ overscrollBehavior: 'contain' }}
       >
         <div className="max-w-4xl mx-auto p-4">
