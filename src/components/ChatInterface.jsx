@@ -6,7 +6,6 @@ import MarkdownRenderer from './MarkdownRenderer'
 import Toast from './ui/Toast'
 import { authFetch } from '@/lib/authFetch'
 
-// 系統 Prompt - 基於 raw 版本改進
 const SYSTEM_PROMPT = `# 角色 (Persona)
 你是一位專為「NCUE 獎學金資訊整合平台」設計的**頂尖AI助理**。你的個性是專業、精確且樂於助人。
 
@@ -32,374 +31,79 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [conversationHistory, setConversationHistory] = useState([])
-  const [showSupportForm, setShowSupportForm] = useState(false)
-  const [supportFormData, setSupportFormData] = useState({
-    urgency: '',
-    problemType: '',
-    description: ''
-  })
-  const [isSubmittingSupportRequest, setIsSubmittingSupportRequest] = useState(false)
   const [toast, setToast] = useState(null)
-  const [currentSessionId, setCurrentSessionId] = useState(null)
   const messagesEndRef = useRef(null)
-  const chatWindowRef = useRef(null)
 
-  // 自動滾動到底部 - 僅在新訊息時觸發
-  const scrollToBottom = (e) => {
-    // 防止事件冒泡到父層
-    if (e) {
+  // 快捷問題
+  const quickQuestions = [
+    {
+      id: 1,
+      text: "如何申請低收入戶學雜費減免？",
+      icon: "💰",
+      category: "申請流程"
+    },
+    {
+      id: 2, 
+      text: "有哪些獎學金目前開放申請？",
+      icon: "📋",
+      category: "現有機會"
+    },
+    {
+      id: 3,
+      text: "申請獎學金需要準備什麼文件？",
+      icon: "📄",
+      category: "文件準備"
+    },
+    {
+      id: 4,
+      text: "獎學金的申請資格限制有哪些？",
+      icon: "✅",
+      category: "申請條件"
+    }
+  ]
+
+  // 自動滾動到底部
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // 處理滾動容器的事件，阻擋冒泡和預設行為
+  const handleScrollContainerEvent = (e) => {
+    // 只阻擋在滾動容器邊界時的冒泡
+    const target = e.currentTarget
+    const { scrollTop, scrollHeight, clientHeight } = target
+    
+    // 如果滾動到頂部或底部，阻擋冒泡防止觸發父元素滾動
+    if ((scrollTop === 0 && e.deltaY < 0) || 
+        (scrollTop + clientHeight >= scrollHeight && e.deltaY > 0)) {
       e.preventDefault()
       e.stopPropagation()
     }
-    
-    if (messagesEndRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'end',
-          inline: 'nearest'
-        })
-      }, 100) // 給一點延遲確保DOM已更新
-    }
   }
 
-  // 僅在有新訊息時滾動，避免初始載入時的滾動
   useEffect(() => {
-    if (messages.length > 0) {
-      // 使用 requestAnimationFrame 確保在下一個渲染周期執行
-      requestAnimationFrame(() => {
-        scrollToBottom()
-      })
-    }
-  }, [messages.length]) // 改為監聽 messages.length 而不是 messages
+    scrollToBottom()
+  }, [messages])
 
-  // 保存訊息到數據庫
-  const saveMessageToDatabase = async (role, content) => {
-    if (!user?.id) return null
-
-    try {
-      const response = await authFetch('/api/chat-history', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId: user.id,
-          sessionId: currentSessionId,
-          role: role,
-          messageContent: content
-        })
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success && result.sessionId && !currentSessionId) {
-          setCurrentSessionId(result.sessionId)
-        }
-        return result
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('保存訊息失敗:', response.status, errorData)
-        // 顯示具體的錯誤信息給用戶
-        setMessages(prev => [...prev, {
-          role: 'model',
-          content: `保存訊息失敗：${errorData.error || '未知錯誤'} (錯誤代碼: ${response.status})`
-        }])
-      }
-    } catch (error) {
-      console.error('保存訊息到數據庫失敗:', error)
-      setMessages(prev => [...prev, {
-        role: 'model',
-        content: `保存訊息失敗：網絡錯誤 - ${error.message}`
-      }])
-    }
-    return null
-  }
-
-  // 載入歷史對話
-  useEffect(() => {
-    if (user?.id !== undefined) { // 確保用戶狀態已經載入
-      loadHistory()
-    }
-  }, [user?.id]) // 當用戶ID變化時重新載入
-
-  const loadHistory = async () => {
-    try {
-      if (!user?.id) {
-        // 如果用戶未登入，顯示歡迎訊息
-        const welcomeMessage = {
-          role: 'model',
-          content: `歡迎使用 NCUE 獎學金 AI 助理，很高興為您服務。
-
-為了節省您的寶貴時間，我能提供以下協助：
-*   **搜尋平台公告**：為您快速查找最新的獎學金申請資格、時程與辦法。
-*   **搜尋網路資訊**：當平台內沒有答案時，我會搜尋外部網站，提供最相關的資訊。
-*   **自動保存對話**：您的所有提問都會被妥善保存，方便您隨時回來查閱。
-
-現在，請直接輸入您的問題開始吧！`,
-          timestamp: new Date()
-        }
-        setMessages([welcomeMessage])
-        setConversationHistory([])
-        return
-      }
-
-      // 從數據庫載入聊天記錄
-      const response = await authFetch(`/api/chat-history?userId=${user.id}`)
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success && result.data.length > 0) {
-          // 轉換數據庫記錄為組件格式
-          const dbMessages = result.data.map(record => ({
-            role: record.role,
-            content: record.message_content,
-            timestamp: new Date(record.timestamp)
-          }))
-          
-          const dbHistory = result.data.map(record => ({
-            role: record.role,
-            message_content: record.message_content
-          }))
-
-          setMessages(dbMessages)
-          setConversationHistory(dbHistory)
-          
-          // 設置當前會話ID（使用最新記錄的會話ID）
-          if (result.data.length > 0) {
-            setCurrentSessionId(result.data[result.data.length - 1].session_id)
-          }
-          return
-        }
-      }
-
-      // 如果沒有歷史記錄或載入失敗，顯示歡迎訊息
-      const welcomeMessage = {
-        role: 'model',
-        content: `歡迎使用 NCUE 獎學金 AI 助理，很高興為您服務。
-
-為了節省您的寶貴時間，我能提供以下協助：
-*   **搜尋平台公告**：為您快速查找最新的獎學金申請資格、時程與辦法。
-*   **搜尋網路資訊**：當平台內沒有答案時，我會搜尋外部網站，提供最相關的資訊。
-*   **自動保存對話**：您的所有提問都會被妥善保存，方便您隨時回來查閱。
-
-現在，請直接輸入您的問題開始吧！`,
-        timestamp: new Date()
-      }
-      setMessages([welcomeMessage])
-      setConversationHistory([])
-      
-      // 保存歡迎訊息到數據庫
-      await saveMessageToDatabase('model', welcomeMessage.content)
-      
-    } catch (error) {
-      console.error('Failed to load history:', error)
-      
-      // 載入失敗時仍顯示歡迎訊息
-      const welcomeMessage = {
-        role: 'model',
-        content: `歡迎使用 NCUE 獎學金 AI 助理，很高興為您服務。
-
-為了節省您的寶貴時間，我能提供以下協助：
-*   **搜尋平台公告**：為您快速查找最新的獎學金申請資格、時程與辦法。
-*   **搜尋網路資訊**：當平台內沒有答案時，我會搜尋外部網站，提供最相關的資訊。
-*   **自動保存對話**：您的所有提問都會被妥善保存，方便您隨時回來查閱。
-
-現在，請直接輸入您的問題開始吧！`,
-        timestamp: new Date()
-      }
-      setMessages([welcomeMessage])
-      setConversationHistory([])
-    }
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-
-    const userMessage = {
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setConversationHistory(prev => [...prev, { role: 'user', message_content: userMessage.content }])
-    setInput('')
-    setIsLoading(true)
-
-    // 保存用戶訊息到數據庫
-    await saveMessageToDatabase('user', userMessage.content)
-
-    try {
-      const response = await authFetch('/api/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          message: userMessage.content,
-          history: conversationHistory
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to get AI response')
-      }
-
-      const aiResponse = await response.json()
-      
-      setMessages(prev => [...prev, {
-        role: aiResponse.role,
-        content: aiResponse.content,
-        timestamp: new Date(aiResponse.timestamp)
-      }])
-      
-      setConversationHistory(prev => [...prev, { 
-        role: aiResponse.role, 
-        message_content: aiResponse.content 
-      }])
-
-      // 保存 AI 回應到數據庫
-      await saveMessageToDatabase(aiResponse.role, aiResponse.content)
-
-    } catch (error) {
-      console.error('Error sending message:', error)
-      const errorResponse = {
-        role: 'model',
-        content: '抱歉，系統連線失敗，請檢查您的網路或稍後再試。',
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorResponse])
-      setConversationHistory(prev => [...prev, { role: 'model', message_content: errorResponse.content }])
-      
-      // 保存錯誤回應到數據庫
-      await saveMessageToDatabase('model', errorResponse.content)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const clearHistory = async () => {
-    if (window.confirm('確定要清除所有對話紀錄嗎？此操作無法復原！')) {
-      try {
-        // 從數據庫中刪除聊天記錄
-        if (user?.id) {
-          const response = await authFetch(`/api/chat-history?userId=${user.id}`, {
-            method: 'DELETE'
-          })
-          
-          if (!response.ok) {
-            console.error('刪除數據庫記錄失敗')
-          }
-        }
-
-        // 清除本地狀態
-        setMessages([])
-        setConversationHistory([])
-        setCurrentSessionId(null)
-        
-        // 重新顯示歡迎訊息
-        loadHistory()
-      } catch (error) {
-        console.error('清除歷史記錄失敗:', error)
-        
-        // 即使數據庫操作失敗，也清除本地狀態
-        setMessages([])
-        setConversationHistory([])
-        setCurrentSessionId(null)
-        loadHistory()
-      }
-    }
-  }
-
-  const requestHumanSupport = async () => {
-    setIsSubmittingSupportRequest(true)
+  // 修復 sendQuickQuestion 函數
+  const sendQuickQuestion = (questionText) => {
+    if (isLoading) return
     
-    try {
-      // 準備對話歷史 - 轉換格式以匹配 API 期望
-      const formattedHistory = conversationHistory.map(msg => ({
-        role: msg.role,
-        content: msg.message_content,
-        timestamp: new Date().toISOString() // 添加時間戳
-      }))
-
-      const response = await authFetch('/api/send-support-request', {
-        method: 'POST',
-        body: JSON.stringify({
-          userEmail: user?.email,
-          userName: user?.profile?.name || user?.email?.split('@')[0] || '匿名使用者',
-          urgency: '中等',
-          problemType: 'AI助理無法解決的問題',
-          description: '使用者透過聊天介面申請真人協助，對話記錄請見下方。',
-          conversationHistory: formattedHistory
-        })
-      })
-
-      const result = await response.json()
-
-      if (response.ok && result.success) {
-        setToast({
-          message: result.message || '您的支援請求已送出！我們將盡快透過 Email 與您聯繫。',
-          type: 'success'
-        })
-      } else {
-        throw new Error(result.error || `伺服器錯誤 (${response.status})`)
-      }
-    } catch (error) {
-      console.error('支援請求發送失敗:', error)
-      setToast({
-        message: `支援請求發送失敗: ${error.message}。請稍後再試或直接聯繫承辦人員。`,
-        type: 'error'
-      })
-    } finally {
-      setIsSubmittingSupportRequest(false)
-    }
-  }
-
-  // 處理支援表單資料變更
-  const handleSupportFormChange = (field, value) => {
-    setSupportFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  // 提交支援請求
-  const submitSupportRequest = async (e) => {
-    e.preventDefault()
+    setInput(questionText)
     
-    if (!supportFormData.urgency || !supportFormData.problemType || !supportFormData.description.trim()) {
-      alert('請填寫所有必要欄位')
-      return
+    // 直接調用 handleSubmit 而不是模擬事件
+    const fakeEvent = {
+      preventDefault: () => {},
+      target: { value: questionText }
     }
-
-    setIsSubmittingSupportRequest(true)
-
-    try {
-      const response = await authFetch('/api/send-support-request', {
-        method: 'POST',
-        body: JSON.stringify({
-          userEmail: user?.email,
-          userName: user?.profile?.name || user?.email?.split('@')[0],
-          urgency: supportFormData.urgency,
-          problemType: supportFormData.problemType,
-          description: supportFormData.description,
-          conversationHistory: conversationHistory
-        })
-      })
-
-      const result = await response.json()
-
-      if (response.ok && result.success) {
-        alert(result.message || '您的支援請求已送出！我們將盡快透過 Email 與您聯繫。')
-        setShowSupportForm(false)
-        setSupportFormData({ urgency: '', problemType: '', description: '' })
-      } else {
-        throw new Error(result.error || '發送失敗')
-      }
-    } catch (error) {
-      console.error('支援請求發送失敗:', error)
-      alert(`支援請求發送失敗: ${error.message}。請稍後再試或直接聯繫承辦人員。`)
-    } finally {
-      setIsSubmittingSupportRequest(false)
-    }
+    
+    // 延遲一點讓 input 值更新
+    setTimeout(() => {
+      handleSubmit(fakeEvent)
+    }, 50)
   }
 
+  // 渲染訊息 - 輕量化設計
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user'
     const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'
@@ -417,108 +121,223 @@ const ChatInterface = () => {
     }
 
     return (
-      <div key={index} className={`flex items-start gap-4 mb-5 max-w-[85%] ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
-        {/* Avatar */}
-        <div className="w-11 flex-shrink-0 text-center">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden ${
-            isUser ? 'bg-blue-600' : 'bg-gray-400'
+      <div key={index} className={`flex gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
+        {/* Avatar - 輕量化設計 */}
+        <div className="flex-shrink-0 w-8 h-8">
+          <div className={`w-full h-full rounded-lg flex items-center justify-center text-white text-sm font-medium ${
+            isUser ? 'bg-blue-500' : 'bg-gray-400'
           }`}>
             {isUser ? (
               userName.substring(0, 1).toUpperCase()
             ) : (
-              <img src="/logo.png" alt="AI" className="w-full h-full object-cover" />
+              <img src="/logo.png" alt="AI" className="w-5 h-5" />
             )}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {isUser ? userName : 'AI'}
           </div>
         </div>
 
         {/* Message Content */}
-        <div className={`flex flex-col max-w-[calc(100%-60px)] ${isUser ? 'items-end' : 'items-start'}`}>
-          <div className={`px-4 py-3 rounded-3xl leading-relaxed text-base break-words ${
+        <div className={`flex flex-col min-w-0 flex-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+          {/* Name and Time */}
+          <div className={`text-xs text-gray-500 mb-1 px-2 ${isUser ? 'text-right' : 'text-left'}`}>
+            {isUser ? userName : 'AI助理'}
+            <span className="ml-2">{time}</span>
+          </div>
+          
+          {/* Message Bubble - 輕量化設計 */}
+          <div className={`px-3 py-2 rounded-lg text-sm break-words border ${
             isUser 
-              ? 'bg-blue-600 text-white rounded-br-md' 
-              : 'bg-gray-200 text-gray-800 rounded-bl-md'
+              ? 'bg-blue-500 text-white border-blue-500 rounded-br-sm' 
+              : 'bg-white text-gray-800 border-gray-200 rounded-bl-sm'
           }`}>
             {/* 渲染 Markdown 內容 */}
-            <MarkdownRenderer 
-              content={content} 
-              className={isUser ? 'prose-invert' : ''} 
-            />
+            <div className="prose prose-sm max-w-none">
+              <MarkdownRenderer 
+                content={content} 
+                className={`${isUser ? 'prose-invert' : ''} prose-blue prose-headings:text-sm prose-headings:font-medium prose-p:my-1 prose-ul:my-1 prose-li:my-0`}
+              />
+            </div>
             
             {/* 渲染公告卡片 */}
             {announcementIds.length > 0 && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 space-y-2">
                 {announcementIds.map(id => (
-                  <div key={id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-blue-600 font-semibold mb-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div key={id} className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                    <div className="flex items-center gap-2 text-blue-600 font-medium mb-1 text-xs">
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                       </svg>
                       參考公告 #{id}
                     </div>
-                    <div className="text-sm text-gray-600">正在載入公告內容...</div>
+                    <div className="text-xs text-gray-600">正在載入公告內容...</div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
-          <div className={`text-xs text-gray-400 mt-2 px-2 ${isUser ? 'text-right' : 'text-left'}`}>
-            {time}
           </div>
         </div>
       </div>
     )
   }
 
+  // 清除對話記錄
+  const clearHistory = () => {
+    setMessages([])
+    setToast({ message: '對話記錄已清除', type: 'success' })
+  }
+
+  // 處理表單提交
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    
+    // 確保有輸入內容且不在載入中
+    const messageText = input.trim()
+    if (!messageText || isLoading) return
+
+    const userMessage = {
+      role: 'user',
+      content: messageText,
+      timestamp: new Date()
+    }
+
+    // 立即清空輸入框和添加用戶訊息
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
+    setIsLoading(true)
+
+    try {
+      const response = await authFetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: messageText,
+          conversationHistory: messages
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      // 處理 API 回應
+      let aiContent = ''
+      
+      if (data.structured_response) {
+        // 處理結構化回應
+        aiContent = data.response || '我收到了您的問題，正在處理中...'
+      } else {
+        // 處理普通回應
+        aiContent = data.response || '抱歉，我遇到了一些問題。請稍後再試。'
+      }
+
+      const aiMessage = {
+        role: 'assistant',
+        content: aiContent,
+        timestamp: new Date()
+      }
+
+      setMessages(prev => [...prev, aiMessage])
+    } catch (error) {
+      console.error('Chat error:', error)
+      setToast({ message: '發送訊息失敗，請稍後再試', type: 'error' })
+      
+      // 發生錯誤時提供友善的回應
+      const errorMessage = {
+        role: 'assistant',
+        content: '抱歉，我遇到了一些問題。請檢查您的網路連線後再試一次。',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-24 px-4">
-      {/* Chat Container - 固定高度但允許頁面滾動 */}
-      <div className="w-full max-w-4xl mx-auto h-[calc(100vh-12rem)] bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden flex flex-col">
-        
-        {/* Chat Header - Sticky */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-800 flex-shrink-0 sticky top-0 z-20">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header - 輕量化設計 */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <img src="/logo.png" alt="AI Assistant" className="w-6 h-6" />
+            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+              <img src="/logo.png" alt="AI" className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-white font-semibold text-lg">NCUE 獎學金 AI 助理</h1>
-              <p className="text-blue-100 text-sm">為您提供獎學金申請諮詢服務</p>
+              <h1 className="text-lg font-semibold text-gray-900">AI 助理</h1>
+              <p className="text-sm text-gray-500">智能獎學金申請顧問</p>
             </div>
           </div>
           
-          {/* User Info */}
-          <div className="text-right text-white">
-            <div className="text-sm opacity-90">Hi, {user?.profile?.name || user?.email || '使用者'}</div>
-          </div>
+          {user && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 hidden sm:inline">
+                {user.user_metadata?.name || user.email?.split('@')[0] || 'User'}
+              </span>
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {(user.user_metadata?.name || user.email?.split('@')[0] || 'U').substring(0, 1).toUpperCase()}
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Chat Messages - 內部滾動區域 */}
-        <div 
-          ref={chatWindowRef}
-          className="flex-grow overflow-y-auto p-6 space-y-4 scrollbar-hide"
-          onScroll={(e) => e.stopPropagation()}
-          style={{ scrollBehavior: 'smooth' }}
-        >
+      </div>
+
+      {/* Messages Area - 輕量化容器 */}
+      <div 
+        className="flex-1 overflow-y-auto"
+        onWheel={handleScrollContainerEvent}
+        style={{ overscrollBehavior: 'contain' }}
+      >
+        <div className="max-w-4xl mx-auto p-4">
+          {/* 歡迎訊息 - 僅在無對話時顯示 */}
+          {messages.length === 0 && (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-blue-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">您好！我是您的 AI 助理</h2>
+              <p className="text-gray-600 mb-6">我可以協助您查詢獎學金相關資訊，請點選下方問題或直接輸入您的問題</p>
+              
+              {/* 快捷問題 - 輕量化卡片 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mb-8">
+                {quickQuestions.map((question) => (
+                  <button
+                    key={question.id}
+                    onClick={() => sendQuickQuestion(question.text)}
+                    disabled={isLoading}
+                    className="p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{question.icon}</span>
+                      <span className="text-sm text-gray-700 group-hover:text-blue-700">{question.text}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 對話訊息 */}
           {messages.map((message, index) => renderMessage(message, index))}
           
-          {/* Loading indicator */}
+          {/* Loading indicator - 簡潔設計 */}
           {isLoading && (
-            <div className="flex items-start gap-4 mb-5 max-w-[85%]">
-              <div className="w-11 flex-shrink-0 text-center">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-400">
-                  <img src="/logo.png" alt="AI" className="w-full h-full object-cover" />
-                </div>
-                <div className="text-xs text-gray-500 mt-1">AI</div>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <img src="/logo.png" alt="AI" className="w-5 h-5" />
               </div>
-              <div className="flex flex-col items-start">
-                <div className="px-4 py-3 rounded-3xl rounded-bl-md bg-gray-200 text-gray-800">
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span>AI 正在思考中...</span>
+              <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 max-w-xs">
+                <div className="flex items-center gap-2">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                   </div>
+                  <span className="text-sm text-gray-500">思考中...</span>
                 </div>
               </div>
             </div>
@@ -526,176 +345,54 @@ const ChatInterface = () => {
           
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        {/* Input Area - 固定底部 */}
-        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-          <div className="relative rounded-full p-0.5 bg-gradient-to-r from-purple-500 via-blue-500 via-teal-500 via-yellow-500 to-red-500 animate-gradient-flow">
-            <form onSubmit={handleSubmit} className="relative z-10 flex items-center bg-white rounded-full py-2 px-5 shadow-lg">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="詢問獎學金相關問題..."
-                className="flex-grow bg-transparent border-none outline-none text-base placeholder-gray-500"
-                disabled={isLoading}
-              />
-              
-              {/* Clear History Button */}
-              <button
-                type="button"
-                onClick={clearHistory}
-                className="flex-shrink-0 bg-transparent text-gray-500 hover:text-red-500 hover:bg-red-50 border-none rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-2 mr-2"
-                title="清除對話紀錄"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>清除紀錄</span>
-              </button>
-
-              {/* Support Button */}
-              {messages.length > 1 && (
-                <button
-                  type="button"
-                  onClick={requestHumanSupport}
-                  disabled={isSubmittingSupportRequest}
-                  className="flex-shrink-0 bg-transparent text-gray-500 hover:text-blue-500 hover:bg-blue-50 border-none rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-2 mr-2"
-                  title="申請真人協助"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>協助</span>
-                </button>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="flex-shrink-0 border-none bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="發送"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
-                </svg>
-              </button>
-            </form>
+      {/* Input Area - 輕量化設計 */}
+      <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
+        <div className="max-w-4xl mx-auto">
+          {/* 操作按鈕 */}
+          <div className="flex gap-2 mb-3 justify-center">
+            <button
+              type="button"
+              onClick={clearHistory}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-md transition-all border border-gray-200 hover:border-red-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              清除記錄
+            </button>
           </div>
+
+          {/* 輸入表單 */}
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="詢問獎學金相關問題..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
+            </button>
+          </form>
         </div>
       </div>
 
-      {/* Support Form Modal */}
-      {showSupportForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">申請真人支援</h3>
-                <button
-                  onClick={() => setShowSupportForm(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  disabled={isSubmittingSupportRequest}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <p className="text-gray-600 mb-6">
-                請提供以下資訊，我們將安排專人為您服務。您的對話記錄將一併提供給承辦人員參考。
-              </p>
-              
-              <form className="space-y-4" onSubmit={submitSupportRequest}>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    緊急程度 <span className="text-red-500">*</span>
-                  </label>
-                  <select 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={supportFormData.urgency}
-                    onChange={(e) => handleSupportFormChange('urgency', e.target.value)}
-                    disabled={isSubmittingSupportRequest}
-                    required
-                  >
-                    <option value="">請選擇</option>
-                    <option value="緊急 (24小時內回覆)">緊急 (24小時內回覆)</option>
-                    <option value="一般 (3個工作天內回覆)">一般 (3個工作天內回覆)</option>
-                    <option value="不急 (一週內回覆)">不急 (一週內回覆)</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    問題類型 <span className="text-red-500">*</span>
-                  </label>
-                  <select 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={supportFormData.problemType}
-                    onChange={(e) => handleSupportFormChange('problemType', e.target.value)}
-                    disabled={isSubmittingSupportRequest}
-                    required
-                  >
-                    <option value="">請選擇</option>
-                    <option value="申請流程問題">申請流程問題</option>
-                    <option value="申請資格問題">申請資格問題</option>
-                    <option value="文件準備問題">文件準備問題</option>
-                    <option value="申請狀態查詢">申請狀態查詢</option>
-                    <option value="其他問題">其他問題</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    問題描述 <span className="text-red-500">*</span>
-                  </label>
-                  <textarea 
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="請詳細描述您遇到的問題..."
-                    value={supportFormData.description}
-                    onChange={(e) => handleSupportFormChange('description', e.target.value)}
-                    disabled={isSubmittingSupportRequest}
-                    required
-                  />
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowSupportForm(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isSubmittingSupportRequest}
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    disabled={isSubmittingSupportRequest}
-                  >
-                    {isSubmittingSupportRequest ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        發送中...
-                      </>
-                    ) : (
-                      '送出請求'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* Toast Notifications */}
-      {toast && toast.message && (
+      {toast && (
         <Toast
           show={true}
           message={toast.message}
