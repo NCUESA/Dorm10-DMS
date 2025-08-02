@@ -18,22 +18,17 @@ const categoryStyles = {
 };
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 
+// 依申請截止日期計算所屬學期
 const calculateSemester = (deadlineStr) => {
     if (!deadlineStr) return 'N/A';
     const deadline = new Date(deadlineStr);
     const year = deadline.getFullYear();
-    const month = deadline.getMonth() + 1; // getMonth() is 0-indexed
+    const month = deadline.getMonth() + 1; // getMonth() 為 0 起算
 
-    let academicYear;
-    let semester;
-
-    if (month >= 8 || month === 1) { // Aug-Jan is 1st semester
-        semester = 1;
-        academicYear = month === 1 ? year - 1912 : year - 1911;
-    } else { // Feb-Jul is 2nd semester
-        semester = 2;
-        academicYear = year - 1911;
-    }
+    // 學年 = 西元年 - 1912 + floor(月份 / 7)
+    const academicYear = year - 1912 + Math.floor(month / 7);
+    // 8-1 月為上學期，2-7 月為下學期
+    const semester = (month >= 8 || month === 1) ? 1 : 2;
 
     return `${academicYear}-${semester}`;
 };
@@ -72,7 +67,9 @@ export default function AnnouncementList() {
             query = query.lt('application_deadline', today);
         }
 
-        query = query.order(sort.column, { ascending: sort.ascending });
+        // 若以學期排序，實際以申請截止日期排序
+        const orderColumn = sort.column === 'semester' ? 'application_deadline' : sort.column;
+        query = query.order(orderColumn, { ascending: sort.ascending });
 
         const from = (page - 1) * rowsPerPage;
         const to = from + rowsPerPage - 1;
@@ -81,7 +78,11 @@ export default function AnnouncementList() {
         const { data, error, count } = await query;
 
         if (!error) {
-            setAnnouncements(data || []);
+            const dataWithSemester = (data || []).map(item => ({
+                ...item,
+                semester: calculateSemester(item.application_deadline),
+            }));
+            setAnnouncements(dataWithSemester);
             setTotalCount(count || 0);
         } else {
             console.error("Error fetching announcements:", error);
@@ -163,14 +164,16 @@ export default function AnnouncementList() {
                             <tr><td colSpan="5" className="p-10 text-center text-gray-500">載入中...</td></tr>
                         ) : announcements.map(item => (
                             <tr key={item.id} ref={el => announcementRefs.current[item.id] = el} className="hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
-                                <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-800">{calculateSemester(item.application_deadline)}</td>
+                                <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-800">{item.semester}</td>
                                 <td className="px-6 py-5 max-w-xs">
                                     <div className="flex items-center gap-3">
                                         <span className={`flex-shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md text-xs font-bold ${getCategoryStyle(item.category).bg} ${getCategoryStyle(item.category).text}`}>{item.category}</span>
                                         <span className="font-semibold text-gray-900 truncate">{item.title}</span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">{item.target_audience}</td>
+                                <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">
+                                    <span dangerouslySetInnerHTML={{ __html: item.target_audience }} />
+                                </td>
                                 <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">{item.application_limitations}</td>
                                 <td className="px-6 py-5 whitespace-nowrap text-sm">
                                     <div className="font-bold text-red-600">{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : '-'}</div>
@@ -191,11 +194,11 @@ export default function AnnouncementList() {
                                 <h3 className="font-bold text-base text-gray-900 flex-1 pr-4">{item.title}</h3>
                                 <div className="text-right flex-shrink-0">
                                     <div className="font-bold text-red-600">{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : '-'}</div>
-                                    <div className="text-xs text-gray-500">{calculateSemester(item.application_deadline)}</div>
+                                    <div className="text-xs text-gray-500">{item.semester}</div>
                                 </div>
                             </div>
                             <div className="text-sm space-y-2 text-gray-600">
-                                <p><strong className="font-semibold text-gray-800">適用對象: </strong>{item.target_audience}</p>
+                                <p><strong className="font-semibold text-gray-800">適用對象: </strong><span dangerouslySetInnerHTML={{ __html: item.target_audience }} /></p>
                                 <p><strong className="font-semibold text-gray-800">兼領限制: </strong>{item.application_limitations}</p>
                             </div>
                         </div>
