@@ -276,13 +276,29 @@ export default function AnnouncementList() {
                             <button onClick={() => setSelectedAnnouncement(null)} className="text-gray-400 hover:text-gray-800 transition-colors"><X /></button>
                         </div>
                         <div className="p-6 space-y-8 overflow-y-auto">
-                            {selectedAnnouncement.summary && <div>
-                                <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">公告摘要</h3>
-                                <p className="text-gray-700">{selectedAnnouncement.summary}</p>
-                            </div>}
+                            {selectedAnnouncement.summary && selectedAnnouncement.full_content && (
+                                <div>
+                                    <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">公告摘要</h3>
+                                    <p className="text-gray-700">{selectedAnnouncement.summary}</p>
+                                </div>
+                            )}
                             <div>
                                 <h3 className="font-semibold text-lg mb-2 text-indigo-700 border-l-4 border-indigo-500 pl-3">詳細內容</h3>
-                                <div className="prose max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: selectedAnnouncement.full_content }} />
+                                {/* 調試資訊 */}
+                                {process.env.NODE_ENV === 'development' && (
+                                    <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs">
+                                        <strong>Debug - full_content:</strong> {JSON.stringify(selectedAnnouncement.full_content)}<br/>
+                                        <strong>Debug - summary type:</strong> {typeof selectedAnnouncement.summary}<br/>
+                                        <strong>Debug - summary length:</strong> {selectedAnnouncement.summary?.length}<br/>
+                                        <strong>Debug - summary first 100:</strong> {selectedAnnouncement.summary?.substring(0, 100)}
+                                    </div>
+                                )}
+                                <div 
+                                    className="prose max-w-none text-gray-700" 
+                                    dangerouslySetInnerHTML={{ 
+                                        __html: selectedAnnouncement.full_content || selectedAnnouncement.summary || '無詳細內容'
+                                    }} 
+                                />
                             </div>
                             {selectedAnnouncement.attachments?.length > 0 && (
                                 <div>
