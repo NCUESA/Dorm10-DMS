@@ -1,126 +1,176 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { HeaderContext } from '@/components/Header';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import AnnouncementsTab from '@/components/admin/AnnouncementsTab';
 import UsersTab from '@/components/admin/UsersTab';
 import UsageTab from '@/components/admin/UsageTab';
+import { Users, FileText, Settings, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
 
-// 頁籤設定
 const tabs = [
-  { id: 'announcements', label: '公告管理' },
-  { id: 'users', label: '使用者管理' },
-  { id: 'usage', label: '使用說明' },
+    { id: 'announcements', label: '公告管理', icon: FileText, component: <AnnouncementsTab /> },
+    { id: 'users', label: '使用者管理', icon: Users, component: <UsersTab /> },
+    { id: 'usage', label: '使用說明', icon: Settings, component: <UsageTab /> },
 ];
 
-export default function ManagePage() {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('announcements');
+const TabComponent = ({ activeTab, onTabClick, isOverDark = false }) => {
+    const tabsRef = useRef([]);
+    const activeTabRef = tabsRef.current[tabs.findIndex(tab => tab.id === activeTab)];
 
-  // 檢查登入狀態與權限，不符合條件則導向其他頁面
-  useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated) {
-        router.push('/login?redirect=/manage');
-      } else if (!isAdmin) {
-        router.push('/');
-      }
-    }
-  }, [isAuthenticated, isAdmin, loading, router]);
-
-  const handleTabClick = (tabId) => {
-    setActiveTab(tabId);
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'announcements':
-        return <AnnouncementsTab />;
-      case 'users':
-        return <UsersTab />;
-      case 'usage':
-        return <UsageTab />;
-      default:
-        return null;
-    }
-  };
-
-  // 載入資料期間顯示讀取狀態
-  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">載入中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 若未通過驗證或非管理員，不渲染內容
-  if (!isAuthenticated || !isAdmin) {
-    return null;
-  }
-
-  return (
-    <main className="min-h-screen bg-gray-50/50">
-      <div className="container mx-auto px-4 py-8 md:px-6 md:py-12">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            管理後台
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            管理公告、使用者和檢視使用說明。
-          </p>
-        </header>
-
-        <div>
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-              {tabs.map((tab) => (
+        <nav className={`relative grid grid-cols-3 items-center p-1 gap-1 rounded-full shadow-inner transition-colors duration-300 backdrop-blur-xl overflow-hidden
+            ${isOverDark
+                ? 'bg-white/15'
+                : 'bg-black/[0.04]'
+            }
+        `}>
+            <motion.span
+                className="absolute top-1 bottom-1 rounded-full bg-purple-300/20"
+                layoutId="bubble"
+                initial={false}
+                animate={{ x: activeTabRef?.offsetLeft, width: activeTabRef?.offsetWidth }}
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+            />
+            {tabs.map((tab, index) => (
                 <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
-                  role="tab"
-                  aria-controls={`tabpanel-${tab.id}`}
-                  aria-selected={activeTab === tab.id}
-                  id={`tab-${tab.id}`}
-                  className={`
-                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                    transition-colors duration-200
-                    ${
-                      activeTab === tab.id
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }
-                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-t-md
-                  `}
+                    key={tab.id}
+                    ref={el => tabsRef.current[index] = el}
+                    onClick={() => onTabClick(tab.id)}
+                    className={`
+                        relative z-10 flex items-center justify-center gap-2 whitespace-nowrap
+                        h-10 py-2.5 px-3 sm:px-4
+                        font-medium text-sm transition-colors duration-300 rounded-full
+                        focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500
+                        ${activeTab === tab.id
+                            ? (isOverDark ? 'text-purple-300 font-semibold' : 'text-purple-700 font-semibold')
+                            : (isOverDark ? 'text-white hover:text-gray-200' : 'text-gray-800 hover:text-black')
+                        }
+                    `}
                 >
-                  {tab.label}
+                    <tab.icon className="h-5 w-5" />
+                    <span>{tab.label}</span>
                 </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="mt-6">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                role="tabpanel"
-                id={`tabpanel-${tab.id}`}
-                aria-labelledby={`tab-${tab.id}`}
-                hidden={activeTab !== tab.id}
-                className="focus:outline-none"
-                tabIndex="0"
-              >
-                {activeTab === tab.id && renderTabContent()}
-              </div>
             ))}
-          </div>
+        </nav>
+    );
+};
+
+function isColorDark(color) {
+    if (!color || color === 'transparent' || color.startsWith('rgba(') && color.endsWith(', 0)')) return false;
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!match) return false;
+    const luminance = (0.299 * match[1] + 0.587 * match[2] + 0.114 * match[3]) / 255;
+    return luminance < 0.5;
+}
+
+function throttle(func, limit) {
+    let inThrottle;
+    return function (...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+
+export default function ManagePage() {
+    const { isAuthenticated, isAdmin, loading } = useAuth();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'announcements');
+    const { ref: triggerRef, inView: isContentTabsInView } = useInView({ threshold: 0.5 });
+
+    const headerContext = useContext(HeaderContext);
+    const isHeaderVisible = headerContext?.isHeaderVisible ?? true;
+
+    const [isOverDarkBg, setIsOverDarkBg] = useState(false);
+    const stickyTabRef = useRef(null);
+
+    const checkBackgroundColor = useCallback(() => {
+        if (!stickyTabRef.current || isContentTabsInView) return;
+
+        const tabRect = stickyTabRef.current.getBoundingClientRect();
+
+        const samplePoints = [
+            { x: tabRect.left + 1, y: tabRect.top + 1 },
+            { x: tabRect.left + tabRect.width / 2, y: tabRect.top + tabRect.height / 2 },
+            { x: tabRect.right - 1, y: tabRect.bottom - 1 }
+        ];
+
+        let darkCount = 0;
+
+        for (const point of samplePoints) {
+            const elements = document.elementsFromPoint(point.x, point.y);
+            for (const element of elements) {
+                if (!stickyTabRef.current.contains(element)) {
+                    const bgColor = window.getComputedStyle(element).backgroundColor;
+                    if (isColorDark(bgColor)) {
+                        darkCount++;
+                    }
+                    break;
+                }
+            }
+        }
+
+        setIsOverDarkBg(darkCount >= 2);
+
+    }, [isContentTabsInView]);
+
+    useEffect(() => {
+        const throttledCheck = throttle(checkBackgroundColor, 100);
+        throttledCheck();
+        window.addEventListener('scroll', throttledCheck, { passive: true });
+        return () => window.removeEventListener('scroll', throttledCheck);
+    }, [checkBackgroundColor]);
+
+    const handleTabClick = (tabId) => {
+        setActiveTab(tabId);
+        router.push(`/manage?tab=${tabId}`, { scroll: false });
+    };
+
+    if (loading || !isAuthenticated || !isAdmin) {
+        return <div className="w-full flex items-center justify-center py-24"><Loader2 className="h-12 w-12 text-indigo-600 animate-spin" /></div>;
+    }
+
+    const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || null;
+
+    return (
+        <div className="w-full bg-white min-h-screen">
+            <motion.div
+                ref={stickyTabRef}
+                className="fixed top-0 left-0 w-full z-40 px-4 pointer-events-none"
+                initial={{ y: '-150%', opacity: 0 }}
+                animate={{
+                    y: isContentTabsInView ? '-150%' : (isHeaderVisible ? '88px' : '20px'),
+                    opacity: isContentTabsInView ? 0 : 1
+                }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            >
+                <div className="max-w-sm sm:max-w-md mx-auto pointer-events-auto">
+                    <TabComponent activeTab={activeTab} onTabClick={handleTabClick} isOverDark={isOverDarkBg} />
+                </div>
+            </motion.div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <header className="py-12 text-center">
+                    <h1 className="text-4xl font-bold tracking-tight text-gray-900">管理後台</h1>
+                    <p className="mt-3 text-lg text-gray-500">在這裡你可以針對 彰師生輔組-校外獎學金平台的所有公告、使用者進行相關操作。</p>
+                </header>
+
+                <div ref={triggerRef} className="flex justify-center mb-10 w-full max-w-md mx-auto sm:max-w-none">
+                    <TabComponent activeTab={activeTab} onTabClick={handleTabClick} isOverDark={false} />
+                </div>
+
+                <main className="pb-12">
+                    {ActiveComponent}
+                </main>
+            </div>
         </div>
-      </div>
-    </main>
-  );
+    );
 }
