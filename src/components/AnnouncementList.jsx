@@ -33,13 +33,13 @@ const calculateSemester = (deadlineStr) => {
     return `${academicYear}-${semester}`;
 };
 
-
 // --- Main Component ---
 export default function AnnouncementList() {
     const searchParams = useSearchParams();
 
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [sortLoading, setSortLoading] = useState(false); // 新增排序載入狀態
     const [filter, setFilter] = useState('open');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -50,8 +50,14 @@ export default function AnnouncementList() {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
     const announcementRefs = useRef({});
 
-    const fetchAnnouncements = useCallback(async () => {
-        setLoading(true);
+    const fetchAnnouncements = useCallback(async (isInitialLoad = false) => {
+        // 如果不是初始載入，使用 sortLoading 來避免閃跳
+        if (isInitialLoad) {
+            setLoading(true);
+        } else {
+            setSortLoading(true);
+        }
+        
         let query = supabase
             .from('announcements')
             .select('*, attachments(*)', { count: 'exact' });
@@ -87,11 +93,18 @@ export default function AnnouncementList() {
         } else {
             console.error("Error fetching announcements:", error);
         }
-        setLoading(false);
+        
+        if (isInitialLoad) {
+            setLoading(false);
+        } else {
+            setSortLoading(false);
+        }
     }, [search, filter, page, rowsPerPage, sort]);
 
     useEffect(() => {
-        fetchAnnouncements();
+        // 判斷是否為初始載入（沒有公告資料）
+        const isInitialLoad = announcements.length === 0;
+        fetchAnnouncements(isInitialLoad);
     }, [fetchAnnouncements]);
 
     useEffect(() => {
@@ -107,8 +120,15 @@ export default function AnnouncementList() {
         }
     }, [searchParams, announcements]);
 
-    const handleSort = (column) => {
-        setSort(prev => ({ column, ascending: prev.column === column ? !prev.ascending : true }));
+    const handleSort = (field) => {
+        let newDirection = true; // ascending
+        if (sort.column === field && sort.ascending === true) {
+            newDirection = false; // descending
+        }
+        setSort({ column: field, ascending: newDirection });
+        setPage(1);
+        // 使用排序載入狀態，不是初始載入
+        fetchAnnouncements(false);
     };
 
     const renderSortIcon = (column) => {
@@ -137,55 +157,79 @@ export default function AnnouncementList() {
                     />
                 </div>
                 <ButtonGroup>
-                    <Button variant={filter === 'open' ? 'primary' : 'secondary'} onClick={() => setFilter('open')}>開放申請中</Button>
-                    <Button variant={filter === 'all' ? 'primary' : 'secondary'} onClick={() => setFilter('all')}>全部</Button>
-                    <Button variant={filter === 'expired' ? 'primary' : 'secondary'} onClick={() => setFilter('expired')}>已過期</Button>
+                    <Button variant={filter === 'open' ? 'primary' : 'secondary'} onClick={() => {
+                        setFilter('open');
+                    }}>開放申請中</Button>
+                    <Button variant={filter === 'all' ? 'primary' : 'secondary'} onClick={() => {
+                        setFilter('all');
+                    }}>全部</Button>
+                    <Button variant={filter === 'expired' ? 'primary' : 'secondary'} onClick={() => {
+                        setFilter('expired');
+                    }}>已過期</Button>
                 </ButtonGroup>
             </div>
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 {/* Desktop Table */}
-                <table className="hidden md:table w-full">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('semester')}>
-                                <div className="flex items-center">學期 {renderSortIcon('semester')}</div>
-                            </th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">獎助學金資料</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">適用對象</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">兼領限制</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('application_deadline')}>
-                                <div className="flex items-center">申請期限 / 送件方式 {renderSortIcon('application_deadline')}</div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                        {loading ? (
-                            <tr><td colSpan="5" className="p-10 text-center text-gray-500">載入中...</td></tr>
-                        ) : announcements.map(item => (
-                            <tr key={item.id} ref={el => announcementRefs.current[item.id] = el} className="hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
-                                <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-800">{item.semester}</td>
-                                <td className="px-6 py-5 max-w-xs">
-                                    <div className="flex items-center gap-3">
-                                        <span className={`flex-shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md text-xs font-bold ${getCategoryStyle(item.category).bg} ${getCategoryStyle(item.category).text}`}>{item.category}</span>
-                                        <span className="font-semibold text-gray-900 truncate">{item.title}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">
-                                    <span dangerouslySetInnerHTML={{ __html: item.target_audience }} />
-                                </td>
-                                <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">{item.application_limitations}</td>
-                                <td className="px-6 py-5 whitespace-nowrap text-sm">
-                                    <div className="font-bold text-red-600">{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : '-'}</div>
-                                    <div className="text-gray-500">{item.submission_method}</div>
-                                </td>
+                <div className="hidden md:block relative">
+                    {sortLoading && (
+                        <div className="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center">
+                            <div className="flex items-center gap-2 text-slate-600">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                                <span>排序中...</span>
+                            </div>
+                        </div>
+                    )}
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('semester')}>
+                                    <div className="flex items-center">學期 {renderSortIcon('semester')}</div>
+                                </th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">獎助學金資料</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">適用對象</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">兼領限制</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('application_deadline')}>
+                                    <div className="flex items-center">申請期限 / 送件方式 {renderSortIcon('application_deadline')}</div>
+                                </th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {loading ? (
+                                <tr><td colSpan="5" className="p-10 text-center text-gray-500">載入中...</td></tr>
+                            ) : announcements.map(item => (
+                                <tr key={item.id} ref={el => announcementRefs.current[item.id] = el} className="hover:bg-indigo-50 transition-colors cursor-pointer" onClick={() => setSelectedAnnouncement(item)}>
+                                    <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-800">{item.semester}</td>
+                                    <td className="px-6 py-5 max-w-xs">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`flex-shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md text-xs font-bold ${getCategoryStyle(item.category).bg} ${getCategoryStyle(item.category).text}`}>{item.category}</span>
+                                            <span className="font-semibold text-gray-900 truncate">{item.title}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">
+                                        <span dangerouslySetInnerHTML={{ __html: item.target_audience }} />
+                                    </td>
+                                    <td className="px-6 py-5 text-sm text-gray-600 max-w-xs truncate">{item.application_limitations}</td>
+                                    <td className="px-6 py-5 whitespace-nowrap text-sm">
+                                        <div className="font-bold text-red-600">{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : '-'}</div>
+                                        <div className="text-gray-500">{item.submission_method}</div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
                 {/* Mobile Card List */}
-                <div className="md:hidden divide-y divide-gray-200">
+                <div className="md:hidden divide-y divide-gray-200 relative">
+                    {sortLoading && (
+                        <div className="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center">
+                            <div className="flex items-center gap-2 text-slate-600">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                                <span>排序中...</span>
+                            </div>
+                        </div>
+                    )}
                     {loading ? (
                         <div className="p-10 text-center text-gray-500">載入中...</div>
                     ) : announcements.map(item => (
