@@ -333,7 +333,6 @@ ${contextText}
 
     return NextResponse.json({
       response: aiResponse,
-      structured_response: false,
       timestamp: new Date().toISOString(),
       sourceType
     })
