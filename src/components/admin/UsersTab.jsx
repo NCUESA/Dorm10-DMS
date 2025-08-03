@@ -143,9 +143,20 @@ export default function UsersTab() {
         try {
             const response = await authFetch('/api/users');
             const data = await response.json();
-            if (response.ok) setAllUsers(data.users);
-            else showToast(data.error || '獲取用戶資料失敗', 'error');
-        } catch (error) { showToast('獲取用戶資料失敗', 'error'); }
+            if (response.ok) {
+                // 確保 users 是一個數組
+                const users = Array.isArray(data.users) ? data.users : [];
+                setAllUsers(users);
+            } else {
+                console.error('API error:', data);
+                showToast(data.error || '獲取用戶資料失敗', 'error');
+                setAllUsers([]); // 設置為空數組以避免錯誤
+            }
+        } catch (error) { 
+            console.error('fetchUsers error:', error);
+            showToast('獲取用戶資料失敗', 'error');
+            setAllUsers([]); // 設置為空數組以避免錯誤
+        }
         finally { setLoading(false); }
     }, []);
 
@@ -179,6 +190,8 @@ export default function UsersTab() {
     };
 
     const processedUsers = useMemo(() => {
+        if (!Array.isArray(allUsers)) return [];
+        
         let filtered = [...allUsers];
         if (searchTerm) {
             const lowercasedTerm = searchTerm.toLowerCase();
@@ -199,9 +212,9 @@ export default function UsersTab() {
     const totalPages = Math.ceil(processedUsers.length / rowsPerPage);
 
     const stats = useMemo(() => ({
-        total: allUsers.length,
-        admins: allUsers.filter(u => u.role === '管理員').length,
-        users: allUsers.filter(u => u.role === '一般使用者').length,
+        total: Array.isArray(allUsers) ? allUsers.length : 0,
+        admins: Array.isArray(allUsers) ? allUsers.filter(u => u.role === '管理員').length : 0,
+        users: Array.isArray(allUsers) ? allUsers.filter(u => u.role === '一般使用者').length : 0,
     }), [allUsers]);
 
     const ghostButtonBase = "flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-300 ease-in-out transform disabled:transform-none disabled:shadow-none disabled:opacity-50 disabled:cursor-not-allowed";
