@@ -179,23 +179,17 @@ export default function UsersTab() {
     };
 
     const processedUsers = useMemo(() => {
-    // ** CRITICAL FIX: Ensure `allUsers` is an array before spreading it. **
-    // If `allUsers` is null or undefined, it will default to an empty array.
-    let filtered = [...(allUsers || [])]; 
-
-    if (searchTerm) {
-        const lowercasedTerm = searchTerm.toLowerCase();
-        filtered = filtered.filter(user =>
-            (user.name?.toLowerCase() || '').includes(lowercasedTerm) ||
-            (user.studentId?.toLowerCase() || '').includes(lowercasedTerm) ||
-            (user.email?.toLowerCase() || '').includes(lowercasedTerm)
-        );
-    }
-    
-    // ... sorting logic ...
-    
-    return filtered;
-}, [allUsers, searchTerm]);
+        let filtered = [...allUsers];
+        if (searchTerm) {
+            const lowercasedTerm = searchTerm.toLowerCase();
+            filtered = filtered.filter(user =>
+                (user.name?.toLowerCase() || '').includes(lowercasedTerm) ||
+                (user.studentId?.toLowerCase() || '').includes(lowercasedTerm) ||
+                (user.email?.toLowerCase() || '').includes(lowercasedTerm)
+            );
+        }
+        return filtered;
+    }, [allUsers, searchTerm]);
 
     const paginatedUsers = useMemo(() => {
         const startIndex = (currentPage - 1) * rowsPerPage;
