@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenAI } from "@google/genai"
 
 // AI 助理的系統 prompt
 const SYSTEM_PROMPT = `# 角色 (Persona)
@@ -13,7 +13,136 @@ const SYSTEM_PROMPT = `# 角色 (Persona)
 1. **直接回答:** 請直接以對話的方式回答問題，不要說「根據我找到的資料...」。
 2. **結構化輸出:** 當資訊包含多個項目時，請**務必使用 Markdown 的列表或表格**來呈現。
 3. **引用來源:** 如果參考資料來源是「內部公告」，你【絕對不能】生成任何外部連結。
-4. **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】加上 [ANNOUNCEMENT_CARD:id1,id2,...] 這樣的標籤，其中 id 是你參考的公告 ID。
+4. **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】加上 \`[ANNOUNCEMENT_CARD:id1,id2,...]\` 這樣的標籤，其中 id 是你參考的公告 ID。
+5. **服務範圍:** 你的知識範圍【嚴格限定】在「獎學金申請」相關事務。若問題無關，請禮貌地說明你的服務範圍並拒絕回答。
+
+# 回應風格
+- 專業但親切
+- 簡潔明瞭
+- 實用性導向
+- 使用繁體中文`
+
+// 使用 Supabase 檢索相關公告
+async function retrieveRelevantAnnouncements(message, history) {
+  try {
+    const { supabase } = await import('@/lib/supabase/client');
+    
+    // 檢索相關公告 - 使用全文搜索
+    const { data: announcements, error } = await supabase
+      .from('announcements')
+      .select('id, title, summary, full_content, category, target_audience, application_limitations')
+      .or(`title.ilike.%${message}%,summary.ilike.%${message}%,target_audience.ilike.%${message}%`)
+      .limit(3);
+    
+    if (error) {
+      console.error('Error fetching announcements:', error);
+      return null;
+    }
+    
+    if (announcements && announcements.length > 0) {
+      return {
+        announcements,
+        confidence: 9 // 來自內部資料庫，可信度高
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error in retrieveRelevantAnnouncements:', error);
+    return null;
+  }
+}
+
+// 將結構化的回應轉換為 Markdown 格式
+function generateMarkdownFromStructure(responseData) {
+  if (!responseData || !responseData.content || !responseData.content.sections) return '';
+  
+  let markdown = '';
+  
+  responseData.content.sections.forEach(section => {
+    // 添加節標題
+    markdown += `## ${section.title}\n\n`;
+    
+    section.content.forEach(item => {
+      switch (item.type) {
+        case 'text':
+          markdown += `${item.text}\n\n`;
+          break;
+        case 'list':
+          if (item.items && item.items.length > 0) {
+            item.items.forEach(listItem => {
+              markdown += `- ${listItem}\n`;
+            });
+            markdown += '\n';
+          }
+          break;
+        case 'table':
+          if (item.table_data && item.table_data.length > 0) {
+            // 創建 Markdown 表格
+            const headers = item.table_data[0];
+            markdown += `| ${headers.join(' | ')} |\n`;
+            markdown += `| ${headers.map(() => '---').join(' | ')} |\n`;
+            
+            for (let i = 1; i < item.table_data.length; i++) {
+              const row = item.table_data[i];
+              markdown += `| ${row.join(' | ')} |\n`;
+            }
+            markdown += '\n';
+          }
+          break;
+        case 'highlight_important':
+          if (item.amount) {
+            markdown += `**� ${item.amount}**\n\n`;
+          } else {
+            markdown += `**�🔸 ${item.text}**\n\n`;
+          }
+          break;
+        case 'highlight_deadline':
+          markdown += `**⏰ 截止日期：${item.deadline}**\n\n`;
+          break;
+        case 'source_link':
+          if (item.link_url && item.link_text) {
+            markdown += `[${item.link_text}](${item.link_url})\n\n`;
+          }
+          break;
+        case 'contact_info':
+          markdown += `📞 **聯絡資訊**\n${item.text}\n\n`;
+          break;
+        default:
+          markdown += `${item.text || ''}\n\n`;
+          break;
+      }
+    });
+  });
+  
+  // 添加後續建議
+  if (responseData.follow_up_suggestions && responseData.follow_up_suggestions.length > 0) {
+    markdown += `\n---\n\n### 💡 您可能還想了解：\n\n`;
+    responseData.follow_up_suggestions.forEach(suggestion => {
+      markdown += `- ${suggestion}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  return markdown.trim();
+}
+
+import { NextResponse } from 'next/server'
+import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
+import { GoogleGenAI } from "@google/genai"
+
+// AI 助理的系統 prompt
+const SYSTEM_PROMPT = `# 角色 (Persona)
+你是一位專為「NCUE 獎學金資訊整合平台」設計的**頂尖AI助理**。你的個性是專業、精確且樂於助人。
+
+# 你的核心任務
+你的核心任務是根據我提供給你的「# 參考資料」（來自內部公告資料庫），用**自然、流暢的繁體中文**總結並回答使用者關於獎學金的問題。
+
+# 表達與格式化規則
+1. **直接回答:** 請直接以對話的方式回答問題，不要說「根據我找到的資料...」。
+2. **結構化輸出:** 當資訊包含多個項目時，請**務必使用 Markdown 的列表或表格**來呈現。
+3. **引用來源:** 如果參考資料來源是「內部公告」，你【絕對不能】生成任何外部連結。
+4. **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】加上 `[ANNOUNCEMENT_CARD:id1,id2,...]` 這樣的標籤，其中 id 是你參考的公告 ID。
 5. **服務範圍:** 你的知識範圍【嚴格限定】在「獎學金申請」相關事務。若問題無關，請禮貌地說明你的服務範圍並拒絕回答。
 
 # 回應風格
@@ -60,7 +189,7 @@ async function generateAIResponse(prompt, sourceType = 'none', relevantAnnouncem
       throw new Error('Gemini API key not configured');
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
+    const genAI = new GoogleGenAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash-exp",
       generationConfig: {
