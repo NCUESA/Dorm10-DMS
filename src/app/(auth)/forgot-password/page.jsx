@@ -31,7 +31,7 @@ function ForgotPasswordContent() {
 
 	const particles = useMemo(() => {
 		if (!isClient) return []; // 服務器端返回空陣列避免 hydration 不匹配
-		
+
 		const colorClasses = ['bg-purple-700', 'bg-rose-500', 'bg-orange-400'];
 		return [...Array(12)].map((_, i) => ({
 			id: i,
@@ -136,7 +136,7 @@ function ForgotPasswordContent() {
 						<h2 className="text-3xl font-bold leading-tight tracking-tight">
 							Forgot Your Password?
 						</h2>
-						<p className="mt-6 text-lg text-slate-200">別擔心，找回帳號存取權非常簡單。請在右方欄位輸入您的註冊郵箱，我們將立即寄送 OTP 至您的信箱，協助您重新登入。</p>
+						<p className="mt-6 text-lg text-slate-200">請在右方欄位輸入您的註冊信箱，我們將立即寄送 OTP 至您的信箱，協助您重新登入。</p>
 					</div>
 				</div>
 
@@ -153,7 +153,7 @@ function ForgotPasswordContent() {
 										<div className="mt-2 relative">
 											<Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
 											<input id="email" name="email" type="email" autoComplete="email" required placeholder="example@mail.com" value={email} onChange={handleChange}
-												className={`block w-full rounded-md border-0 py-2.5 pl-11 pr-4 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all`} />
+												className={`block w-full rounded-md border-0 py-2.5 pl-11 pr-4 text-gray-900 ring-1 ring-inset ${error ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:shadow-lg focus:shadow-indigo-500/50 sm:text-sm sm:leading-6 transition-all`} />
 										</div>
 										{error && <p className="mt-2 text-sm text-red-600 flex items-center gap-1"><AlertTriangle size={14} />{error}</p>}
 									</div>

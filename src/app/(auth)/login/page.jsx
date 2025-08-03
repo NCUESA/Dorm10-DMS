@@ -32,7 +32,7 @@ function LoginContent() {
 	// 登入頁面動畫計算
 	const particles = useMemo(() => {
 		if (!isClient) return []; // 服務器端返回空陣列避免 hydration 不匹配
-		
+
 		const colorClasses = ['bg-blue-700', 'bg-teal-500', 'bg-cyan-400'];
 		return [...Array(12)].map((_, i) => ({
 			id: i,
@@ -177,7 +177,7 @@ function LoginContent() {
 									<div className="mt-2 relative">
 										<Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
 										<input id="email" name="email" type="email" autoComplete="email" required placeholder="example@mail.com" value={formData.email} onChange={handleChange}
-											className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ${errors.email ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all`}
+											className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ${errors.email ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:shadow-lg focus:shadow-indigo-500/50 sm:text-sm sm:leading-6 transition-all`}
 										/>
 									</div>
 									{errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
@@ -188,7 +188,7 @@ function LoginContent() {
 									<div className="mt-2 relative">
 										<Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
 										<input id="password" name="password" required type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="請輸入您的密碼" value={formData.password} onChange={handleChange}
-											className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${errors.password ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 transition-all`}
+											className={`block w-full rounded-md border-0 py-2.5 pl-10 pr-10 text-gray-900 ring-1 ring-inset ${errors.password ? 'ring-red-500' : 'ring-gray-300'} placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:shadow-lg focus:shadow-indigo-500/50 sm:text-sm sm:leading-6 transition-all`}
 										/>
 										<button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
 											{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
