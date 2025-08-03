@@ -172,14 +172,13 @@ export default function AnnouncementList() {
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 {/* Desktop Table */}
                 <div className="hidden md:block relative">
-                    {sortLoading && (
-                        <div className="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center">
-                            <div className="flex items-center gap-2 text-slate-600">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-                                <span>排序中...</span>
-                            </div>
+                    {/* 排序時顯示覆蓋層，避免列表閃爍 */}
+                    <div className={`absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center transition-opacity duration-300 ${sortLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <div className="flex items-center gap-2 text-slate-600">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                            <span>排序中...</span>
                         </div>
-                    )}
+                    </div>
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
@@ -222,14 +221,13 @@ export default function AnnouncementList() {
 
                 {/* Mobile Card List */}
                 <div className="md:hidden divide-y divide-gray-200 relative">
-                    {sortLoading && (
-                        <div className="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center">
-                            <div className="flex items-center gap-2 text-slate-600">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-                                <span>排序中...</span>
-                            </div>
+                    {/* 排序時顯示覆蓋層，避免列表閃爍 */}
+                    <div className={`absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center transition-opacity duration-300 ${sortLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <div className="flex items-center gap-2 text-slate-600">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                            <span>排序中...</span>
                         </div>
-                    )}
+                    </div>
                     {loading ? (
                         <div className="p-10 text-center text-gray-500">載入中...</div>
                     ) : announcements.map(item => (
