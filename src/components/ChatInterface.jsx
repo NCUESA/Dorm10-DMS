@@ -365,8 +365,11 @@ const ChatInterface = () => {
         },
         body: JSON.stringify({
           message: messageText,
-          // 將最新訊息一併送至後端，避免遺漏
-          conversationHistory: [...messages, userMessage]
+          // 使用正確的欄位名稱，並轉換格式以符合新 API
+          history: messages.map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'model',
+            message_content: msg.content
+          }))
         })
       })
 
