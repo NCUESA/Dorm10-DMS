@@ -7,8 +7,9 @@ import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
 import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import AnnouncementPreviewModal from '@/components/AnnouncementPreviewModal';
 import Toast from '@/components/ui/Toast';
-import { Plus, Search, ChevronsUpDown, ArrowDown, ArrowUp, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+import { Plus, Search, ChevronsUpDown, ArrowDown, ArrowUp, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const LineIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="16" height="16" viewBox="0 0 50 50" className="inline-block">
@@ -20,6 +21,8 @@ const GmailIcon = () => (
         <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75L35,40h7c1.657,0,3-1.343,3-3V16.2z"></path><path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H6c-1.657,0-3-1.343-3-3V16.2z"></path><polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17"></polygon><path fill="#c62828" d="M3,12.298V16.2l10,7.5V11.2L9.876,8.859C9.132,8.301,8.228,8,7.298,8h0C4.924,8,3,9.924,3,12.298z"></path><path fill="#fbc02d" d="M45,12.298V16.2l-10,7.5V11.2l3.124-2.341C38.868,8.301,39.772,8,40.702,8h0 C43.076,8,45,9.924,45,12.298z"></path>
     </svg>
 );
+
+
 
 // --- Helper Functions for Notifications ---
 const sendEmailAnnouncement = async (id, showToast) => {
@@ -43,6 +46,7 @@ const sendLineBroadcast = async (id, showToast) => {
 };
 
 export default function AnnouncementsTab() {
+    const [expandedId, setExpandedId] = useState(null);
     const [allAnnouncements, setAllAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -146,50 +150,122 @@ export default function AnnouncementsTab() {
             </div>
 
             <div className="rounded-xl w-full bg-white shadow-lg overflow-hidden border border-gray-200/80">
+                {/* --- DESKTOP TABLE VIEW --- */}
                 <div className="hidden md:block">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50/70 text-left"><tr>
-                            <th className="p-4 px-6 font-semibold text-gray-500">標題</th>
-                            <th className="p-4 px-6 font-semibold text-gray-500">分類</th>
-                            <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer" onClick={() => handleSort('application_deadline')}><div className="flex items-center">申請截止日 {renderSortIcon('application_deadline')}</div></th>
-                            <th className="p-4 px-6 font-semibold text-gray-500">狀態</th>
-                            <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer" onClick={() => handleSort('created_at')}><div className="flex items-center">最後更新 {renderSortIcon('created_at')}</div></th>
-                            <th className="p-4 px-6 font-semibold text-gray-500 text-center">操作</th>
-                        </tr></thead>
+                    <table className="w-full text-sm table-layout-fixed">
+                        <thead className="bg-gray-50/70 text-left">
+                            <tr>
+                                <th className="p-4 px-6 font-semibold text-gray-500">標題</th>
+                                <th className="p-4 px-6 font-semibold text-gray-500 w-24">分類</th>
+                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('application_deadline')}>
+                                    <div className="flex items-center">申請截止日 {renderSortIcon('application_deadline')}</div>
+                                </th>
+                                <th className="p-4 px-6 font-semibold text-gray-500 w-28">狀態</th>
+                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('created_at')}>
+                                    <div className="flex items-center">最後更新 {renderSortIcon('created_at')}</div>
+                                </th>
+                                <th className="p-4 px-6 font-semibold text-gray-500 text-center w-48">操作</th>
+                            </tr>
+                        </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {loading ? (<tr><td colSpan="6" className="text-center p-12 text-gray-500">載入中...</td></tr>) : paginatedAnnouncements.length === 0 ? (<tr><td colSpan="6" className="text-center p-12 text-gray-500">找不到符合條件的公告。</td></tr>) : (
+                            {loading ? (
+                                <tr><td colSpan="6" className="text-center p-12 text-gray-500">載入中...</td></tr>
+                            ) : paginatedAnnouncements.length === 0 ? (
+                                <tr><td colSpan="6" className="text-center p-12 text-gray-500">找不到符合條件的公告。</td></tr>
+                            ) : (
                                 paginatedAnnouncements.map((ann) => (
                                     <tr key={ann.id} className="transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-xl z-0 hover:z-10 hover:scale-[1.02]">
-                                        <td className="p-4 px-6 font-medium text-gray-800">{ann.title}</td>
+                                        <td className="p-4 px-6 font-medium text-gray-800 break-words">{ann.title}</td>
                                         <td className="p-4 px-6 text-gray-600">{ann.category}</td>
                                         <td className="p-4 px-6 text-gray-600 font-medium">{ann.application_deadline || 'N/A'}</td>
-                                        <td className="p-4 px-6"><span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span></td>
+                                        <td className="p-4 px-6">
+                                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span>
+                                        </td>
                                         <td className="p-4 px-6 text-gray-600">{new Date(ann.created_at).toLocaleDateString()}</td>
-                                        <td className="p-4 px-6"><div className="flex items-center justify-center gap-1.5">
-                                            <button onClick={() => setEditing(ann)} className={buttonStyles.edit}>編輯</button>
-                                            <button onClick={() => setDeletingId(ann.id)} className={buttonStyles.delete}>刪除</button>
-                                            <div className="border-l h-5 mx-1 border-gray-200"></div>
-                                            <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
-                                            <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
-                                        </div></td>
+                                        <td className="p-4 px-6">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
+                                                <button onClick={() => setDeletingId(ann.id)} className={`${buttonStyles.delete} whitespace-nowrap`}>刪除</button>
+                                                <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
+                                                <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))
                             )}
                         </tbody>
                     </table>
                 </div>
-                <div className="md:hidden divide-y divide-gray-100">
-                    {loading ? (<div className="text-center p-8 text-gray-500">載入中...</div>) : paginatedAnnouncements.length === 0 ? (<div className="text-center p-8 text-gray-500">找不到符合條件的公告。</div>) : (
-                        paginatedAnnouncements.map(ann => (
-                            <div key={ann.id} className="p-4 space-y-3">
-                                <div className="flex justify-between items-start"><h3 className="font-bold text-base text-gray-900 flex-1 pr-4">{ann.title}</h3><span className={`px-2.5 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span></div>
-                                <div className="text-sm space-y-2 text-gray-600 border-t pt-3"><p><strong className="font-semibold text-gray-800">分類: </strong>{ann.category}</p><p><strong className="font-semibold text-gray-800">申請截止: </strong>{ann.application_deadline || 'N/A'}</p><p><strong className="font-semibold text-gray-800">最後更新: </strong>{new Date(ann.created_at).toLocaleDateString()}</p></div>
-                                <div className="flex items-center justify-between border-t pt-3">
-                                    <div className="flex gap-2"><button onClick={() => setEditing(ann)} className={buttonStyles.edit}>編輯</button><button onClick={() => setDeletingId(ann.id)} className={buttonStyles.delete}>刪除</button></div>
-                                    <div className="flex gap-2"><button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button><button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button></div>
+                {/* --- MOBILE VIEW (NEW ACCORDION CARD DESIGN) --- */}
+                <div className="md:hidden px-2 py-4 flex flex-col gap-3">
+                    {loading ? (
+                        <div className="text-center p-8 text-gray-500">載入中...</div>
+                    ) : paginatedAnnouncements.length === 0 ? (
+                        <div className="text-center p-8 text-gray-500">找不到符合條件的公告。</div>
+                    ) : (
+                        paginatedAnnouncements.map(ann => {
+                            const isExpanded = expandedId === ann.id;
+                            return (
+                                <div key={ann.id}
+                                    className={`
+                        bg-white rounded-lg transition-all duration-300
+                        ${isExpanded ? 'shadow-lg ring-2 ring-indigo-500 ring-offset-2' : 'shadow-md border border-gray-200/80'}
+                    `}
+                                >
+                                    {/* --- Card Header (Always Visible Trigger) --- */}
+                                    <button
+                                        onClick={() => setExpandedId(isExpanded ? null : ann.id)}
+                                        className="w-full flex items-center justify-between text-left p-4"
+                                    >
+                                        <div className="flex-1 pr-4">
+                                            <h3 className="font-bold text-base text-gray-900">{ann.title}</h3>
+                                        </div>
+                                        <div className="flex items-center gap-x-3 flex-shrink-0">
+                                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                {ann.is_active ? '上架' : '下架'}
+                                            </span>
+                                            <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </button>
+
+                                    {/* --- Collapsible Content --- */}
+                                    <AnimatePresence>
+                                        {isExpanded && (
+                                            <motion.div
+                                                key="content"
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="border-t border-gray-200 p-4 pt-3">
+                                                    {/* Details Grid */}
+                                                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-4">
+                                                        <div className="font-semibold text-gray-500">分類</div>
+                                                        <div className="text-gray-700">{ann.category || '-'}</div>
+
+                                                        <div className="font-semibold text-gray-500">申請截止</div>
+                                                        <div className="text-gray-700">{ann.application_deadline || 'N/A'}</div>
+
+                                                        <div className="font-semibold text-gray-500">最後更新</div>
+                                                        <div className="text-gray-700">{new Date(ann.created_at).toLocaleDateString()}</div>
+                                                    </div>
+
+                                                    {/* Action Buttons */}
+                                                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-200">
+                                                        <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
+                                                        <button onClick={() => setDeletingId(ann.id)} className={`${buttonStyles.delete} whitespace-nowrap`}>刪除</button>
+                                                        <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
+                                                        <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>

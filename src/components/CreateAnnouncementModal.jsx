@@ -12,15 +12,14 @@ const Stepper = ({ currentStep, inputMode = 'ai' }) => {
     const aiSteps = ['上傳檔案', 'AI 分析', '審閱發布'];
     const manualSteps = ['手動輸入', '審閱發布'];
     const steps = inputMode === 'manual' ? manualSteps : aiSteps;
-    
+
     return (
         <div className="flex items-center justify-center mb-4">
             {steps.map((step, index) => (
                 <div key={index} className="flex items-center text-sm md:text-base">
                     <div className={`flex items-center ${index <= currentStep ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 ${
-                            index <= currentStep ? 'bg-indigo-600 scale-105' : 'bg-gray-400'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 ${index <= currentStep ? 'bg-indigo-600 scale-105' : 'bg-gray-400'
+                            }`}>
                             {index + 1}
                         </div>
                         <span className="ml-2 font-medium hidden md:block">{step}</span>
@@ -97,18 +96,16 @@ const InputModeSelector = ({ inputMode, setInputMode, disabled }) => {
         <div className="mb-6">
             <h3 className="text-lg font-medium text-gray-900 mb-3">選擇輸入模式</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div 
-                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${
-                        inputMode === 'ai' 
-                            ? 'border-blue-500 bg-blue-50' 
+                <div
+                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${inputMode === 'ai'
+                            ? 'border-blue-500 bg-blue-50'
                             : 'border-gray-300 hover:border-gray-400'
-                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => !disabled && setInputMode('ai')}
                 >
                     <div className="flex items-center space-x-3">
-                        <div className={`w-4 h-4 rounded-full border-2 ${
-                            inputMode === 'ai' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                        }`}>
+                        <div className={`w-4 h-4 rounded-full border-2 ${inputMode === 'ai' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                            }`}>
                             {inputMode === 'ai' && (
                                 <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                             )}
@@ -119,19 +116,17 @@ const InputModeSelector = ({ inputMode, setInputMode, disabled }) => {
                         </div>
                     </div>
                 </div>
-                
-                <div 
-                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${
-                        inputMode === 'manual' 
-                            ? 'border-green-500 bg-green-50' 
+
+                <div
+                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${inputMode === 'manual'
+                            ? 'border-green-500 bg-green-50'
                             : 'border-gray-300 hover:border-gray-400'
-                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => !disabled && setInputMode('manual')}
                 >
                     <div className="flex items-center space-x-3">
-                        <div className={`w-4 h-4 rounded-full border-2 ${
-                            inputMode === 'manual' ? 'border-green-500 bg-green-500' : 'border-gray-300'
-                        }`}>
+                        <div className={`w-4 h-4 rounded-full border-2 ${inputMode === 'manual' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                            }`}>
                             {inputMode === 'manual' && (
                                 <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                             )}
@@ -150,42 +145,42 @@ const InputModeSelector = ({ inputMode, setInputMode, disabled }) => {
 // URL 輸入區域組件
 const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
     const [urlInput, setUrlInput] = useState('');
-    
+
     const handleAddUrl = () => {
         const trimmedUrl = urlInput.trim();
         if (!trimmedUrl) {
             showToast('請輸入網址', 'warning');
             return;
         }
-        
+
         try {
             new URL(trimmedUrl);
         } catch {
             showToast('請輸入有效的網址', 'warning');
             return;
         }
-        
+
         if (urls.some(url => url === trimmedUrl)) {
             showToast('此網址已經存在', 'warning');
             return;
         }
-        
+
         setUrls(prev => [...prev, trimmedUrl]);
         setUrlInput('');
         showToast('網址已添加', 'success');
     };
-    
+
     const handleRemoveUrl = (indexToRemove) => {
         setUrls(prev => prev.filter((_, index) => index !== indexToRemove));
     };
-    
+
     const handleKeyPress = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             handleAddUrl();
         }
     };
-    
+
     return (
         <div className="space-y-4">
             <div className="flex gap-2">
@@ -207,7 +202,7 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
                     添加
                 </button>
             </div>
-            
+
             {urls.length > 0 && (
                 <div className="space-y-2">
                     <h4 className="text-sm font-medium text-gray-700">已添加的網址：</h4>
@@ -218,9 +213,9 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
                                     <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                                     </svg>
-                                    <a 
-                                        href={url} 
-                                        target="_blank" 
+                                    <a
+                                        href={url}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-sm text-blue-600 hover:text-blue-800 break-all"
                                     >
@@ -250,74 +245,74 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
 // 檔案上傳組件
 const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
     const fileInputRef = useRef(null);
-    
+
     const supportedTypes = {
         'application/pdf': 'PDF',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
         'application/msword': 'DOC',
         'image/jpeg': '圖片',
-        'image/jpg': '圖片', 
+        'image/jpg': '圖片',
         'image/png': '圖片',
         'image/gif': '圖片',
         'image/webp': '圖片'
     };
-    
+
     const maxFileSize = 10 * 1024 * 1024; // 10MB
     const maxFiles = 5;
-    
+
     const validateAndAddFiles = (files) => {
         const validFiles = [];
         const fileArray = Array.from(files);
         const currentFilesCount = selectedFiles.length;
-        
+
         for (const file of fileArray) {
             if (!file || !file.name) {
                 showToast('發現無效的檔案', 'error');
                 continue;
             }
-            
+
             const fileName = file.name.trim();
             if (!fileName) {
                 showToast('檔案名稱不能為空', 'error');
                 continue;
             }
-            
+
             if (fileName.length > 255) {
                 showToast(`檔案名稱過長: ${fileName}`, 'error');
                 continue;
             }
-            
+
             const illegalChars = /[<>:"|?*\x00-\x1f]/;
             if (illegalChars.test(fileName)) {
                 showToast(`檔案名稱包含非法字符: ${fileName}`, 'error');
                 continue;
             }
-            
+
             if (selectedFiles.some(existingFile => existingFile.name === fileName)) {
                 showToast(`檔案 "${fileName}" 已經存在`, 'warning');
                 continue;
             }
-            
+
             if (currentFilesCount + validFiles.length >= maxFiles) {
                 showToast(`最多只能上傳 ${maxFiles} 個檔案`, 'warning');
                 break;
             }
-            
+
             if (!supportedTypes[file.type]) {
                 showToast(`檔案 "${fileName}" 格式不支援。請上傳 PDF、DOCX、DOC 或圖片文件。`, 'warning');
                 continue;
             }
-            
+
             if (file.size > maxFileSize) {
                 showToast(`檔案 "${fileName}" 大小超過限制。請選擇小於 10MB 的文件。`, 'warning');
                 continue;
             }
-            
+
             if (file.size === 0) {
                 showToast(`檔案 "${fileName}" 是空檔案`, 'warning');
                 continue;
             }
-            
+
             validFiles.push({
                 file: file,
                 name: file.name,
@@ -327,13 +322,13 @@ const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }
                 isNewFile: true
             });
         }
-        
+
         if (validFiles.length > 0) {
             setSelectedFiles(prev => [...prev, ...validFiles]);
             showToast(`成功選擇 ${validFiles.length} 個檔案`, 'success');
         }
     };
-    
+
     const handleFileChange = (event) => {
         const files = event.target.files;
         if (files && files.length > 0) {
@@ -341,19 +336,19 @@ const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }
         }
         event.target.value = '';
     };
-    
+
     const handleDragOver = (event) => event.preventDefault();
-    
+
     const handleDrop = (event) => {
         event.preventDefault();
         if (disabled) return;
-        
+
         const files = event.dataTransfer.files;
         if (files && files.length > 0) {
             validateAndAddFiles(files);
         }
     };
-    
+
     const handleRemoveFile = (indexToRemove) => {
         setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
@@ -403,7 +398,7 @@ const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }
                     <div className="max-h-40 overflow-y-auto space-y-2">
                         {selectedFiles.map((fileWrapper, index) => {
                             const fileType = supportedTypes[fileWrapper.type] || '未知';
-                            
+
                             return (
                                 <div key={fileWrapper.tempId || index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                                     <div className="flex items-center space-x-3">
@@ -616,7 +611,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const [urls, setUrls] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isEditMode = !!editingAnnouncement;
-    
+
     const [formData, setFormData] = useState({
         title: '',
         summary: '',
@@ -663,7 +658,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             setTimeout(() => setShow(true), 50);
-            
+
             // 重置狀態
             if (!isEditMode) {
                 setInputMode('ai');
@@ -686,7 +681,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             document.body.style.overflow = 'unset';
             setShow(false);
         }
-        
+
         return () => {
             document.body.style.overflow = 'unset';
         };
@@ -719,9 +714,9 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 .from('attachments')
                 .select('*')
                 .eq('announcement_id', announcementId);
-            
+
             if (error) throw error;
-            
+
             if (attachments && attachments.length > 0) {
                 const existingFiles = attachments.map(attachment => ({
                     id: attachment.id,
@@ -731,7 +726,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     path: attachment.stored_file_path,
                     isExisting: true
                 })).filter(file => file.path);
-                
+
                 setSelectedFiles(existingFiles);
             }
         } catch (error) {
@@ -785,11 +780,11 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
         try {
             setLoadingText("正在準備分析資料...");
-            
+
             // 準備 prompt 內容
             let promptParts = [];
             let hasFileContent = false;
-            
+
             // 如果有檔案，處理檔案
             if (selectedFiles.length > 0) {
                 let fileForAnalysis;
@@ -801,12 +796,12 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     fileForAnalysis = pdfFiles.length > 0 ? pdfFiles[0] : selectedFiles[0];
                     showToast(`使用檔案 "${fileForAnalysis.name}" 進行AI分析`, "success");
                 }
-                
+
                 const pdfPart = await fileToGenerativePart(fileForAnalysis.file || fileForAnalysis);
                 promptParts.push(pdfPart);
                 hasFileContent = true;
             }
-            
+
             // 建構 prompt 文字
             let promptText = `
 # 角色 (Persona)
@@ -885,12 +880,12 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     promptText += `${index + 1}. ${url}\n`;
                 });
             }
-            
+
             // 如果有檔案，添加檔案說明
             if (hasFileContent) {
                 promptText += `\n\n# 檔案資料來源已上傳`;
             }
-            
+
             promptParts.push({ text: promptText });
 
             // 配置 AI 參數（移除 JSON schema，使用簡單配置）
@@ -931,18 +926,18 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
             // 清理和解析 JSON 回應（參考 raw/api/generate_summary.php 的處理方式）
             let cleanedResult = result.trim();
-            
+
             // 尋找 JSON 物件的開始和結束
             const firstBrace = cleanedResult.indexOf('{');
             const lastBrace = cleanedResult.lastIndexOf('}');
-            
+
             if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
                 cleanedResult = cleanedResult.substring(firstBrace, lastBrace + 1);
             }
-            
+
             // 移除可能的 markdown 標記
             cleanedResult = cleanedResult.replace(/```json\s*\n?/g, '').replace(/\n?\s*```/g, '');
-            
+
             let aiResponse;
             try {
                 aiResponse = JSON.parse(cleanedResult);
@@ -961,7 +956,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             // 調試：檢查 AI 回應內容
             console.log("AI 分析結果:", aiResponse);
             console.log("Summary 內容:", aiResponse.summary);
-            
+
             setFormData(prev => {
                 const newFormData = {
                     ...prev,
@@ -978,7 +973,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 });
                 return newFormData;
             });
-            
+
             // 延遲一點再切換步驟，確保 formData 更新完成
             setTimeout(() => {
                 setCurrentStep(2);
@@ -996,12 +991,12 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     // 上傳檔案到伺服器
     const uploadFilesToServer = async (files) => {
         const uploadedFiles = [];
-        
+
         for (const fileWrapper of files) {
             if (fileWrapper.isNewFile) {
                 try {
                     console.log("正在上傳檔案:", fileWrapper.name);
-                    
+
                     // 檢查當前用戶身份驗證狀態
                     const { data: { session } } = await supabase.auth.getSession();
                     console.log("當前身份驗證狀態:", {
@@ -1009,29 +1004,29 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                         hasToken: !!session?.access_token,
                         user: session?.user?.email
                     });
-                    
+
                     const formData = new FormData();
                     formData.append('file', fileWrapper.file || fileWrapper);
-                    
+
                     console.log("FormData 內容:", {
                         fileName: (fileWrapper.file || fileWrapper).name,
                         fileSize: (fileWrapper.file || fileWrapper).size,
                         fileType: (fileWrapper.file || fileWrapper).type
                     });
-                    
+
                     const response = await authFetch('/api/upload-files', {
                         method: 'POST',
                         body: formData,
                     });
-                    
+
                     console.log("上傳回應狀態:", response.status);
-                    
+
                     if (!response.ok) {
                         const errorText = await response.text();
                         console.error("上傳失敗詳情:", errorText);
                         throw new Error(`上傳失敗: ${response.status} - ${errorText}`);
                     }
-                    
+
                     const result = await response.json();
                     console.log("上傳成功結果:", result);
                     uploadedFiles.push(result.data);
@@ -1041,7 +1036,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                 }
             }
         }
-        
+
         return uploadedFiles;
     };
 
@@ -1112,11 +1107,11 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             }
 
             showToast(isEditMode ? "公告更新成功!" : "公告發布成功!", "success");
-            
+
             if (refreshAnnouncements) {
                 refreshAnnouncements();
             }
-            
+
             setTimeout(() => {
                 onClose();
             }, 1500);
@@ -1144,11 +1139,11 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             if (error) throw error;
 
             showToast("公告刪除成功!", "success");
-            
+
             if (refreshAnnouncements) {
                 refreshAnnouncements();
             }
-            
+
             setTimeout(() => {
                 onClose();
             }, 1500);
@@ -1171,14 +1166,13 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
     return (
         <>
-            <div 
+            <div
                 className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 pt-16"
                 onClick={handleClose}
             >
                 <div
-                    className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-hidden transform transition-all duration-300 ${
-                        show ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-                    }`}
+                    className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-hidden transform transition-all duration-300 ${show ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+                        }`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* 標題欄 */}
@@ -1206,22 +1200,22 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
                         {!isEditMode && currentStep === 0 && (
                             <>
-                                <InputModeSelector 
-                                    inputMode={inputMode} 
-                                    setInputMode={setInputMode} 
-                                    disabled={isLoading} 
+                                <InputModeSelector
+                                    inputMode={inputMode}
+                                    setInputMode={setInputMode}
+                                    disabled={isLoading}
                                 />
-                                
+
                                 {inputMode === 'ai' ? (
                                     <div className="space-y-6">
                                         <h3 className="text-lg font-medium text-gray-900">上傳檔案或網址進行 AI 分析</h3>
-                                        <FileUploadArea 
+                                        <FileUploadArea
                                             selectedFiles={selectedFiles}
                                             setSelectedFiles={setSelectedFiles}
                                             disabled={isLoading}
                                             showToast={showToast}
                                         />
-                                        <UrlInputArea 
+                                        <UrlInputArea
                                             urls={urls}
                                             setUrls={setUrls}
                                             disabled={isLoading}
@@ -1237,7 +1231,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                                             handleSummaryChange={handleSummaryChange}
                                             disabled={isLoading}
                                         />
-                                        <FileUploadArea 
+                                        <FileUploadArea
                                             selectedFiles={selectedFiles}
                                             setSelectedFiles={setSelectedFiles}
                                             disabled={isLoading}
@@ -1267,7 +1261,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                                     disabled={isLoading}
                                 />
                                 {!isEditMode && (
-                                    <FileUploadArea 
+                                    <FileUploadArea
                                         selectedFiles={selectedFiles}
                                         setSelectedFiles={setSelectedFiles}
                                         disabled={isLoading}
@@ -1324,17 +1318,17 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                                 </>
                             )}
 
-                            {((!isEditMode && currentStep === 0 && inputMode === 'manual') || 
-                              (!isEditMode && currentStep === 2) || 
-                              isEditMode) && (
-                                <Button
-                                    variant="primary"
-                                    onClick={handleSave}
-                                    disabled={isLoading || !isFormValid}
-                                >
-                                    {isEditMode ? '更新公告' : '發布公告'}
-                                </Button>
-                            )}
+                            {((!isEditMode && currentStep === 0 && inputMode === 'manual') ||
+                                (!isEditMode && currentStep === 2) ||
+                                isEditMode) && (
+                                    <Button
+                                        variant="primary"
+                                        onClick={handleSave}
+                                        disabled={isLoading || !isFormValid}
+                                    >
+                                        {isEditMode ? '更新公告' : '發布公告'}
+                                    </Button>
+                                )}
                         </div>
                     </div>
                 </div>

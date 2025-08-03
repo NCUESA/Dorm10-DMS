@@ -36,6 +36,31 @@ const EmailPreview = ({ announcement }) => {
             .prose { font-size: 16px; line-height: 1.7; color: #374151; }
             .prose h3 { font-size: 18px; color: #1f2937; margin-top: 24px; margin-bottom: 12px; }
             .prose p { margin: 0 0 16px; }
+
+            /* --- ✨ 新增的表格樣式 ✨ --- */
+            .prose table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 14px;
+                border: 1px solid #dee2e6;
+            }
+            .prose th, .prose td {
+                border: 1px solid #dee2e6;
+                padding: 12px 15px;
+                text-align: left;
+                vertical-align: top;
+            }
+            .prose th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+                color: #495057;
+            }
+            .prose tr:nth-of-type(even) {
+                background-color: #f8f9fa;
+            }
+            /* --- ✨ 樣式結束 ✨ --- */
+
             .cta-button { display: inline-block; background-color: #7c3aed; color: #ffffff !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500; }
             .footer { padding: 24px 40px; font-size: 12px; text-align: center; color: #9ca3af; background-color: #f9fafb; }
             .footer a { color: #6b7280; text-decoration: none; }
