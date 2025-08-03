@@ -1,62 +1,73 @@
-'use client';
+// src/components/AnnouncementPreviewModal.jsx
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Button from '@/components/ui/Button';
+import { X, Send, Loader2 } from 'lucide-react';
+import EmailPreview from './previews/EmailPreview';
+import LinePreview from './previews/LinePreview';
 
-export default function AnnouncementPreviewModal({ isOpen, type, contentHtml, contentText, onConfirm, onClose }) {
-  const [show, setShow] = useState(false);
+export default function AnnouncementPreviewModal({ isOpen, type, announcement, onConfirm, onClose }) {
+  const [isSending, setIsSending] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      setTimeout(() => setShow(true), 50);
-    } else {
-      document.body.style.overflow = 'unset';
-      setShow(false);
-    }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen]);
-
-  const handleClose = useCallback(() => {
-    setShow(false);
-    setTimeout(() => {
-      document.body.style.overflow = 'unset';
-      onClose();
-    }, 200);
-  }, [onClose]);
-
-  if (!isOpen) return null;
+  const handleConfirm = async () => {
+    setIsSending(true);
+    await onConfirm();
+    setIsSending(false);
+  };
 
   return (
-    <div
-      className={`fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
-      onClick={handleClose}
-      aria-modal="true"
-      role="dialog"
-    >
-      <div
-        className={`bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col transition-all duration-300 ${show ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="p-4 border-b flex justify-between items-center flex-shrink-0">
-          <h2 className="text-lg font-bold text-gray-800">{type === 'email' ? 'mail 預覽' : 'LINE 訊息預覽'}</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
-            &times;
-          </button>
-        </div>
-        <div className="p-6 overflow-y-auto flex-1">
-          {type === 'email' ? (
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: contentHtml }} />
-          ) : (
-            <pre className="whitespace-pre-wrap text-sm text-gray-800">{contentText}</pre>
-          )}
-        </div>
-        <div className="p-4 bg-gray-100 border-t flex justify-end gap-3 flex-shrink-0 rounded-b-xl">
-          <button onClick={handleClose} className="px-4 py-2 rounded-md bg-white border text-gray-700 hover:bg-gray-50">取消</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-            {type === 'email' ? '寄送 mail' : '發送 LINE'}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {isOpen && (
+        // 外層容器：調整為從頂部開始排列，並增加 pt-20 (80px) 的頂部內距
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-start p-4 pt-20 overflow-y-auto"
+          onClick={onClose}
+        >
+          {/* Modal 卡片：加入半透明背景、模糊效果和邊框 */}
+          <motion.div
+            initial={{ scale: 0.95, y: -20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border border-white/20 dark:border-gray-700/50 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[calc(100vh-100px)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 標題區域 */}
+            <div className="p-5 border-b border-black/10 dark:border-white/10 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{type === 'email' ? 'Email 通知預覽' : 'LINE 通知預覽'}</h2>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+
+            {/* 內容預覽區域：背景改為透明以透出毛玻璃效果 */}
+            <div className="p-6 bg-transparent flex-grow overflow-y-auto">
+              {type === 'email' && <EmailPreview announcement={announcement} />}
+              {type === 'line' && <LinePreview announcement={announcement} />}
+            </div>
+
+            {/* 頁腳區域：更新背景和按鈕 */}
+            <div className="p-4 bg-black/5 dark:bg-white/5 border-t border-black/10 dark:border-white/10 flex justify-end items-center rounded-b-xl flex-shrink-0">
+              <div className="flex items-center gap-x-2">
+                <Button variant="ghost" className="text-gray-700 dark:text-gray-300" onClick={onClose}>
+                  關閉
+                </Button>
+                <Button
+                  variant="ghost" // 紫色 Ghost Button
+                  onClick={handleConfirm}
+                  disabled={isSending}
+                  className="text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/50 font-bold"
+                  leftIcon={isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send size={16} />}
+                >
+                  {isSending ? '發送中...' : `確認並發送 ${type === 'email' ? 'Email' : 'LINE'}`}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-}
+};
