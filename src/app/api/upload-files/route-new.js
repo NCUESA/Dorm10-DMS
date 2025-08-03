@@ -7,12 +7,9 @@ import { verifyUserAuth, checkRateLimit, handleApiError, logSuccessAction } from
 
 export async function POST(request) {
     try {
-        console.log("文件上傳 API 被調用");
-        
         // 1. Rate limiting 檢查（文件上傳限制）
         const rateLimitCheck = checkRateLimit(request, 'upload-files', 10, 60000); // 每分鐘10次
         if (!rateLimitCheck.success) {
-            console.log("Rate limit 檢查失敗");
             return rateLimitCheck.error;
         }
 
@@ -24,24 +21,14 @@ export async function POST(request) {
         });
         
         if (!authCheck.success) {
-            console.log("身份驗證失敗:", authCheck.error);
             return authCheck.error;
         }
 
-        console.log("開始解析 FormData");
         const formData = await request.formData();
         const file = formData.get('file'); // 單一檔案上傳
         
-        console.log("文件資訊:", {
-            hasFile: !!file,
-            fileName: file?.name,
-            fileSize: file?.size,
-            fileType: file?.type
-        });
-        
         // 3. 基本驗證
         if (!file) {
-            console.log("沒有檔案被上傳");
             return NextResponse.json({ error: '沒有檔案被上傳' }, { status: 400 });
         }
 

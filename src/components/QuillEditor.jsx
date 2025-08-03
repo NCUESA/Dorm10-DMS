@@ -32,6 +32,8 @@ const QuillEditor = ({ value, onChange, placeholder, disabled }) => {
             const Quill = (await import('quill')).default;
             await import('quill/dist/quill.snow.css');
             
+            console.log("QuillEditor 初始化，當前 value:", value);
+            
             // --- 僅在第一次渲染時初始化 Quill ---
             quillInstance.current = new Quill(quillRef.current, {
                 theme: 'snow',
@@ -48,22 +50,76 @@ const QuillEditor = ({ value, onChange, placeholder, disabled }) => {
                 placeholder,
             });
 
+            // 設置初始內容
+            if (value) {
+                console.log("設置初始內容:", value);
+                quillInstance.current.clipboard.dangerouslyPasteHTML(value);
+            }
+
             // 監聽內容變更事件
             quillInstance.current.on('text-change', onTextChange);
         };
 
         loadQuill().catch(console.error);
-    }, [isClient, placeholder, onTextChange]);
+
+        // 清理函數
+        return () => {
+            if (quillInstance.current) {
+                console.log("QuillEditor 清理");
+                // 移除事件監聽器
+                quillInstance.current.off('text-change', onTextChange);
+                // 清空 DOM 內容
+                if (quillRef.current) {
+                    quillRef.current.innerHTML = '';
+                }
+                // 清空實例引用
+                quillInstance.current = null;
+            }
+        };
+    }, [isClient, placeholder, onTextChange]); // 移除 value 依賴
 
     useEffect(() => {
-        if (quillInstance.current) {
+        if (quillInstance.current && value !== undefined) {
             // --- 處理外部傳入的 value 變化 ---
             const editorHTML = quillInstance.current.root.innerHTML;
+            const normalizedEditorHTML = editorHTML === '<p><br></p>' ? '' : editorHTML.trim();
+            const normalizedValue = (value || '').trim();
+            
+            console.log("QuillEditor value 更新:", { 
+                newValue: normalizedValue, 
+                currentEditorHTML: normalizedEditorHTML,
+                rawEditorHTML: editorHTML,
+                shouldUpdate: normalizedValue !== normalizedEditorHTML,
+                valueType: typeof value,
+                hasValue: !!value,
+                valueLength: value ? value.length : 0
+            });
+            
             // 只有當外部傳入的 value 與編輯器內的內容不同時，才更新編輯器
-            // 這樣可以避免在使用者輸入時，因父組件 re-render 導致的游標跳動問題
-            if (value !== editorHTML) {
-                // dangerouslyPasteHTML 會保留 HTML 樣式，正是我們需要的
-                quillInstance.current.clipboard.dangerouslyPasteHTML(value || '');
+            if (normalizedValue !== normalizedEditorHTML) {
+                try {
+                    // 先清空編輯器
+                    quillInstance.current.setText('');
+                    
+                    if (normalizedValue) {
+                        // 使用 clipboard.dangerouslyPasteHTML 插入HTML內容
+                        setTimeout(() => {
+                            quillInstance.current.clipboard.dangerouslyPasteHTML(normalizedValue);
+                            console.log("QuillEditor 內容已更新至:", normalizedValue);
+                        }, 10);
+                    } else {
+                        console.log("QuillEditor 已清空");
+                    }
+                } catch (error) {
+                    console.error("QuillEditor 更新內容失敗:", error);
+                    // 備用方法: 直接設置 innerHTML
+                    try {
+                        quillInstance.current.root.innerHTML = normalizedValue || '<p><br></p>';
+                        console.log("使用備用方法更新 QuillEditor 內容");
+                    } catch (fallbackError) {
+                        console.error("QuillEditor 備用方法也失敗:", fallbackError);
+                    }
+                }
             }
         }
     }, [value]);

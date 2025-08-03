@@ -7,18 +7,20 @@ import QuillEditor from './QuillEditor';
 import Button from '@/components/ui/Button';
 import { authFetch } from '@/lib/authFetch';
 
-// Stepper component to show the current stage
-const Stepper = ({ currentStep }) => {
-    const steps = ['上傳檔案', 'AI 分析', '審閱發布'];
+// Stepper 組件
+const Stepper = ({ currentStep, inputMode = 'ai' }) => {
+    const aiSteps = ['上傳檔案', 'AI 分析', '審閱發布'];
+    const manualSteps = ['手動輸入', '審閱發布'];
+    const steps = inputMode === 'manual' ? manualSteps : aiSteps;
+    
     return (
         <div className="flex items-center justify-center mb-4">
             {steps.map((step, index) => (
                 <div key={index} className="flex items-center text-sm md:text-base">
                     <div className={`flex items-center ${index <= currentStep ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 ${index <= currentStep ? 'bg-indigo-600 scale-105' : 'bg-gray-400'
-                                }`}
-                        >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 ${
+                            index <= currentStep ? 'bg-indigo-600 scale-105' : 'bg-gray-400'
+                        }`}>
                             {index + 1}
                         </div>
                         <span className="ml-2 font-medium hidden md:block">{step}</span>
@@ -36,7 +38,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
         if (show) {
             const timer = setTimeout(() => {
                 onClose();
-            }, 5000); // 延長到 5 秒
+            }, 5000);
             return () => clearTimeout(timer);
         }
     }, [show, onClose]);
@@ -68,7 +70,7 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
     };
 
     return (
-        <div className={`fixed top-20 right-4 z-[60] transform transition-all duration-300 ${show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+        <div className={`fixed top-24 right-4 z-[60] transform transition-all duration-300 ${show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
             <div className={`flex items-center p-4 rounded-lg border shadow-lg ${bgColors[type]} min-w-[320px] max-w-md`}>
                 <div className="flex-shrink-0">
                     {icons[type]}
@@ -89,7 +91,63 @@ const Toast = ({ show, message, type = 'success', onClose }) => {
     );
 };
 
-// URL Input Area component
+// 輸入模式選擇組件
+const InputModeSelector = ({ inputMode, setInputMode, disabled }) => {
+    return (
+        <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">選擇輸入模式</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${
+                        inputMode === 'ai' 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-300 hover:border-gray-400'
+                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => !disabled && setInputMode('ai')}
+                >
+                    <div className="flex items-center space-x-3">
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                            inputMode === 'ai' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        }`}>
+                            {inputMode === 'ai' && (
+                                <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                            )}
+                        </div>
+                        <div>
+                            <h4 className="font-medium text-gray-900">AI 智慧分析</h4>
+                            <p className="text-sm text-gray-600">上傳檔案或網址，由 AI 自動分析並生成內容</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div 
+                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${
+                        inputMode === 'manual' 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-300 hover:border-gray-400'
+                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => !disabled && setInputMode('manual')}
+                >
+                    <div className="flex items-center space-x-3">
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                            inputMode === 'manual' ? 'border-green-500 bg-green-500' : 'border-gray-300'
+                        }`}>
+                            {inputMode === 'manual' && (
+                                <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                            )}
+                        </div>
+                        <div>
+                            <h4 className="font-medium text-gray-900">手動輸入</h4>
+                            <p className="text-sm text-gray-600">直接填寫標題和內容，可上傳附件</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// URL 輸入區域組件
 const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
     const [urlInput, setUrlInput] = useState('');
     
@@ -100,7 +158,6 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
             return;
         }
         
-        // 簡單的 URL 驗證
         try {
             new URL(trimmedUrl);
         } catch {
@@ -108,7 +165,6 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
             return;
         }
         
-        // 檢查是否已存在
         if (urls.some(url => url === trimmedUrl)) {
             showToast('此網址已經存在', 'warning');
             return;
@@ -191,11 +247,10 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
     );
 };
 
-// Multiple Files Upload Area component
-const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
+// 檔案上傳組件
+const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
     const fileInputRef = useRef(null);
     
-    // 支援的文件類型
     const supportedTypes = {
         'application/pdf': 'PDF',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
@@ -208,7 +263,7 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
     };
     
     const maxFileSize = 10 * 1024 * 1024; // 10MB
-    const maxFiles = 5; // 最多5個檔案
+    const maxFiles = 5;
     
     const validateAndAddFiles = (files) => {
         const validFiles = [];
@@ -216,69 +271,61 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
         const currentFilesCount = selectedFiles.length;
         
         for (const file of fileArray) {
-            try {
-                // 基本檔案檢查
-                if (!file || !file.name) {
-                    showToast('發現無效的檔案', 'error');
-                    continue;
-                }
-                
-                // 檔案名稱安全檢查
-                const fileName = file.name.trim();
-                if (!fileName) {
-                    showToast('檔案名稱不能為空', 'error');
-                    continue;
-                }
-                
-                // 檢查檔案名稱長度
-                if (fileName.length > 255) {
-                    showToast(`檔案名稱過長: ${fileName}`, 'error');
-                    continue;
-                }
-                
-                // 檢查是否包含非法字符（針對檔案系統路徑安全）
-                const illegalChars = /[<>:"|?*\x00-\x1f]/;
-                if (illegalChars.test(fileName)) {
-                    showToast(`檔案名稱包含非法字符: ${fileName}`, 'error');
-                    continue;
-                }
-                
-                // 檢查是否已經存在相同名稱的檔案
-                if (selectedFiles.some(existingFile => existingFile.name === fileName)) {
-                    showToast(`檔案 "${fileName}" 已經存在`, 'warning');
-                    continue;
-                }
-                
-                // 檢查檔案數量限制（包括現有檔案）
-                if (currentFilesCount + validFiles.length >= maxFiles) {
-                    showToast(`最多只能上傳 ${maxFiles} 個檔案`, 'warning');
-                    break;
-                }
-                
-                // 檢查文件類型
-                if (!supportedTypes[file.type]) {
-                    showToast(`檔案 "${fileName}" 格式不支援。請上傳 PDF、DOCX、DOC 或圖片文件。`, 'warning');
-                    continue;
-                }
-                
-                // 檢查文件大小
-                if (file.size > maxFileSize) {
-                    showToast(`檔案 "${fileName}" 大小超過限制。請選擇小於 10MB 的文件。`, 'warning');
-                    continue;
-                }
-                
-                // 檢查檔案是否可讀
-                if (file.size === 0) {
-                    showToast(`檔案 "${fileName}" 是空檔案`, 'warning');
-                    continue;
-                }
-                
-                validFiles.push(file);
-                
-            } catch (error) {
-                console.error('檔案驗證錯誤:', error);
-                showToast(`檔案處理錯誤: ${file.name || '未知檔案'} - ${error.message}`, 'error');
+            if (!file || !file.name) {
+                showToast('發現無效的檔案', 'error');
+                continue;
             }
+            
+            const fileName = file.name.trim();
+            if (!fileName) {
+                showToast('檔案名稱不能為空', 'error');
+                continue;
+            }
+            
+            if (fileName.length > 255) {
+                showToast(`檔案名稱過長: ${fileName}`, 'error');
+                continue;
+            }
+            
+            const illegalChars = /[<>:"|?*\x00-\x1f]/;
+            if (illegalChars.test(fileName)) {
+                showToast(`檔案名稱包含非法字符: ${fileName}`, 'error');
+                continue;
+            }
+            
+            if (selectedFiles.some(existingFile => existingFile.name === fileName)) {
+                showToast(`檔案 "${fileName}" 已經存在`, 'warning');
+                continue;
+            }
+            
+            if (currentFilesCount + validFiles.length >= maxFiles) {
+                showToast(`最多只能上傳 ${maxFiles} 個檔案`, 'warning');
+                break;
+            }
+            
+            if (!supportedTypes[file.type]) {
+                showToast(`檔案 "${fileName}" 格式不支援。請上傳 PDF、DOCX、DOC 或圖片文件。`, 'warning');
+                continue;
+            }
+            
+            if (file.size > maxFileSize) {
+                showToast(`檔案 "${fileName}" 大小超過限制。請選擇小於 10MB 的文件。`, 'warning');
+                continue;
+            }
+            
+            if (file.size === 0) {
+                showToast(`檔案 "${fileName}" 是空檔案`, 'warning');
+                continue;
+            }
+            
+            validFiles.push({
+                file: file,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                tempId: Date.now() + Math.random(),
+                isNewFile: true
+            });
         }
         
         if (validFiles.length > 0) {
@@ -288,26 +335,10 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
     };
     
     const handleFileChange = (event) => {
-        try {
-            const files = event.target.files;
-            console.log('Selected files:', {
-                length: files?.length || 0,
-                items: files ? Array.from(files).map(f => ({
-                    name: f.name,
-                    type: f.type,
-                    size: f.size
-                })) : []
-            });
-            
-            if (files && files.length > 0) {
-                validateAndAddFiles(files);
-            }
-        } catch (error) {
-            console.error('檔案選擇錯誤:', error);
-            showToast(`檔案選擇失敗: ${error.message}`, 'error');
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            validateAndAddFiles(files);
         }
-        
-        // 重置 input value 以允許重新選擇相同檔案
         event.target.value = '';
     };
     
@@ -317,23 +348,9 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
         event.preventDefault();
         if (disabled) return;
         
-        try {
-            const files = event.dataTransfer.files;
-            console.log('Dropped files:', {
-                length: files.length,
-                items: Array.from(files).map(f => ({
-                    name: f.name,
-                    type: f.type,
-                    size: f.size
-                }))
-            });
-            
-            if (files && files.length > 0) {
-                validateAndAddFiles(files);
-            }
-        } catch (error) {
-            console.error('檔案拖放錯誤:', error);
-            showToast(`檔案拖放失敗: ${error.message}`, 'error');
+        const files = event.dataTransfer.files;
+        if (files && files.length > 0) {
+            validateAndAddFiles(files);
         }
     };
     
@@ -351,7 +368,6 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
 
     return (
         <div className="space-y-4">
-            {/* 上傳區域 */}
             <div
                 className={`relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'hover:border-indigo-400 bg-gray-50 cursor-pointer' : 'bg-gray-100 cursor-not-allowed'}`}
                 onDragOver={handleDragOver}
@@ -367,11 +383,11 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
                     disabled={disabled}
                     multiple
                 />
-                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <p className="mt-2 text-sm text-gray-600">
-                    拖曳多個檔案到此處，或 <span className="font-medium text-indigo-600">點擊上傳</span>
+                    拖曳檔案到此處，或 <span className="font-medium text-indigo-600">點擊上傳</span>
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                     支援 PDF、DOCX、DOC、圖片格式 (最大 10MB，最多 {maxFiles} 個檔案)
@@ -381,66 +397,31 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
                 </p>
             </div>
 
-            {/* 已選擇的檔案列表 */}
             {selectedFiles.length > 0 && (
                 <div className="space-y-2">
                     <h4 className="text-sm font-medium text-gray-700">已選擇的檔案：</h4>
                     <div className="max-h-40 overflow-y-auto space-y-2">
-                        {selectedFiles.map((file, index) => {
-                            const isExisting = file.isExisting;
-                            const fileType = isExisting ? file.type : supportedTypes[file.type];
+                        {selectedFiles.map((fileWrapper, index) => {
+                            const fileType = supportedTypes[fileWrapper.type] || '未知';
                             
                             return (
-                                <div key={isExisting ? file.id : index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                                <div key={fileWrapper.tempId || index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                                     <div className="flex items-center space-x-3">
-                                        {isExisting ? (
-                                            <button
-                                                onClick={() => handleFileDownload(file)}
-                                                className="group relative"
-                                                title="點擊下載檔案"
-                                            >
-                                                <svg 
-                                                    xmlns="http://www.w3.org/2000/svg" 
-                                                    className="h-8 w-8 text-blue-500 transition-all duration-200 hover:scale-110 hover:shadow-lg cursor-pointer" 
-                                                    viewBox="0 0 20 20" 
-                                                    fill="currentColor"
-                                                >
-                                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                                {/* Hover 提示 */}
-                                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                                    點擊下載
-                                                </div>
-                                            </button>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                            </svg>
-                                        )}
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                        </svg>
                                         <div>
-                                            <div className="flex items-center space-x-2">
-                                                <p className="text-sm font-medium text-gray-700 break-all">{file.name}</p>
-                                                {isExisting && (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                        現有檔案
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <p className="text-sm font-medium text-gray-700 break-all">{fileWrapper.name}</p>
                                             <p className="text-xs text-gray-500">
-                                                {fileType} • {formatFileSize(file.size)}
+                                                {fileType} • {formatFileSize(fileWrapper.size)}
                                             </p>
-                                            {isExisting && (
-                                                <p className="text-xs text-blue-600">
-                                                    路徑: {file.path}
-                                                </p>
-                                            )}
                                         </div>
                                     </div>
                                     {!disabled && (
                                         <button
                                             onClick={() => handleRemoveFile(index)}
                                             className="text-red-500 hover:text-red-700 transition-colors"
-                                            title={isExisting ? "從列表移除" : "移除檔案"}
+                                            title="移除檔案"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -457,17 +438,185 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, disabled, sh
     );
 };
 
+// 手動輸入表單組件
+const ManualInputForm = ({ formData, setFormData, handleSummaryChange, disabled }) => {
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-// --- 主 Modal 組件 ---
+    return (
+        <div className="space-y-6">
+            {/* 標題 */}
+            <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                    標題 <span className="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="請輸入公告標題"
+                />
+            </div>
+
+            {/* 分類 */}
+            <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                    分類
+                </label>
+                <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                    <option value="">請選擇分類</option>
+                    <option value="A">A - 各縣市政府獎助學金</option>
+                    <option value="B">B - 公家機關及公營單位獎助學金</option>
+                    <option value="C">C - 宗親會及民間指定身分獎助學金</option>
+                    <option value="D">D - 民間單位獎助學金</option>
+                    <option value="E">E - 獎學金得獎名單公告</option>
+                </select>
+            </div>
+
+            {/* 申請截止日期 */}
+            <div>
+                <label htmlFor="application_deadline" className="block text-sm font-medium text-gray-700 mb-2">
+                    申請截止日期
+                </label>
+                <input
+                    type="date"
+                    id="application_deadline"
+                    name="application_deadline"
+                    value={formData.application_deadline}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+            </div>
+
+            {/* 目標對象 */}
+            <div>
+                <label htmlFor="target_audience" className="block text-sm font-medium text-gray-700 mb-2">
+                    目標對象
+                </label>
+                <input
+                    type="text"
+                    id="target_audience"
+                    name="target_audience"
+                    value={formData.target_audience}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="例：大學部學生、低收入戶學生"
+                />
+            </div>
+
+            {/* 兼領限制 */}
+            <div>
+                <label htmlFor="application_limitations" className="block text-sm font-medium text-gray-700 mb-2">
+                    兼領限制
+                </label>
+                <select
+                    id="application_limitations"
+                    name="application_limitations"
+                    value={formData.application_limitations}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                    <option value="">請選擇</option>
+                    <option value="Y">Y - 可以兼領</option>
+                    <option value="N">N - 不可兼領</option>
+                </select>
+            </div>
+
+            {/* 送件方式 */}
+            <div>
+                <label htmlFor="submission_method" className="block text-sm font-medium text-gray-700 mb-2">
+                    送件方式
+                </label>
+                <input
+                    type="text"
+                    id="submission_method"
+                    name="submission_method"
+                    value={formData.submission_method}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="例：線上申請、郵寄、現場繳交"
+                />
+            </div>
+
+            {/* 相關網址 */}
+            <div>
+                <label htmlFor="external_urls" className="block text-sm font-medium text-gray-700 mb-2">
+                    相關網址
+                </label>
+                <input
+                    type="url"
+                    id="external_urls"
+                    name="external_urls"
+                    value={formData.external_urls}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="https://example.com"
+                />
+            </div>
+
+            {/* 內容 */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    內容 <span className="text-red-500">*</span>
+                </label>
+                <QuillEditor
+                    value={formData.summary}
+                    onChange={handleSummaryChange}
+                    disabled={disabled}
+                    placeholder="請輸入公告內容..."
+                />
+            </div>
+
+            {/* 狀態 */}
+            <div>
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                    發布狀態
+                </label>
+                <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                    <option value="1">啟用</option>
+                    <option value="0">停用</option>
+                </select>
+            </div>
+        </div>
+    );
+};
+
+// 主要組件
 export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnouncements, editingAnnouncement = null }) {
+    const [inputMode, setInputMode] = useState('ai');
     const [currentStep, setCurrentStep] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-    const [loadingText, setLoadingText] = useState("AI 分析中...");
+    const [loadingText, setLoadingText] = useState("處理中...");
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [urls, setUrls] = useState([]);
-    const [attachments, setAttachments] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isEditMode = !!editingAnnouncement;
+    
     const [formData, setFormData] = useState({
         title: '',
         summary: '',
@@ -479,128 +628,6 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         submission_method: '',
         external_urls: '',
     });
-
-    // 當進入編輯模式時，填充表單數據和載入附件
-    useEffect(() => {
-        if (editingAnnouncement && isOpen) {
-            setFormData({
-                title: editingAnnouncement.title || '',
-                summary: editingAnnouncement.summary || '',
-                status: editingAnnouncement.is_active ? '1' : '0',
-                category: editingAnnouncement.category || '',
-                application_deadline: editingAnnouncement.application_deadline || '',
-                target_audience: editingAnnouncement.target_audience || '',
-                application_limitations: editingAnnouncement.application_limitations || '',
-                submission_method: editingAnnouncement.submission_method || '',
-                external_urls: editingAnnouncement.external_urls || '',
-            });
-            setCurrentStep(2); // 跳過文件上傳步驟
-            
-            // 載入現有附件
-            loadExistingAttachments(editingAnnouncement.id);
-        }
-    }, [editingAnnouncement, isOpen]);
-
-    // 載入現有附件的函數
-    const loadExistingAttachments = async (announcementId) => {
-        try {
-            const { data: attachments, error } = await supabase
-                .from('attachments')
-                .select('*')
-                .eq('announcement_id', announcementId);
-            
-            if (error) throw error;
-            
-            // 將現有附件轉換為顯示格式
-            if (attachments && attachments.length > 0) {
-                const existingFiles = attachments.map(attachment => {
-                    // 清理和驗證檔案路徑
-                    let cleanPath = attachment.stored_file_path;
-                    
-                    // 檢查路徑有效性
-                    if (!cleanPath || cleanPath === 'null' || cleanPath === 'undefined') {
-                        console.warn(`Invalid path for attachment ${attachment.id}:`, cleanPath);
-                        cleanPath = null;
-                    } else {
-                        // 清理路徑中的非法字符
-                        cleanPath = cleanPath.trim().replace(/[<>"|?*]/g, '');
-                    }
-                    
-                    return {
-                        id: attachment.id,
-                        name: attachment.file_name || '未知檔案',
-                        size: attachment.file_size || 0,
-                        type: attachment.mime_type || 'application/octet-stream',
-                        path: cleanPath,
-                        isExisting: true // 標記為現有檔案
-                    };
-                });
-                
-                // 過濾掉路徑無效的檔案
-                const validFiles = existingFiles.filter(file => file.path);
-                if (validFiles.length < existingFiles.length) {
-                    const invalidCount = existingFiles.length - validFiles.length;
-                    showToast(`發現 ${invalidCount} 個檔案路徑無效，已跳過`, 'warning');
-                }
-                
-                setSelectedFiles(validFiles);
-            }
-        } catch (error) {
-            console.error('載入附件失敗:', error);
-            showToast('載入附件失敗', 'error');
-        }
-    };
-
-    // 處理檔案下載
-    const handleFileDownload = async (file) => {
-        try {
-            // 對於現有檔案，使用儲存的路徑
-            if (file.isExisting && file.path) {
-                // 驗證和清理檔案路徑
-                let cleanPath = file.path.trim();
-                
-                // 檢查路徑是否為空或包含非法字符
-                if (!cleanPath || cleanPath === 'null' || cleanPath === 'undefined') {
-                    showToast('檔案路徑無效', 'error');
-                    return;
-                }
-                
-                // 移除可能的非法字符，只保留安全的路徑字符
-                cleanPath = cleanPath.replace(/[<>"|?*]/g, '');
-                
-                // 確保路徑以 / 開頭
-                const fileUrl = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-                
-                // 驗證路徑格式
-                try {
-                    new URL(fileUrl, window.location.origin);
-                } catch (urlError) {
-                    console.error('Invalid file URL:', fileUrl, urlError);
-                    showToast('檔案路徑格式錯誤', 'error');
-                    return;
-                }
-                
-                // 創建下載連結
-                const link = document.createElement('a');
-                link.href = fileUrl;
-                link.download = file.name || 'download';
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                
-                // 觸發下載
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                showToast(`正在下載檔案: ${file.name}`, 'success');
-            } else {
-                showToast('無法下載此檔案：檔案路徑不存在', 'error');
-            }
-        } catch (error) {
-            console.error('下載失敗:', error);
-            showToast(`檔案下載失敗: ${error.message}`, 'error');
-        }
-    };
 
     // Toast 通知狀態
     const [toast, setToast] = useState({
@@ -616,35 +643,106 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const hideToast = () => {
         setToast(prev => ({ ...prev, show: false }));
     };
-    
+
+    const [show, setShow] = useState(false);
     const modelRef = useRef(null);
+
+    // 初始化 Gemini AI
     useEffect(() => {
+        console.log("Gemini API Key:", process.env.NEXT_PUBLIC_GEMINI_API_KEY ? "已設定" : "未設定");
         if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
             const genAI = new GoogleGenAI({
                 apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY,
             });
             modelRef.current = genAI;
+            console.log("Gemini AI 已初始化");
         }
     }, []);
 
-    const [show, setShow] = useState(false);
-
     useEffect(() => {
         if (isOpen) {
-            // 阻止外部頁面滾動
             document.body.style.overflow = 'hidden';
             setTimeout(() => setShow(true), 50);
+            
+            // 重置狀態
+            if (!isEditMode) {
+                setInputMode('ai');
+                setCurrentStep(0);
+                setSelectedFiles([]);
+                setUrls([]);
+                setFormData({
+                    title: '',
+                    summary: '',
+                    status: '1',
+                    category: '',
+                    application_deadline: '',
+                    target_audience: '',
+                    application_limitations: '',
+                    submission_method: '',
+                    external_urls: '',
+                });
+            }
         } else {
-            // 恢復外部頁面滾動
             document.body.style.overflow = 'unset';
             setShow(false);
         }
         
-        // 清理函數：確保組件卸載時恢復滾動
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [isOpen]);
+    }, [isOpen, isEditMode]);
+
+    // 編輯模式初始化
+    useEffect(() => {
+        if (editingAnnouncement && isOpen) {
+            setFormData({
+                title: editingAnnouncement.title || '',
+                summary: editingAnnouncement.summary || '',
+                status: editingAnnouncement.is_active ? '1' : '0',
+                category: editingAnnouncement.category || '',
+                application_deadline: editingAnnouncement.application_deadline || '',
+                target_audience: editingAnnouncement.target_audience || '',
+                application_limitations: editingAnnouncement.application_limitations || '',
+                submission_method: editingAnnouncement.submission_method || '',
+                external_urls: editingAnnouncement.external_urls || '',
+            });
+            setInputMode('manual');
+            setCurrentStep(0);
+            loadExistingAttachments(editingAnnouncement.id);
+        }
+    }, [editingAnnouncement, isOpen]);
+
+    // 載入現有附件
+    const loadExistingAttachments = async (announcementId) => {
+        try {
+            const { data: attachments, error } = await supabase
+                .from('attachments')
+                .select('*')
+                .eq('announcement_id', announcementId);
+            
+            if (error) throw error;
+            
+            if (attachments && attachments.length > 0) {
+                const existingFiles = attachments.map(attachment => ({
+                    id: attachment.id,
+                    name: attachment.file_name || '未知檔案',
+                    size: attachment.file_size || 0,
+                    type: attachment.mime_type || 'application/octet-stream',
+                    path: attachment.stored_file_path,
+                    isExisting: true
+                })).filter(file => file.path);
+                
+                setSelectedFiles(existingFiles);
+            }
+        } catch (error) {
+            console.error('載入附件失敗:', error);
+            showToast('載入附件失敗', 'error');
+        }
+    };
+
+    const handleSummaryChange = useCallback((content) => {
+        setFormData(prev => ({ ...prev, summary: content }));
+    }, []);
 
     const isFormValid = (() => {
         if (formData.title.trim() === '') return false;
@@ -653,22 +751,13 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         return true;
     })();
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    // 跳轉到手動輸入模式
+    const handleSkipToManual = () => {
+        setInputMode('manual');
+        setCurrentStep(0);
     };
 
-    // 清理 HTML 標籤的函數
-    const stripHtmlTags = (html) => {
-        if (!html) return '';
-        return html.replace(/<[^>]*>/g, '').trim();
-    };
-    
-    const handleSummaryChange = useCallback((content) => {
-        setFormData(prev => ({ ...prev, summary: content }));
-    }, []);
-
-
+    // 檔案轉換為 AI 輸入格式
     async function fileToGenerativePart(file) {
         const base64EncodedData = await new Promise((resolve) => {
             const reader = new FileReader();
@@ -680,6 +769,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         };
     }
 
+    // AI 分析功能
     const handleAiAnalyze = async () => {
         if (selectedFiles.length === 0 && urls.length === 0) {
             showToast("請先選擇至少一個文件或添加一個網址", "warning");
@@ -691,7 +781,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         }
 
         setIsLoading(true);
-        setCurrentStep(1); 
+        setCurrentStep(1);
 
         try {
             setLoadingText("正在準備分析資料...");
@@ -712,7 +802,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                     showToast(`使用檔案 "${fileForAnalysis.name}" 進行AI分析`, "success");
                 }
                 
-                const pdfPart = await fileToGenerativePart(fileForAnalysis);
+                const pdfPart = await fileToGenerativePart(fileForAnalysis.file || fileForAnalysis);
                 promptParts.push(pdfPart);
                 hasFileContent = true;
             }
@@ -720,14 +810,44 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             // 建構 prompt 文字
             let promptText = `
 # 角色 (Persona)
-你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的任務是將獎學金相關資訊進行分析，提取結構化資料並生成摘要內容。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
+你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的任務是將一篇關於獎學金的公告，轉換成一段重點突出、視覺清晰的 HTML 公告，並提取結構化資料。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
 
 # 核心任務 (Core Task)
-根據提供的資訊來源，提取關鍵資訊並生成結構化摘要內容。
+你的任務是根據下方提供的「公告全文」，執行以下兩項任務，並將結果合併在一個**單一的 JSON 物件**中回傳。
+
+## 任務一：提取結構化資料 (JSON Extraction)
+提取公告中的關鍵資訊，並以一個嚴格的 JSON 物件格式回傳。
 
 ### 欄位規則 (Field Rules)
-- **不確定性原則**：若資訊未提及或不明確，**必須**回傳空字串 ""，**禁止**自行猜测。
-- 對於 summary_content 欄位，請提取並整理關鍵內容項目，後續會在前端組合成 HTML 格式。
+- **不確定性原則**：若資訊未提及或不明確，**必須**回傳空字串 ""，**禁止**自行猜測。
+- **欄位列表**：
+    1. title (string): 公告的**簡短**標題，必須包含**提供單位**和**獎學金名稱**。例如：「國際崇她社『崇她獎』獎學金」。
+    2. category (string): 根據下方的「代碼定義」從 'A'~'E' 中選擇一個。
+    3. application_deadline (string): **申請截止日期**，格式必須是 YYYY-MM-DD。若只提及月份，以該月最後一天為準。若為區間，以**結束日期**為準，備註: 民國年 + 1911 即為西元年。
+    4. target_audience (string): **目標對象**。用一段話簡潔但完整地說明，應包含年級、特殊身份、家庭狀況或成績要求等核心申請條件。
+    5. application_limitations (string): **兼領限制**。若內容明確提及**可以**兼領其他獎學金，回傳 'Y'。若提及**不行**兼領其他獎學金，則回傳 'N'。若完全未提及，則回傳空字串。
+    6. submission_method (string): **送件方式**。簡要說明最終的送件管道，例如「自行送件申請」、「送至生輔組彙辦」或「線上系統申請」。
+    7. external_urls (string): **相關網址或連結**。
+
+## 任務二：生成 HTML 重點摘要 (HTML Summary Generation)
+根據你分析的內容，生成一份專業、條理分明的 HTML 格式重點摘要。
+
+### 內容與結構指導 (Content & Structure Guidance)
+- **摘要必須包含以下幾個部分（如果公告中有提及）**：
+    1.  **申請資格**: 應包含所有身份、年級、成績、家庭等條件。**建議使用 <ul> 列點呈現**。
+    2.  **獎助金額**: 應清楚說明不同組別的金額與名額。**強烈建議使用 <table> 呈現**。
+    3.  **申請期限**: 說明完整的申請起訖時間。
+    4.  **應繳文件**: 清楚列出所有需要繳交的文件。**建議使用 <ul> 或 <ol> 列點呈現**。
+    5.  **其他注意事項**: 其他補充說明。
+- **表格優先**：當資訊具有「項目-內容」的對應關係時（如：大學部-五萬元），**優先使用 <table>**。
+
+### 視覺化與樣式指導 (Visualization & Style Guidance)
+- **多色彩重點標記**：請**大量且智慧地**使用以下三種顏色來標記重點：
+    - **金額、日期、名額等數字類關鍵字**: <span style="color: #D6334C; font-weight: bold;">
+    - **身份、成績等申請條件**: <span style="color: #F79420; font-weight: bold;">
+    - **所有小標題 (如：申請資格、獎助金額)**: <h4 style="color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;">
+- **標籤限定**：只能使用 <h4>, <ul>, <li>, <ol>, <strong>, <p>, <br>, <span>, <table>, <tbody>, <tr>, <td>。
+- summary 的內容必須放在 JSON 物件的 summary (string) 鍵中。
 
 # 獎助學金代碼定義 (Category Definitions)
 - **A**: 各縣市政府獎助學金
@@ -736,8 +856,28 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 - **D**: 各民間單位：因經濟不利、學業優良或其他無法歸類之獎助學金
 - **E**: 純粹的獎學金「得獎名單」公告
 
+# 最終輸出規則 (Final Output Rules)
+- **你的回覆必須是、也只能是一個 JSON 物件**。
+- **絕對禁止**在 JSON 物件前後包含任何 Markdown 標記 (如 """json ... """) 或其他任何解釋性文字。
+- 請嚴格模仿下方範例的 JSON 結構和 HTML 風格。
+
+# 輸出格式與範例 (Output Format & Example)
+{
+  "title": "國際蘭馨交流協會『讓夢想起飛』助學方案",
+  "category": "C",
+  "application_deadline": "2025-07-23",
+  "target_audience": "大學部在學女學生(含大一新生)，歷年平均成績達70分，且全戶所得及財產符合規定者。",
+  "application_limitations": "N",
+  "submission_method": "送件至生輔組或 Email 寄送 PDF 檔",
+  "external_urls": "",
+  "summary": "<h4 style=\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\">申請資格</h4><ul><li>國內各大學日間部、進修學士班之<span style=\\"color: #F79420; font-weight: bold;\\">在學女學生</span>。</li><li>歷年學業平均成績達 <span style=\\"color: #F79420; font-weight: bold;\\">70分</span> 且未受記過處分。</li><li>全戶人均所得未逾當年度最低基本工資。</li><li>全戶存款本金未逾 <span style=\\"color: #D6334C; font-weight: bold;\\">10萬元</span>。</li></ul><h4 style=\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\">補助金額</h4><p>通過審查者，補助每學期學費至畢業為止。</p><h4 style=\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\">申請應繳文件</h4><ol><li>申請書（需黏貼照片並簽名）。</li><li>歷年成績單（新生附高三成績單）。</li><li>全戶含記事戶籍謄本。</li><li>全戶113年所得及財產清單。</li><li>其他佐證資料（如重大傷病卡、身障手冊等）。</li></ol><h4 style=\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\">申請期限</h4><p>即日起至 <span style=\\"color: #D6334C; font-weight: bold;\\">2025年7月23日</span> 前，將文件送至生輔組或 Email 寄送。</p>"
+}
+
+# 公告全文 (Source Text)
+---
+
 請分析以下資訊：`;
-            
+
             // 如果有網址，添加網址資訊
             if (urls.length > 0) {
                 promptText += `\n\n# 網址資料來源：\n`;
@@ -753,108 +893,14 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             
             promptParts.push({ text: promptText });
 
-            const responseSchema = {
-                type: Type.OBJECT,
-                properties: {
-                    title: {
-                        type: Type.STRING,
-                        description: "公告的簡短標題，必須包含提供單位和獎學金名稱"
-                    },
-                    category: {
-                        type: Type.STRING,
-                        description: "獎學金分類代碼 A-E"
-                    },
-                    application_deadline: {
-                        type: Type.STRING,
-                        description: "申請截止日期，格式 YYYY-MM-DD"
-                    },
-                    target_audience: {
-                        type: Type.STRING,
-                        description: "目標對象，包含年級、特殊身份、家庭狀況或成績要求等核心申請條件"
-                    },
-                    application_limitations: {
-                        type: Type.STRING,
-                        description: "兼領限制，Y=可以兼領，N=不可兼領，空字串=未提及"
-                    },
-                    submission_method: {
-                        type: Type.STRING,
-                        description: "送件方式，簡要說明最終的送件管道"
-                    },
-                    external_urls: {
-                        type: Type.STRING,
-                        description: "相關網址或連結"
-                    },
-                    summary_content: {
-                        type: Type.OBJECT,
-                        properties: {
-                            sections: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        title: {
-                                            type: Type.STRING,
-                                            description: "小標題"
-                                        },
-                                        content: {
-                                            type: Type.ARRAY,
-                                            items: {
-                                                type: Type.OBJECT,
-                                                properties: {
-                                                    type: {
-                                                        type: Type.STRING,
-                                                        description: "內容類型：text, list, table, highlight_number, highlight_condition"
-                                                    },
-                                                    text: {
-                                                        type: Type.STRING,
-                                                        description: "文字內容"
-                                                    },
-                                                    items: {
-                                                        type: Type.ARRAY,
-                                                        items: {
-                                                            type: Type.STRING
-                                                        },
-                                                        description: "列表項目，當type為list時使用"
-                                                    },
-                                                    table_data: {
-                                                        type: Type.ARRAY,
-                                                        items: {
-                                                            type: Type.ARRAY,
-                                                            items: {
-                                                                type: Type.STRING
-                                                            }
-                                                        },
-                                                        description: "表格數據，當type為table時使用"
-                                                    }
-                                                },
-                                                required: ["type"]
-                                            }
-                                        }
-                                    },
-                                    required: ["title", "content"]
-                                }
-                            }
-                        },
-                        required: ["sections"]
-                    }
-                },
-                required: ["title", "category", "application_deadline", "target_audience", "application_limitations", "submission_method", "external_urls", "summary_content"],
-                propertyOrdering: ["title", "category", "application_deadline", "target_audience", "application_limitations", "submission_method", "external_urls", "summary_content"]
-            };
-
-            // 配置 tools 和 config
-            const tools = urls.length > 0 ? [{ urlContext: {} }] : [];
-            
+            // 配置 AI 參數（移除 JSON schema，使用簡單配置）
             const config = {
                 responseMimeType: 'application/json',
-                responseSchema: responseSchema,
-                tools: tools,
                 systemInstruction: [
                     {
-                        text: `繁體中文回應。如果有提供網址，請詳細分析網頁內容並提取相關的獎學金資訊。`,
+                        text: `繁體中文回應。如果有提供網址，請詳細分析網頁內容並提取相關的獎學金資訊。請直接生成完整的HTML格式摘要內容，包含豐富的樣式和結構。`,
                     }
-                ],
-                mediaResolution: 'MEDIA_RESOLUTION_MEDIUM'
+                ]
             };
 
             const model = 'gemini-2.5-flash';
@@ -876,27 +922,67 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
             setLoadingText("正在解析結果...");
             let result = '';
             for await (const chunk of response) {
-                result += chunk.text || '';
+                const chunkText = chunk.text || '';
+                result += chunkText;
+                console.log("AI 回應片段:", chunkText);
             }
 
-            const aiResponse = JSON.parse(result);
-            
-            // 在前端組合 HTML 格式的 summary
-            const summary = generateHtmlSummary(aiResponse.summary_content);
-            
-            const processedResponse = {
-                ...aiResponse,
-                summary: summary
-            };
-            delete processedResponse.summary_content;
+            console.log("完整 AI 回應:", result);
 
-            setFormData(prev => ({
-                ...prev,
-                ...processedResponse,
-                status: prev.status || '1',
-            }));
+            // 清理和解析 JSON 回應（參考 raw/api/generate_summary.php 的處理方式）
+            let cleanedResult = result.trim();
             
-            setCurrentStep(2);
+            // 尋找 JSON 物件的開始和結束
+            const firstBrace = cleanedResult.indexOf('{');
+            const lastBrace = cleanedResult.lastIndexOf('}');
+            
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                cleanedResult = cleanedResult.substring(firstBrace, lastBrace + 1);
+            }
+            
+            // 移除可能的 markdown 標記
+            cleanedResult = cleanedResult.replace(/```json\s*\n?/g, '').replace(/\n?\s*```/g, '');
+            
+            let aiResponse;
+            try {
+                aiResponse = JSON.parse(cleanedResult);
+            } catch (parseError) {
+                console.error("JSON 解析失敗:", parseError);
+                console.error("原始回應:", result);
+                console.error("清理後回應:", cleanedResult);
+                throw new Error("AI 回傳的 JSON 格式不正確，請重試");
+            }
+
+            // 確保 summary 欄位存在
+            if (!aiResponse.summary) {
+                aiResponse.summary = '<p>AI 未能生成摘要內容，請手動輸入。</p>';
+            }
+
+            // 調試：檢查 AI 回應內容
+            console.log("AI 分析結果:", aiResponse);
+            console.log("Summary 內容:", aiResponse.summary);
+            
+            setFormData(prev => {
+                const newFormData = {
+                    ...prev,
+                    ...aiResponse,
+                    status: prev.status || '1',
+                };
+                console.log("formData 更新前:", prev);
+                console.log("更新後的 formData:", newFormData);
+                console.log("特別檢查 summary 字段:", {
+                    previous: prev.summary,
+                    new: newFormData.summary,
+                    hasChanged: prev.summary !== newFormData.summary,
+                    newSummaryLength: newFormData.summary ? newFormData.summary.length : 0
+                });
+                return newFormData;
+            });
+            
+            // 延遲一點再切換步驟，確保 formData 更新完成
+            setTimeout(() => {
+                setCurrentStep(2);
+            }, 100);
 
         } catch (error) {
             console.error("AI 分析失敗:", error);
@@ -907,135 +993,73 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
         }
     };
 
-    // 生成 HTML 格式摘要的函數
-    const generateHtmlSummary = (summaryContent) => {
-        if (!summaryContent || !summaryContent.sections) return '';
+    // 上傳檔案到伺服器
+    const uploadFilesToServer = async (files) => {
+        const uploadedFiles = [];
         
-        // 定義需要特殊標註的關鍵字模式
-        const highlightPatterns = {
-            // 紅色 - 金額、日期、名額等數字類關鍵字
-            red: [
-                /(\d+[\d,]*)\s*元/g,                    // 金額
-                /(\d+)\s*名/g,                          // 名額
-                /(\d+)\s*位/g,                          // 位數
-                /(\d{2,4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g, // 日期
-                /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,        // 日期格式
-                /(\d{1,2}-\d{1,2}-\d{2,4})/g,          // 日期格式
-                /(\d+)\s*學分/g,                        // 學分
-                /(\d+)\s*點/g,                          // 點數
-                /前\s*(\d+)\s*名/g,                     // 排名
-                /第\s*(\d+)\s*名/g,                     // 排名
-                /(\d+)\s*萬/g,                          // 萬元
-                /(\d+)\s*千/g,                          // 千元
-                /平均\s*(\d+\.?\d*)/g,                  // 平均分數
-                /(\d+)\s*分/g,                          // 分數
-                /(\d+)\s*級分/g,                        // 級分
-                /(\d+)\s*%/g,                           // 百分比
-                /(\d+)\s*件/g                           // 件數
-            ],
-            // 橙色 - 身份、成績、申請條件
-            orange: [
-                /(大[一二三四]|碩[一二]|博[一二三四五六七八])/g,  // 年級
-                /(低收入戶|中低收入戶)/g,                // 經濟狀況
-                /(原住民|身心障礙|清寒)/g,              // 特殊身份
-                /(優秀|傑出|優良|卓越)/g,               // 優秀相關
-                /(學業成績|操行成績|學期成績)/g,         // 成績相關
-                /(全班前\d+%|全系前\d+%|全校前\d+%)/g,  // 排名
-                /(碩士班|大學部|博士班)/g,               // 學制
-                /(在學|就讀|修讀)/g,                     // 就學狀態
-                /(設籍|戶籍)/g,                         // 戶籍相關
-                /(家庭年收入|年收入)/g,                  // 收入相關
-                /(持有證明|檢附證明)/g,                  // 證明文件
-                /(具備|符合|滿足)/g,                     // 條件符合
-                /(限制|禁止|不得)/g                      // 限制條件
-            ]
-        };
-        
-        // 文字高亮處理函數
-        const highlightText = (text) => {
-            if (!text) return text;
-            
-            let processedText = text;
-            
-            // 先處理紅色高亮（數字相關）
-            highlightPatterns.red.forEach(pattern => {
-                processedText = processedText.replace(pattern, (match) => {
-                    return `<span style="color: #D6334C; font-weight: bold;">${match}</span>`;
-                });
-            });
-            
-            // 再處理橙色高亮（條件相關）
-            highlightPatterns.orange.forEach(pattern => {
-                processedText = processedText.replace(pattern, (match) => {
-                    // 避免重複標註已經被標註的內容
-                    if (match.includes('<span')) return match;
-                    return `<span style="color: #F79420; font-weight: bold;">${match}</span>`;
-                });
-            });
-            
-            return processedText;
-        };
-        
-        let html = '';
-        
-        summaryContent.sections.forEach(section => {
-            // 添加小標題
-            html += `<h4 style="color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;">${highlightText(section.title)}</h4>`;
-            
-            section.content.forEach(item => {
-                switch (item.type) {
-                    case 'text':
-                        html += `<p>${highlightText(item.text)}</p>`;
-                        break;
-                    case 'list':
-                        if (item.items && item.items.length > 0) {
-                            html += '<ul>';
-                            item.items.forEach(listItem => {
-                                html += `<li>${highlightText(listItem)}</li>`;
-                            });
-                            html += '</ul>';
-                        }
-                        break;
-                    case 'table':
-                        if (item.table_data && item.table_data.length > 0) {
-                            html += '<table style="border-collapse: collapse; width: 100%;"><tbody>';
-                            item.table_data.forEach(row => {
-                                html += '<tr>';
-                                row.forEach(cell => {
-                                    html += `<td style="border: 1px solid #ddd; padding: 8px;">${highlightText(cell)}</td>`;
-                                });
-                                html += '</tr>';
-                            });
-                            html += '</tbody></table>';
-                        }
-                        break;
-                    case 'highlight_number':
-                        // 這些已經由 AI 預先分類，直接使用指定顏色
-                        html += `<p><span style="color: #D6334C; font-weight: bold;">${item.text}</span></p>`;
-                        break;
-                    case 'highlight_condition':
-                        // 這些已經由 AI 預先分類，直接使用指定顏色
-                        html += `<p><span style="color: #F79420; font-weight: bold;">${item.text}</span></p>`;
-                        break;
-                    default:
-                        html += `<p>${highlightText(item.text || '')}</p>`;
-                        break;
+        for (const fileWrapper of files) {
+            if (fileWrapper.isNewFile) {
+                try {
+                    console.log("正在上傳檔案:", fileWrapper.name);
+                    
+                    // 檢查當前用戶身份驗證狀態
+                    const { data: { session } } = await supabase.auth.getSession();
+                    console.log("當前身份驗證狀態:", {
+                        hasSession: !!session,
+                        hasToken: !!session?.access_token,
+                        user: session?.user?.email
+                    });
+                    
+                    const formData = new FormData();
+                    formData.append('file', fileWrapper.file || fileWrapper);
+                    
+                    console.log("FormData 內容:", {
+                        fileName: (fileWrapper.file || fileWrapper).name,
+                        fileSize: (fileWrapper.file || fileWrapper).size,
+                        fileType: (fileWrapper.file || fileWrapper).type
+                    });
+                    
+                    const response = await authFetch('/api/upload-files', {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    
+                    console.log("上傳回應狀態:", response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("上傳失敗詳情:", errorText);
+                        throw new Error(`上傳失敗: ${response.status} - ${errorText}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log("上傳成功結果:", result);
+                    uploadedFiles.push(result.data);
+                } catch (error) {
+                    console.error(`檔案 ${fileWrapper.name} 上傳失敗:`, error);
+                    showToast(`檔案 ${fileWrapper.name} 上傳失敗: ${error.message}`, 'error');
                 }
-            });
-        });
+            }
+        }
         
-        return html;
+        return uploadedFiles;
     };
-    
+
+    // 儲存公告
     const handleSave = async () => {
         if (!isFormValid) {
             showToast("請填寫所有必填欄位", "warning");
             return;
         }
+
         setIsLoading(true);
         setLoadingText(isEditMode ? "更新中..." : "儲存中...");
 
         try {
+            // 上傳新檔案
+            const newFiles = selectedFiles.filter(file => file.isNewFile);
+            const uploadedFiles = await uploadFilesToServer(newFiles);
+
             const announcementData = {
                 title: formData.title,
                 summary: formData.summary,
@@ -1050,118 +1074,87 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
             let announcementId;
             if (isEditMode) {
-                const { data: updated, error } = await supabase
+                const { data, error } = await supabase
                     .from('announcements')
                     .update(announcementData)
                     .eq('id', editingAnnouncement.id)
                     .select()
                     .single();
+
                 if (error) throw error;
-                announcementId = updated.id;
+                announcementId = editingAnnouncement.id;
             } else {
-                const { data: created, error } = await supabase
+                const { data, error } = await supabase
                     .from('announcements')
-                    .insert([announcementData])
+                    .insert(announcementData)
                     .select()
                     .single();
+
                 if (error) throw error;
-                announcementId = created.id;
+                announcementId = data.id;
             }
 
-            // 上傳新檔案到本地儲存
-            const newFiles = selectedFiles.filter(file => !file.isExisting);
-            if (newFiles.length > 0) {
-                setLoadingText("上傳檔案中...");
-                
-                const uploadFormData = new FormData();
-                newFiles.forEach(file => {
-                    uploadFormData.append('files', file);
-                });
-                uploadFormData.append('announcementId', announcementId.toString());
+            // 儲存附件資訊到資料庫
+            if (uploadedFiles.length > 0) {
+                const attachmentData = uploadedFiles.map(file => ({
+                    announcement_id: announcementId,
+                    file_name: file.originalName,
+                    stored_file_path: file.path,
+                    file_size: file.size,
+                    mime_type: file.mimeType
+                }));
 
-                const uploadResponse = await authFetch('/api/upload-files', {
-                    method: 'POST',
-                    body: uploadFormData,
-                });
-
-                if (!uploadResponse.ok) {
-                    throw new Error('檔案上傳失敗');
-                }
-
-                const uploadResult = await uploadResponse.json();
-                
-                // 將新檔案資訊儲存到資料庫
-                for (const uploadedFile of uploadResult.files) {
-                    const { error: insErr } = await supabase.from('attachments').insert({
-                        announcement_id: announcementId,
-                        file_name: uploadedFile.originalName,
-                        stored_file_path: uploadedFile.relativePath,
-                        file_size: uploadedFile.size,
-                        mime_type: uploadedFile.mimeType,
-                    });
-                    if (insErr) throw insErr;
-                }
-            }
-
-            // 處理被移除的現有檔案
-            if (isEditMode) {
-                // 獲取原始附件列表
-                const { data: originalAttachments, error: fetchError } = await supabase
+                const { error: attachmentError } = await supabase
                     .from('attachments')
-                    .select('*')
-                    .eq('announcement_id', announcementId);
-                
-                if (fetchError) throw fetchError;
-                
-                // 找出被移除的檔案
-                const currentExistingFiles = selectedFiles.filter(file => file.isExisting);
-                const removedAttachments = originalAttachments.filter(
-                    original => !currentExistingFiles.some(current => current.id === original.id)
-                );
-                
-                // 刪除被移除的檔案記錄
-                for (const removedAttachment of removedAttachments) {
-                    const { error: deleteError } = await supabase
-                        .from('attachments')
-                        .delete()
-                        .eq('id', removedAttachment.id);
-                    
-                    if (deleteError) throw deleteError;
-                    
-                    // 可選：也可以從檔案系統中刪除實際檔案
-                    // 這裡暫時跳過實際檔案刪除，只刪除資料庫記錄
-                }
+                    .insert(attachmentData);
+
+                if (attachmentError) throw attachmentError;
             }
 
-            showToast(isEditMode ? "公告已成功更新！" : "公告已成功儲存！", "success");
-            if (refreshAnnouncements) refreshAnnouncements();
-            handleClose();
+            showToast(isEditMode ? "公告更新成功!" : "公告發布成功!", "success");
+            
+            if (refreshAnnouncements) {
+                refreshAnnouncements();
+            }
+            
+            setTimeout(() => {
+                onClose();
+            }, 1500);
+
         } catch (error) {
-            console.error(isEditMode ? "更新失敗:" : "儲存失敗:", error);
-            showToast(`${isEditMode ? '更新' : '儲存'}失敗: ${error.message}`, "error");
+            console.error('儲存失敗:', error);
+            showToast(`儲存失敗: ${error.message}`, "error");
         } finally {
             setIsLoading(false);
         }
     };
 
+    // 刪除公告
     const handleDelete = async () => {
-        if (!editingAnnouncement) return;
-        
         setIsLoading(true);
         setLoadingText("刪除中...");
 
         try {
+            // 刪除公告（附件會自動級聯刪除）
             const { error } = await supabase
                 .from('announcements')
                 .delete()
                 .eq('id', editingAnnouncement.id);
 
             if (error) throw error;
-            showToast("公告已成功刪除！", "success");
-            if (refreshAnnouncements) refreshAnnouncements();
-            handleClose();
+
+            showToast("公告刪除成功!", "success");
+            
+            if (refreshAnnouncements) {
+                refreshAnnouncements();
+            }
+            
+            setTimeout(() => {
+                onClose();
+            }, 1500);
+
         } catch (error) {
-            console.error("刪除失敗:", error);
+            console.error('刪除失敗:', error);
             showToast(`刪除失敗: ${error.message}`, "error");
         } finally {
             setIsLoading(false);
@@ -1171,308 +1164,217 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
     const handleClose = useCallback(() => {
         if (isLoading) return;
-        setShow(false);
-        setTimeout(() => {
-            // 恢復外部頁面滾動
-            document.body.style.overflow = 'unset';
-            onClose();
-            setCurrentStep(0);
-            setSelectedFiles([]);
-            setUrls([]);
-            setAttachments([]);
-            setShowDeleteConfirm(false);
-            setFormData({
-                title: '', summary: '', status: '1', category: '',
-                application_deadline: '', target_audience: '', application_limitations: '',
-                submission_method: '', external_urls: '',
-            });
-        }, 300);
+        onClose();
     }, [isLoading, onClose]);
-    
+
     if (!isOpen) return null;
 
     return (
         <>
-            <Toast 
-                show={toast.show} 
-                message={toast.message} 
-                type={toast.type} 
-                onClose={hideToast} 
+            <div 
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 pt-16"
+                onClick={handleClose}
+            >
+                <div
+                    className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-hidden transform transition-all duration-300 ${
+                        show ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* 標題欄 */}
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900">
+                                {isEditMode ? '編輯公告' : '建立新公告'}
+                            </h2>
+                            <p className="mt-1 text-sm text-gray-500">
+                                {isEditMode ? '修改現有公告內容' : '建立並發布新的獎學金公告'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleClose}
+                            disabled={isLoading}
+                            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* 主要內容 */}
+                    <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
+                        {!isEditMode && currentStep === 0 && (
+                            <>
+                                <InputModeSelector 
+                                    inputMode={inputMode} 
+                                    setInputMode={setInputMode} 
+                                    disabled={isLoading} 
+                                />
+                                
+                                {inputMode === 'ai' ? (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-medium text-gray-900">上傳檔案或網址進行 AI 分析</h3>
+                                        <FileUploadArea 
+                                            selectedFiles={selectedFiles}
+                                            setSelectedFiles={setSelectedFiles}
+                                            disabled={isLoading}
+                                            showToast={showToast}
+                                        />
+                                        <UrlInputArea 
+                                            urls={urls}
+                                            setUrls={setUrls}
+                                            disabled={isLoading}
+                                            showToast={showToast}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-medium text-gray-900">手動輸入公告內容</h3>
+                                        <ManualInputForm
+                                            formData={formData}
+                                            setFormData={setFormData}
+                                            handleSummaryChange={handleSummaryChange}
+                                            disabled={isLoading}
+                                        />
+                                        <FileUploadArea 
+                                            selectedFiles={selectedFiles}
+                                            setSelectedFiles={setSelectedFiles}
+                                            disabled={isLoading}
+                                            showToast={showToast}
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {currentStep === 1 && (
+                            <div className="text-center py-12">
+                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                                <p className="text-lg font-medium text-gray-900">{loadingText}</p>
+                                <p className="text-sm text-gray-500 mt-2">請稍候，正在處理您的資料...</p>
+                            </div>
+                        )}
+
+                        {(currentStep === 2 || isEditMode) && (
+                            <div className="space-y-6">
+                                <Stepper currentStep={inputMode === 'manual' ? 1 : 2} inputMode={inputMode} />
+                                <h3 className="text-lg font-medium text-gray-900">審閱並發布公告</h3>
+                                <ManualInputForm
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    handleSummaryChange={handleSummaryChange}
+                                    disabled={isLoading}
+                                />
+                                {!isEditMode && (
+                                    <FileUploadArea 
+                                        selectedFiles={selectedFiles}
+                                        setSelectedFiles={setSelectedFiles}
+                                        disabled={isLoading}
+                                        showToast={showToast}
+                                    />
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 操作按鈕 */}
+                    <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                            {!isEditMode && currentStep === 0 && (
+                                <Stepper currentStep={currentStep} inputMode={inputMode} />
+                            )}
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                            {isEditMode && (
+                                <Button
+                                    variant="danger"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    disabled={isLoading}
+                                >
+                                    刪除公告
+                                </Button>
+                            )}
+
+                            <Button
+                                variant="secondary"
+                                onClick={handleClose}
+                                disabled={isLoading}
+                            >
+                                取消
+                            </Button>
+
+                            {!isEditMode && currentStep === 0 && inputMode === 'ai' && (
+                                <>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={handleSkipToManual}
+                                        disabled={isLoading}
+                                    >
+                                        跳過 AI 分析
+                                    </Button>
+                                    <Button
+                                        variant="primary"
+                                        onClick={handleAiAnalyze}
+                                        disabled={isLoading || (selectedFiles.length === 0 && urls.length === 0)}
+                                    >
+                                        開始 AI 分析
+                                    </Button>
+                                </>
+                            )}
+
+                            {((!isEditMode && currentStep === 0 && inputMode === 'manual') || 
+                              (!isEditMode && currentStep === 2) || 
+                              isEditMode) && (
+                                <Button
+                                    variant="primary"
+                                    onClick={handleSave}
+                                    disabled={isLoading || !isFormValid}
+                                >
+                                    {isEditMode ? '更新公告' : '發布公告'}
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Toast 通知 */}
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={hideToast}
             />
-            
+
             {/* 刪除確認對話框 */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center px-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-                        <div className="flex items-center mb-4">
-                            <svg className="w-8 h-8 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                            </svg>
-                            <h3 className="text-lg font-semibold text-gray-900">確認刪除</h3>
-                        </div>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">確認刪除</h3>
                         <p className="text-gray-600 mb-6">
-                            您確定要刪除「{formData.title}」這個公告嗎？此操作無法復原。
+                            您確定要刪除這個公告嗎？此操作無法復原，相關的附件檔案也會一併刪除。
                         </p>
                         <div className="flex justify-end space-x-3">
-                            <Button 
-                                type="button" 
-                                variant="secondary" 
+                            <Button
+                                variant="secondary"
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={isLoading}
                             >
                                 取消
                             </Button>
-                            <Button 
-                                type="button" 
-                                variant="danger" 
+                            <Button
+                                variant="danger"
                                 onClick={handleDelete}
-                                loading={isLoading}
                                 disabled={isLoading}
                             >
-                                {isLoading ? '刪除中...' : '確認刪除'}
+                                確認刪除
                             </Button>
                         </div>
                     </div>
                 </div>
             )}
-            
-            <div
-                className={`fixed inset-0 bg-black/60 z-50 flex justify-center items-start px-4 pt-24 pb-8 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
-                onClick={handleClose}
-                aria-modal="true"
-                role="dialog"
-            >
-            <div
-                className={`bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl h-[calc(100vh-8rem)] flex flex-col transition-all duration-300 ${show ? 'transform scale-100 opacity-100' : 'transform scale-95 opacity-0'}`}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="p-5 border-b flex justify-between items-center flex-shrink-0 bg-gray-50 sticky top-0 z-20">
-                    <h2 className="text-lg font-bold text-gray-800" id="modal-title">
-                        {isEditMode ? '編輯獎學金公告' : '新增獎學金公告'}
-                    </h2>
-                    <button onClick={handleClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 p-2 rounded-full disabled:cursor-not-allowed">&times;</button>
-                </div>
-                <div className="p-4 md:p-6 flex-grow overflow-y-auto scrollbar-hide relative" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-                    <style jsx>{`
-                        .scrollbar-hide::-webkit-scrollbar {
-                            display: none;
-                        }
-                    `}</style>
-                    {isLoading && (
-                        <div className="absolute inset-0 bg-white/90 z-30 flex flex-col items-center justify-center">
-                            <div className="bg-white rounded-xl p-6 shadow-2xl border max-w-xs w-full text-center">
-                                <svg className="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <h3 className="text-base font-semibold text-gray-900 mb-2">處理中</h3>
-                                <p className="text-indigo-700 font-medium text-sm leading-relaxed">{loadingText}</p>
-                                <div className="mt-3 text-xs text-gray-500">
-                                    請稍候，這可能需要幾分鐘時間
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <Stepper currentStep={currentStep} />
-                    <form id="announcement-form" noValidate className="space-y-6">
-                        {!isEditMode && (
-                            <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
-                                <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-blue-50 rounded-md">步驟一：上傳文件或提供網址</legend>
-                                
-                                <div className="space-y-6">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-700 mb-3">檔案上傳</h4>
-                                        <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast}/>
-                                    </div>
-                                    
-                                    <div className="relative">
-                                        <div className="absolute inset-0 flex items-center">
-                                            <div className="w-full border-t border-gray-300" />
-                                        </div>
-                                        <div className="relative flex justify-center text-sm">
-                                            <span className="px-2 bg-white text-gray-500">或</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-700 mb-3">網址連結分析</h4>
-                                        <UrlInputArea urls={urls} setUrls={setUrls} disabled={isLoading} showToast={showToast}/>
-                                    </div>
-                                </div>
-                                
-                                <Button
-                                    type="button"
-                                    variant="warning"
-                                    className="w-full mt-6"
-                                    onClick={handleAiAnalyze}
-                                    disabled={(selectedFiles.length === 0 && urls.length === 0) || isLoading}
-                                    loading={isLoading && currentStep === 1}
-                                >
-                                    {isLoading && currentStep === 1 ? '處理中...' : '開始 AI 分析'}
-                                </Button>
-                            </fieldset>
-                        )}
-                        <fieldset className="p-6 bg-white rounded-lg border shadow-sm">
-                            <legend className="text-base font-semibold text-gray-800 px-3 py-1 bg-green-50 rounded-md">
-                                {isEditMode ? '編輯公告資訊' : '步驟二：基本資訊與內容'}
-                            </legend>
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">公告標題 (必填)</label>
-                                        <input 
-                                            type="text" 
-                                            id="title" 
-                                            name="title" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                                            value={formData.title} 
-                                            onChange={handleChange} 
-                                            disabled={isLoading} 
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="status" className="block text-sm font-semibold text-gray-700 mb-2">公告狀態</label>
-                                        <select 
-                                            id="status" 
-                                            name="status" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                                            value={formData.status} 
-                                            onChange={handleChange} 
-                                            disabled={isLoading}
-                                        >
-                                            <option value="0">下架 (草稿)</option>
-                                            <option value="1">上架</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-2">獎學金分類</label>
-                                        <select 
-                                            id="category" 
-                                            name="category" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                                            value={formData.category} 
-                                            onChange={handleChange} 
-                                            disabled={isLoading}
-                                        >
-                                             <option value="">請選擇或由AI分析</option>
-                                             <option value="A">A: 縣市政府</option>
-                                             <option value="B">B: 其他公家機關</option>
-                                             <option value="C">C: 宗親會/指定身分</option>
-                                             <option value="D">D: 其他民間單位</option>
-                                             <option value="E">E: 得獎名單</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="application_deadline" className="block text-sm font-semibold text-gray-700 mb-2">申請截止日期</label>
-                                        <input 
-                                            type="date" 
-                                            id="application_deadline" 
-                                            name="application_deadline" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                                            value={formData.application_deadline} 
-                                            onChange={handleChange} 
-                                            disabled={isLoading} 
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-2">送件方式</label>
-                                        <input 
-                                            type="text" 
-                                            id="submission_method" 
-                                            name="submission_method" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                                            placeholder="自行送件、至系生輔組申請..." 
-                                            value={stripHtmlTags(formData.submission_method)} 
-                                            onChange={(e) => setFormData(prev => ({ ...prev, submission_method: e.target.value }))} 
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="external_urls" className="block text-sm font-semibold text-gray-700 mb-2">外部連結</label>
-                                        <input 
-                                            type="url" 
-                                            id="external_urls" 
-                                            name="external_urls" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                                            value={formData.external_urls} 
-                                            onChange={handleChange} 
-                                            disabled={isLoading} 
-                                            placeholder="相關網頁連結..."
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="target_audience" className="block text-sm font-semibold text-gray-700 mb-2">適用對象</label>
-                                        <textarea 
-                                            id="target_audience" 
-                                            name="target_audience" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed min-h-[80px] resize-none" 
-                                            rows={3} 
-                                            value={stripHtmlTags(formData.target_audience)} 
-                                            onChange={(e) => setFormData(prev => ({ ...prev, target_audience: e.target.value }))} 
-                                            disabled={isLoading} 
-                                            placeholder="申請資格或適用對象..."
-                                        ></textarea>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="application_limitations" className="block text-sm font-semibold text-gray-700 mb-2">申請限制</label>
-                                        <textarea 
-                                            id="application_limitations" 
-                                            name="application_limitations" 
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed min-h-[80px] resize-none" 
-                                            rows={3} 
-                                            value={stripHtmlTags(formData.application_limitations)} 
-                                            onChange={(e) => setFormData(prev => ({ ...prev, application_limitations: e.target.value }))} 
-                                            disabled={isLoading} 
-                                            placeholder="申請資格限制或注意事項..."
-                                        ></textarea>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label htmlFor="summary" className="block text-sm font-semibold text-gray-700 mb-2">公告摘要 (必填)</label>
-                                <QuillEditor
-                                        value={formData.summary}
-                                        onChange={handleSummaryChange}
-                                        placeholder="AI 生成的內容將顯示於此，您也可以手動編輯..."
-                                        disabled={isLoading}
-                                    />
-                                <div className="mt-4">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">附件上傳</label>
-                                    <MultipleFilesUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast}/>
-                                </div>
-                                </div>
-                            </div>
-                        </fieldset>
-                    </form>
-                </div>
-                <div className="p-4 bg-gray-100/80 backdrop-blur-sm border-t rounded-b-2xl flex justify-between space-x-3 flex-shrink-0">
-                    <div className="flex space-x-3">
-                        <Button type="button" variant="secondary" onClick={handleClose} disabled={isLoading}>
-                            取消
-                        </Button>
-                        {isEditMode && (
-                            <Button 
-                                type="button" 
-                                variant="danger" 
-                                onClick={() => setShowDeleteConfirm(true)} 
-                                disabled={isLoading}
-                            >
-                                刪除
-                            </Button>
-                        )}
-                    </div>
-                    <Button 
-                        type="button"
-                        onClick={handleSave} 
-                        disabled={!isFormValid || isLoading}
-                        loading={isLoading}
-                    >
-                        {isLoading ? loadingText : (isEditMode ? '更新公告' : '儲存公告')}
-                    </Button>
-                </div>
-            </div>
-            </div>
         </>
     );
 }

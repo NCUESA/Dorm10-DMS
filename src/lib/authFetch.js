@@ -23,9 +23,14 @@ export async function createAuthFetchOptions(options = {}) {
   const token = await getCurrentToken();
   
   const headers = {
-    'Content-Type': 'application/json',
     ...options.headers
   };
+  
+  // 如果沒有指定 Content-Type 且 body 不是 FormData，則設置為 application/json
+  if (!headers['Content-Type'] && !headers['content-type'] && 
+      !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
   
   if (token) {
     headers.Authorization = `Bearer ${token}`;
