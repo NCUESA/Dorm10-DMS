@@ -2,18 +2,9 @@
 
 ## 主要改進項目
 
-### 1. JSON Output 格式統一 - 使用 Gemini 2.5 Flash responseSchema 方法
-- ✅ API 回應現在使用 Gemini 2.5 Flash 的 responseSchema，參考 `AI_ANALYSIS_METHODS.md`
-- ✅ 定義完整的 `chatResponseSchema` 包含：
-  - `answer_type`: 回答類型分類
-  - `content.sections`: 結構化內容段落
-  - `referenced_announcements`: 參考公告ID
-  - `source_type`: 資料來源類型
-  - `confidence_level`: 回答可信度
-  - `follow_up_suggestions`: 後續建議問題
-- ✅ 支援多種內容類型：text, list, table, highlight_important, highlight_deadline, source_link, contact_info
-- ✅ 使用 `generateStructuredAIResponse()` 函數調用 Gemini API
-- ✅ 自動回退到模擬回應（當 API 不可用時）
+### 1. 移除 JSON Output，改用純 Markdown 回應
+- ✅ API 不再要求結構化 JSON 格式
+- ✅ 前後端直接以文字或 Markdown 顯示內容
 
 ### 2. 修正 React Component 錯誤
 - ✅ 修正 `/ai-assistant/layout.jsx` 空檔案問題
@@ -45,7 +36,6 @@
 - ✅ 快捷問題區域（當對話較少時顯示）
 - ✅ 改進的操作按鈕佈局
 - ✅ 更好的載入狀態指示
-- ✅ 結構化的 AI 回應分類
 - ✅ 智能的後續問題建議
 
 ### 7. 輕量化介面設計改進 (2025/8/2 更新)
@@ -59,44 +49,11 @@
 - ✅ 整體採用灰白色調，營造輕鬆專業的視覺感受
 - ✅ 大幅減少視覺噪音，提升使用體驗
 
-## API Schema 結構
-
-### Chat Response Schema
-```javascript
-{
-  answer_type: "scholarship_info" | "application_guide" | "document_requirements" | "eligibility_criteria" | "contact_info" | "general_help" | "rejection",
-  content: {
-    sections: [
-      {
-        title: "段落標題",
-        content: [
-          {
-            type: "text" | "list" | "table" | "highlight_important" | "highlight_deadline" | "source_link" | "contact_info",
-            text?: "文字內容",
-            items?: ["列表項目"],
-            table_data?: [["表格", "資料"]],
-            link_url?: "連結網址",
-            link_text?: "連結文字",
-            deadline?: "截止日期",
-            amount?: "金額資訊"
-          }
-        ]
-      }
-    ]
-  },
-  referenced_announcements?: [1, 2, 3],
-  source_type: "internal" | "external" | "none",
-  confidence_level: "high" | "medium" | "low",
-  follow_up_suggestions?: ["後續建議問題"]
-}
-```
-
 ## 測試建議
 
 1. **Gemini API 測試**
    - 設定 `NEXT_PUBLIC_GOOGLE_AI_API_KEY` 環境變數
-   - 測試結構化回應的生成
-   - 驗證 JSON Schema 的正確性
+   - 驗證 AI 回應是否正常生成
 
 2. **桌面端測試**  
    - 檢查聊天介面的佈局和功能
@@ -110,15 +67,12 @@
    - 驗證快捷按鈕的大小是否適當
 
 4. **功能測試**
-   - 測試結構化回應的顯示
    - 檢查公告卡片的渲染
    - 驗證清除記錄和支援請求功能
    - 測試不同類型的 AI 回應
 
 ## API 變更
-- `/api/chat/route.js` 現在使用 Gemini 2.5 Flash 的 responseSchema
-- 新增 `generateStructuredAIResponse()` 函數
-- 新增 `generateMockStructuredResponse()` 作為備援
+- `/api/chat/route.js` 移除結構化 JSON 回應，改以純文字呈現
 - 改進的錯誤處理和自動回退機制
 - 支援多種回應類型和內容格式
 
@@ -135,4 +89,4 @@
 NEXT_PUBLIC_GOOGLE_AI_API_KEY=your_gemini_api_key_here
 ```
 
-這些改進使聊天介面更加現代化、響應式，並提供更順暢的使用者體驗，同時整合了 Gemini 2.5 Flash 的先進 JSON Schema 功能。
+這些改進使聊天介面更加現代化、響應式，並提供更順暢的使用者體驗。
