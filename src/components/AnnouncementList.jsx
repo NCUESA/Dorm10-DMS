@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Search, X, ChevronsUpDown, ArrowUp, ArrowDown, Link as LinkIcon, Paperclip } from 'lucide-react';
@@ -34,7 +34,7 @@ const calculateSemester = (deadlineStr) => {
 };
 
 // --- Main Component ---
-export default function AnnouncementList() {
+function AnnouncementListContent() {
     const searchParams = useSearchParams();
 
     const [announcements, setAnnouncements] = useState([]);
@@ -325,5 +325,17 @@ export default function AnnouncementList() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function AnnouncementList() {
+    return (
+        <Suspense fallback={
+            <div className="w-full flex items-center justify-center py-24">
+                <div className="h-12 w-12 border-4 border-gray-300 border-t-indigo-600 rounded-full animate-spin"></div>
+            </div>
+        }>
+            <AnnouncementListContent />
+        </Suspense>
     );
 }

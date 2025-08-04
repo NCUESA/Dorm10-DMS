@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useContext, useCallback } from "react";
+import { useState, useEffect, useRef, useContext, useCallback, Suspense } from "react";
 import { HeaderContext } from '@/components/Header';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,7 +78,7 @@ function throttle(func, limit) {
     }
 }
 
-export default function ManagePage() {
+function ManagePageContent() {
     const { isAuthenticated, isAdmin, loading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -172,5 +172,17 @@ export default function ManagePage() {
                 </main>
             </div>
         </div>
+    );
+}
+
+export default function ManagePage() {
+    return (
+        <Suspense fallback={
+            <div className="w-full flex items-center justify-center py-24">
+                <Loader2 className="h-12 w-12 text-indigo-600 animate-spin" />
+            </div>
+        }>
+            <ManagePageContent />
+        </Suspense>
     );
 }
