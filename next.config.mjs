@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // 解決跨域請求警告
+    allowedDevOrigins: ['10.21.44.243'],
+    
     // 設置 CORS headers
     async headers() {
         return [
@@ -16,7 +19,7 @@ const nextConfig = {
                     },
                     {
                         key: 'Access-Control-Allow-Headers',
-                        value: 'Content-Type, Authorization, X-Requested-With',
+                        value: 'Content-Type, Authorization, X-Requested-With, apikey',
                     },
                 ],
             },

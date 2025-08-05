@@ -1,0 +1,9 @@
+FROM supabase/gotrue:v2.177.0
+
+# 覆蓋註冊信件樣板（Magic Link）
+COPY ./confirm_signup_mail.html /app/mailer/templates/magic_link_email.html
+
+# 覆蓋忘記密碼樣板（Recovery）
+COPY ./reset_password_mail.html /app/mailer/templates/recovery_email.html
+
+# docker build -f DockerFile.supabase_mailer -t {image_name} .

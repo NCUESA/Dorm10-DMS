@@ -15,12 +15,9 @@ export const metadata = {
   title: '彰師校外獎學金資訊平台',
   description: '提供彰化師範大學學生校外獎學金資訊',
   icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: '16x16 32x32', type: 'image/x-icon' },
-      { url: '/logo.png', sizes: '192x192', type: 'image/png' }
-    ],
-    shortcut: '/favicon.ico',
-    apple: { url: '/logo.png', sizes: '180x180', type: 'image/png' }
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png'
   }
 }
 

@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-
 export async function middleware(request) {
 	// 簡化的 CORS 處理
 	const origin = request.headers.get('origin');
@@ -13,7 +10,7 @@ export async function middleware(request) {
 		const response = new NextResponse(null, { status: 200 });
 		response.headers.set('Access-Control-Allow-Origin', origin || '*');
 		response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-		response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+		response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, apikey, x-supabase-api-version');
 		response.headers.set('Access-Control-Max-Age', '86400');
 		return response;
 	}
@@ -24,12 +21,12 @@ export async function middleware(request) {
 	if (origin) {
 		res.headers.set('Access-Control-Allow-Origin', origin);
 		res.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-		res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+		res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, apikey, x-supabase-api-version');
 	}
 	
 	try {
 		const supabase = createServerClient(
-			process.env.NEXT_PUBLIC_SUPABASE_URL,
+			process.env.NEXT_PUBLIC_SUPABASE_URL, // 這會使用 https://scholarship.ncuesa.org.tw/api/proxy
 			process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 			{
 				cookies: {
