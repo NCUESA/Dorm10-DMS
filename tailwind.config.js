@@ -16,7 +16,7 @@ module.exports = {
                     300: '#66B7FF',
                     400: '#339FFF',
                     500: '#0087FF',
-                    600: '#005A9C', // Updated to match DEFAULT for better hover contrast
+                    600: '#005A9C',
                     700: '#004875',
                     800: '#00364E',
                     900: '#002427',

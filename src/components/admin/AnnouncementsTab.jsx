@@ -22,8 +22,6 @@ const GmailIcon = () => (
     </svg>
 );
 
-
-
 // --- Helper Functions for Notifications ---
 const sendEmailAnnouncement = async (id, showToast) => {
     try {

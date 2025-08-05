@@ -12,7 +12,7 @@ const notoSans = Noto_Sans_TC({
 })
 
 export const metadata = {
-	title: '彰師大生輔組 校外獎學金資訊平台',
+	title: '彰師校外獎學金資訊平台',
 }
 
 export default function RootLayout({ children }) {

@@ -22,9 +22,7 @@ const itemVariants = {
     }
 };
 
-// --- 子元件 ---
-
-// 目錄元件 (極淡紫色主題 + 流暢動畫)
+// 目錄元件
 const TableOfContents = ({ sections, activeId, onLinkClick }) => {
     const isSectionActive = (section) => {
         if (!activeId) return false;
@@ -46,8 +44,8 @@ const TableOfContents = ({ sections, activeId, onLinkClick }) => {
                                 onLinkClick(targetId);
                             }}
                             className={`flex items-center text-sm transition-colors duration-200 ${isSectionActive(section)
-                                    ? 'font-bold text-slate-700'
-                                    : 'text-slate-500 hover:text-slate-700'
+                                ? 'font-bold text-slate-700'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             {section.title}
@@ -63,8 +61,8 @@ const TableOfContents = ({ sections, activeId, onLinkClick }) => {
                                                 onLinkClick(article.id);
                                             }}
                                             className={`block py-1.5 pl-4 pr-2 text-sm transition-colors duration-200 relative ${activeId === article.id
-                                                    ? 'font-semibold text-violet-500'
-                                                    : 'text-slate-500 hover:text-violet-500'
+                                                ? 'font-semibold text-violet-500'
+                                                : 'text-slate-500 hover:text-violet-500'
                                                 }`}
                                         >
                                             {article.title}
@@ -92,7 +90,6 @@ const TableOfContents = ({ sections, activeId, onLinkClick }) => {
     );
 };
 
-
 // 帶有滾動高亮功能的內容區塊
 const ContentSection = ({ id, activeId, title, titleAs: TitleComponent = 'h3', children }) => {
     const isActive = activeId === id;
@@ -102,13 +99,12 @@ const ContentSection = ({ id, activeId, title, titleAs: TitleComponent = 'h3', c
             variants={itemVariants}
             id={id}
             className={`scroll-mt-24 -mx-6 p-6 rounded-2xl transition-all duration-300 ease-in-out border-l-4 ${isActive
-                    ? 'bg-violet-50/70 border-violet-300' // 高亮時的背景與左邊框 (極淡)
-                    : 'border-transparent'
+                ? 'bg-violet-50/70 border-violet-300'
+                : 'border-transparent'
                 }`}
         >
             {title && (
-                <TitleComponent className={`text-xl sm:text-2xl font-bold transition-colors duration-300 ${isActive ? 'text-violet-700' : 'text-slate-800' // 高亮時的標題顏色
-                    }`}>
+                <TitleComponent className={`text-xl sm:text-2xl font-bold transition-colors duration-300 ${isActive ? 'text-violet-700' : 'text-slate-800'}`}>
                     {title}
                 </TitleComponent>
             )}

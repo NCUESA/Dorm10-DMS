@@ -16,7 +16,7 @@ const EmailPreview = ({ announcement }) => {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>彰師大 校外獎學金資訊平台</title>
+        <title>彰師校外獎學金資訊平台</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
             body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -37,7 +37,7 @@ const EmailPreview = ({ announcement }) => {
             .prose h3 { font-size: 18px; color: #1f2937; margin-top: 24px; margin-bottom: 12px; }
             .prose p { margin: 0 0 16px; }
 
-            /* --- ✨ 新增的表格樣式 ✨ --- */
+            /* --- 表格樣式 --- */
             .prose table {
                 width: 100%;
                 border-collapse: collapse;
@@ -59,7 +59,6 @@ const EmailPreview = ({ announcement }) => {
             .prose tr:nth-of-type(even) {
                 background-color: #f8f9fa;
             }
-            /* --- ✨ 樣式結束 ✨ --- */
 
             .cta-button { display: inline-block; background-color: #7c3aed; color: #ffffff !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500; }
             .footer { padding: 24px 40px; font-size: 12px; text-align: center; color: #9ca3af; background-color: #f9fafb; }
@@ -73,7 +72,7 @@ const EmailPreview = ({ announcement }) => {
                     <table class="container" border="0" cellpadding="0" cellspacing="0" width="100%">
                         <!-- HEADER -->
                         <tr>
-                            <td class="header"><h1>彰師大 校外獎學金資訊平台</h1></td>
+                            <td class="header"><h1>彰師校外獎學金資訊平台</h1></td>
                         </tr>
                         <!-- CONTENT -->
                         <tr>
@@ -99,8 +98,8 @@ const EmailPreview = ({ announcement }) => {
                         <!-- FOOTER -->
                         <tr>
                             <td class="footer">
-                                <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" target="_blank">平台首頁</a>  •  <a href="https://www.ncue.edu.tw/" target="_blank">彰師大官網</a></p>
-                                <p style="margin: 0 0 5px;">© ${currentYear} 彰師大 校外獎學金資訊平台. All Rights Reserved.</p>
+                                <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" target="_blank">校外獎學金資訊平台</a>  •  <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+                                <p style="margin: 0 0 5px;">© ${currentYear} 彰師校外獎學金資訊平台. All Rights Reserved.</p>
                                 <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
                             </td>
                         </tr>

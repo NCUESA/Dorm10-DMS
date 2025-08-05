@@ -70,8 +70,8 @@ const generateAnnouncementEmailHtml = (announcement) => {
                         </table>
                     </td></tr>
                     <tr><td class="footer">
-                        <p style="margin: 0 0 12px;"><a href="${platformUrl}" target="_blank">平台首頁</a>  •  <a href="https://www.ncue.edu.tw/" target="_blank">彰師大官網</a></p>
-                        <p style="margin: 0 0 5px;">© ${currentYear} 彰師大 校外獎學金資訊平台. All Rights Reserved.</p>
+                        <p style="margin: 0 0 12px;"><a href="${platformUrl}" target="_blank">校外獎學金資訊平台</a>  •  <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+                        <p style="margin: 0 0 5px;">© ${currentYear} 彰師 校外獎學金資訊平台. All Rights Reserved.</p>
                         <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
                     </td></tr>
                 </table>
@@ -148,7 +148,7 @@ export async function POST(request) {
         const plainTextContent = (announcement.summary || '').replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim(); // 產生純文字備份
 
         const mailOptions = {
-            from: '"NCUE 獎學金平台" <noreply@ncuesa.org.tw>',
+            from: '"彰師校外獎學金平台" <noreply@ncuesa.org.tw>',
             bcc: emails.join(','), // 使用密件副本保護隱私
             subject: `【公告通知】${announcement.title}`,
             text: plainTextContent, // 使用純文字備份

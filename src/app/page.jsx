@@ -9,7 +9,6 @@ export default function Home() {
 
     return (
         <div className="w-full bg-white font-sans min-h-screen">
-            {/* Banner 圖片高度自動，寬度 100% */}
             <div className="w-full">
                 <Image
                     src="/banner.jpg"
@@ -26,7 +25,7 @@ export default function Home() {
                         歡迎來到 彰師校外獎學金資訊平台
                     </h2>
                     <p className="text-lg mb-8" style={{ color: 'var(--text-muted)' }}>
-                        您可以在這裡獲取所有校外獎學金的資訊，並且使用 AI 問答助理解答您的問題。
+                        您可以在這裡獲取所有相關資訊，並且使用 AI 問答助理解答您的問題。
                     </p>
                 </div>
                 <AnnouncementList />

@@ -108,12 +108,12 @@ const Header = forwardRef((props, ref) => {
 
 	const LogoTitle = () => (
 		<Link href="/" className="flex items-center space-x-3 focus:outline-none p-1" aria-label="回到首頁" onClick={closeMenu}>
-			<Image src={logo} alt="NCUE Logo" width={52} height={52} className="h-10 w-10 sm:h-12 sm:w-12" priority />
+			<Image src={logo} alt="NCUE Logo" width={52} height={52} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full" priority />
 			<h1
 				className="font-bold text-base sm:text-lg whitespace-nowrap transition-colors duration-300"
 				style={{ color: isMenuOpen && isOverDark ? 'var(--primary-light)' : 'var(--primary)' }}
 			>
-				生輔組 校外獎助學金資訊平台
+				彰師校外獎學金資訊平台
 			</h1>
 		</Link>
 	);
@@ -178,9 +178,9 @@ const Header = forwardRef((props, ref) => {
 								key={`mobile-${link.href}`}
 								href={link.href}
 								className={`block w-full text-left px-4 py-3 my-1 rounded-lg text-lg 
-                    transition-all duration-300 ease-in-out
-                    ${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}
-                    ${pathname === link.href
+									transition-all duration-300 ease-in-out
+									${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}
+									${pathname === link.href
 										? (isOverDark ? 'bg-white/25 text-white' : 'bg-[#00A6D6]/20 backdrop-blur-sm text-primary font-semibold')
 										: (isOverDark ? 'text-white' : 'text-text')
 									}`

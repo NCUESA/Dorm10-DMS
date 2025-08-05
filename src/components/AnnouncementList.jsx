@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronsUpDown, ArrowUp, ArrowDown, Award, Loader2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown } from 'lucide-react';
@@ -10,11 +10,11 @@ import AnnouncementDetailModal from './AnnouncementDetailModal';
 
 // --- Helper Functions & Constants ---
 const categoryStyles = {
-    A: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },         // 紅
-    B: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' }, // 橘 (黃)
-    C: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },   // 綠
-    D: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },     // 藍
-    E: { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-300' }, // 紫
+    A: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
+    B: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' },
+    C: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
+    D: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
+    E: { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-300' },
     default: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' },
 };
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
@@ -32,6 +32,7 @@ const calculateSemester = (deadlineStr) => {
 // --- Main Component ---
 function AnnouncementListContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sortLoading, setSortLoading] = useState(false);
@@ -40,18 +41,20 @@ function AnnouncementListContent() {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
-    const [sort, setSort] = useState({ column: 'application_deadline', ascending: true });
+    const [sort, setSort] = useState({ column: 'application_deadline', ascending: false });
 
-    // ✨ 修改: 手機版 RWD 卡片展開狀態
     const [expandedId, setExpandedId] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
     const announcementRefs = useRef({});
+    const isInitialLoad = useRef(true);
 
-    const fetchAnnouncements = useCallback(async (isInitialLoad = false) => {
-        if (isInitialLoad) setLoading(true);
-        else setSortLoading(true);
+    const [readIds, setReadIds] = useState(new Set());
+    const [deepLinkedInfo, setDeepLinkedInfo] = useState(null);
 
+
+    const fetchAnnouncementsList = useCallback(async () => {
+        setSortLoading(true);
         let query = supabase.from('announcements').select('*, attachments(*)', { count: 'exact' });
 
         if (search) query = query.or(`title.ilike.%${search}%,target_audience.ilike.%${search}%,application_limitations.ilike.%${search}%`);
@@ -74,26 +77,67 @@ function AnnouncementListContent() {
             setTotalCount(count || 0);
         } else console.error("Error fetching announcements:", error);
 
-        if (isInitialLoad) setLoading(false);
-        else setSortLoading(false);
+        setSortLoading(false);
     }, [search, filter, page, rowsPerPage, sort]);
 
     useEffect(() => {
-        fetchAnnouncements(announcements.length === 0);
-    }, [fetchAnnouncements]);
+        if (isInitialLoad.current) return;
+        fetchAnnouncementsList();
+    }, [page, rowsPerPage, sort, filter, search, fetchAnnouncementsList]);
 
     useEffect(() => {
-        const announcementIdFromUrl = searchParams.get('announcement_id');
-        if (announcementIdFromUrl && announcements.length > 0) {
-            const targetAnnouncement = announcements.find(a => a.id === announcementIdFromUrl);
-            if (targetAnnouncement) {
-                handleOpenDetailModal(targetAnnouncement);
-                setTimeout(() => {
-                    announcementRefs.current[announcementIdFromUrl]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
+        const initialFetch = async () => {
+            setLoading(true);
+            const announcementIdFromUrl = searchParams.get('announcement_id');
+
+            if (announcementIdFromUrl) {
+                const { data: targetAnnouncement, error } = await supabase
+                    .from('announcements')
+                    .select('*, attachments(*)')
+                    .eq('id', announcementIdFromUrl)
+                    .single();
+
+                if (targetAnnouncement && !error) {
+                    handleOpenDetailModal(targetAnnouncement);
+
+                    const { data: allIds, error: idsError } = await supabase
+                        .from('announcements')
+                        .select('id')
+                        .order(sort.column, { ascending: sort.ascending });
+
+                    if (allIds && !idsError) {
+                        const index = allIds.findIndex(item => item.id === announcementIdFromUrl);
+                        if (index !== -1) {
+                            const targetPage = Math.floor(index / rowsPerPage) + 1;
+                            setDeepLinkedInfo({ page: targetPage, filter: 'all' });
+                        }
+                    }
+                } else {
+                    console.error("Could not fetch announcement from URL parameter:", error);
+                }
+            }
+            await fetchAnnouncementsList();
+            setLoading(false);
+            isInitialLoad.current = false;
+        };
+        initialFetch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (deepLinkedInfo && announcements.length > 0) {
+            const announcementIdFromUrl = searchParams.get('announcement_id');
+            if (announcementIdFromUrl) {
+                const targetElement = announcementRefs.current[announcementIdFromUrl];
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                    });
+                }
             }
         }
-    }, [searchParams, announcements]);
+    }, [announcements, deepLinkedInfo, searchParams]);
 
     const handleSort = (field) => {
         setSort(prev => ({ column: field, ascending: prev.column === field ? !prev.ascending : true }));
@@ -101,8 +145,20 @@ function AnnouncementListContent() {
     };
 
     const handleOpenDetailModal = (announcement) => {
-        setSelectedAnnouncement(announcement);
+        setReadIds(prev => new Set(prev).add(announcement.id));
+        const announcementWithSemester = { ...announcement, semester: calculateSemester(announcement.application_deadline) };
+        setSelectedAnnouncement(announcementWithSemester);
         setIsDetailModalOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setIsDetailModalOpen(false);
+        if (deepLinkedInfo) {
+            setFilter(deepLinkedInfo.filter);
+            setPage(deepLinkedInfo.page);
+            setDeepLinkedInfo(null);
+            router.replace('/', undefined, { shallow: true });
+        }
     };
 
     const renderSortIcon = (column) => {
@@ -122,7 +178,7 @@ function AnnouncementListContent() {
                     <p><strong className="font-semibold text-red-600">A：</strong>各縣市政府獎助學金</p>
                     <p><strong className="font-semibold text-orange-600">B：</strong>縣市政府以外之各級公家機關及公營單位獎助學金</p>
                     <p><strong className="font-semibold text-green-600">C：</strong>宗教及民間各項指定身分獎助學金</p>
-                    <p><strong className="font-semibold text-blue-600">D：</strong>各民間單位（經濟不利、學業優良等）</p>
+                    <p><strong className="font-semibold text-blue-600">D：</strong>非公家機關或其他無法歸類的獎助學金</p>
                     <p><strong className="font-semibold text-violet-600">E：</strong>獎學金得獎名單公告</p>
                 </div>
             </div>
@@ -132,7 +188,7 @@ function AnnouncementListContent() {
                     <Search className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input type="text" placeholder="搜尋公告標題、摘要、適用對象..." value={search} onChange={e => setSearch(e.target.value)}
                         className="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-300
-                                   focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
+                                    focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
                     />
                 </div>
                 <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
@@ -144,7 +200,7 @@ function AnnouncementListContent() {
 
             <div className="rounded-xl w-full bg-white shadow-lg overflow-hidden border border-gray-200/80">
                 <div className="hidden md:block relative">
-                    {sortLoading && (<div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"><div className="flex items-center gap-2 text-slate-600 font-semibold"><Loader2 className="animate-spin h-5 w-5" />排序中...</div></div>)}
+                    {sortLoading && (<div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"><div className="flex items-center gap-2 text-slate-600 font-semibold"><Loader2 className="animate-spin h-5 w-5" />處理中...</div></div>)}
                     <table className="w-full text-sm table-fixed">
                         <thead className="bg-gray-50/70 text-left">
                             <tr>
@@ -156,29 +212,31 @@ function AnnouncementListContent() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {loading ? (<tr><td colSpan="5" className="text-center p-16 text-gray-500"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />載入中...</td></tr>) : announcements.map(item => (
-                                <tr key={item.id} ref={el => (announcementRefs.current[item.id] = el)} onClick={() => handleOpenDetailModal(item)} className="transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-2xl z-0 hover:z-10 hover:scale-[1.01] cursor-pointer">
-                                    <td className="p-4 px-6 font-medium text-gray-800 align-top">{item.semester}</td>
-                                    <td className="p-4 px-6 align-top">
-                                        <div className="flex items-start gap-3">
-                                            <span className={`flex-shrink-0 mt-1 inline-flex items-center justify-center h-8 w-8 rounded-lg text-sm font-bold ${getCategoryStyle(item.category).bg} ${getCategoryStyle(item.category).text} border ${getCategoryStyle(item.category).border}`}>{item.category}</span>
-                                            <p className="font-semibold text-gray-900">{item.title}</p>
-                                        </div>
-                                    </td>
-                                    <td className="p-4 px-6 text-sm text-gray-600 align-top">{item.target_audience}</td>
-                                    <td className="p-4 px-6 text-sm font-bold align-top">
-                                        {item.application_limitations === 'N' && <span className="text-green-600">{item.application_limitations}</span>}
-                                        {item.application_limitations === 'Y' && <span className="text-red-600">{item.application_limitations}</span>}
-                                        {item.application_limitations !== 'N' && item.application_limitations !== 'Y' && <span className="text-gray-600 font-normal">{item.application_limitations || '無'}</span>}
-                                    </td>
-                                    <td className="p-4 px-6 text-sm align-top">
-                                        <div className={`font-bold ${new Date(item.application_deadline) < new Date() && item.application_deadline ? 'text-gray-500' : 'text-red-600'}`}>
-                                            {item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : 'N/A'}
-                                        </div>
-                                        <div className="text-slate-500 mt-1">{item.submission_method}</div>
-                                    </td>
-                                </tr>
-                            ))}
+                            {loading ? (<tr><td colSpan="5" className="text-center p-16 text-gray-500"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />載入中...</td></tr>) : announcements.map(item => {
+                                const isRead = readIds.has(item.id);
+                                const isExpired = item.application_deadline && new Date(item.application_deadline) < new Date();
+                                return (
+                                    <tr key={item.id} ref={el => (announcementRefs.current[item.id] = el)} onClick={() => handleOpenDetailModal(item)} className={`transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-2xl z-0 hover:z-10 hover:scale-[1.01] cursor-pointer ${isRead ? 'bg-gray-100 text-gray-500' : ''}`}>
+                                        <td className="p-4 px-6 font-medium align-top">{item.semester}</td>
+                                        <td className="p-4 px-6 align-top">
+                                            <div className="flex items-start gap-3">
+                                                <span className={`flex-shrink-0 mt-1 inline-flex items-center justify-center h-8 w-8 rounded-lg text-sm font-bold ${getCategoryStyle(item.category).bg} ${isRead ? 'opacity-60' : ''} ${getCategoryStyle(item.category).text} border ${getCategoryStyle(item.category).border}`}>{item.category}</span>
+                                                <p className={`font-semibold ${isRead ? '' : 'text-gray-900'}`}>{item.title}</p>
+                                            </div>
+                                        </td>
+                                        <td className="p-4 px-6 text-sm align-top">{item.target_audience}</td>
+                                        <td className="p-4 px-6 text-sm font-bold align-top">
+                                            {item.application_limitations === 'Y' ? <span className="text-red-600">Y</span> : <span className="text-green-600">N</span>}
+                                        </td>
+                                        <td className="p-4 px-6 text-sm align-top">
+                                            <div className={`font-bold ${isExpired ? 'text-red-600' : 'text-green-600'}`}>
+                                                {item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : 'N/A'}
+                                            </div>
+                                            <div className={`mt-1 ${isRead ? '' : 'text-slate-500'}`}>{item.submission_method}</div>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -186,46 +244,33 @@ function AnnouncementListContent() {
                 <div className="md:hidden flex flex-col gap-3 p-3">
                     {loading ? (<div className="p-10 text-center text-gray-500"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />載入中...</div>) : announcements.map(item => {
                         const isExpanded = expandedId === item.id;
+                        const isRead = readIds.has(item.id);
+                        const isExpired = item.application_deadline && new Date(item.application_deadline) < new Date();
                         const style = getCategoryStyle(item.category);
                         return (
-                            <motion.div key={item.id} layout ref={el => (announcementRefs.current[item.id] = el)} className={`bg-white rounded-lg transition-all duration-300 border ${isExpanded ? 'shadow-xl ring-2 ring-indigo-400' : 'shadow-md border-gray-200/60'}`}>
+                            <motion.div key={item.id} layout ref={el => (announcementRefs.current[item.id] = el)} className={`rounded-lg transition-all duration-300 border ${isExpanded ? 'shadow-xl ring-2 ring-indigo-400' : 'shadow-md border-gray-200/60'} ${isRead ? 'bg-gray-100 text-gray-500' : 'bg-white'}`}>
                                 <button onClick={() => setExpandedId(isExpanded ? null : item.id)} className="w-full text-left p-4">
                                     <div className="flex justify-between items-start gap-3">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1.5">
-                                                <span className={`inline-flex items-center justify-center h-7 w-7 rounded-md text-xs font-bold ${style.bg} ${style.text}`}>{item.category}</span>
-                                                <span className="text-xs text-gray-500 font-medium">{`學期 ${item.semester}`}</span>
+                                                <span className={`inline-flex items-center justify-center h-7 w-7 rounded-md text-xs font-bold ${style.bg} ${style.text} ${isRead ? 'opacity-60' : ''}`}>{item.category}</span>
+                                                <span className="text-xs font-medium">{`學期 ${item.semester}`}</span>
                                             </div>
-                                            <h3 className="font-bold text-base text-gray-800">{item.title}</h3>
+                                            <h3 className={`font-bold text-base ${isRead ? '' : 'text-gray-800'}`}>{item.title}</h3>
                                         </div>
                                         <ChevronDown className={`h-5 w-5 text-gray-400 mt-1 flex-shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                                     </div>
                                 </button>
-                                <AnimatePresence>
-                                    {isExpanded && (
-                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="overflow-hidden">
-                                            <div className="pt-2 pb-4 px-4 border-t border-gray-200 space-y-3 text-sm">
-                                                <div>
-                                                    <div className="font-semibold text-gray-500 mb-1">申請截止</div>
-                                                    <div className={`font-bold ${new Date(item.application_deadline) < new Date() && item.application_deadline ? 'text-gray-500' : 'text-red-600'}`}>{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : 'N/A'}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold text-gray-500 mb-1">適用對象</div>
-                                                    <p className="text-gray-700">{item.target_audience}</p>
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold text-gray-500 mb-1">兼領限制</div>
-                                                    {item.application_limitations === 'N' && <p className="font-bold text-green-600">{item.application_limitations}</p>}
-                                                    {item.application_limitations === 'Y' && <p className="font-bold text-red-600">{item.application_limitations}</p>}
-                                                    {item.application_limitations !== 'N' && item.application_limitations !== 'Y' && <p className="text-gray-700">{item.application_limitations || '無'}</p>}
-                                                </div>
-                                                <div className="pt-2">
-                                                    <Button size="sm" onClick={() => handleOpenDetailModal(item)}>查看詳細內容</Button>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                <AnimatePresence>{isExpanded && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="overflow-hidden">
+                                        <div className="pt-2 pb-4 px-4 border-t border-gray-200 space-y-3 text-sm">
+                                            <div><div className="font-semibold text-gray-500 mb-1">申請截止</div><div className={`font-bold ${isExpired ? 'text-red-600' : 'text-green-600'}`}>{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : 'N/A'}</div></div>
+                                            <div><div className="font-semibold text-gray-500 mb-1">適用對象</div><p className="text-gray-700">{item.target_audience}</p></div>
+                                            <div><div className="font-semibold text-gray-500 mb-1">兼領限制</div>{item.application_limitations === 'Y' ? <p className="font-bold text-red-600">Y</p> : <p className="font-bold text-green-600">N</p>}</div>
+                                            <div className="pt-2"><Button size="sm" onClick={() => handleOpenDetailModal(item)}>查看詳細內容</Button></div>
+                                        </div>
+                                    </motion.div>
+                                )}</AnimatePresence>
                             </motion.div>
                         );
                     })}
@@ -241,9 +286,7 @@ function AnnouncementListContent() {
                         <select value={rowsPerPage} onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1); }} className="appearance-none w-full bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-10 text-sm shadow-sm transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/30">
                             {[10, 25, 50].map(v => <option key={v} value={v}>{v} 筆 / 頁</option>)}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                            <ChevronsUpDown className="h-4 w-4" />
-                        </div>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400"><ChevronsUpDown className="h-4 w-4" /></div>
                     </div>
                     <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                         <button onClick={() => setPage(1)} disabled={page === 1} className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronsLeft className="h-5 w-5" /></button>
@@ -254,7 +297,7 @@ function AnnouncementListContent() {
                 </div>
             </div>
 
-            <AnnouncementDetailModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} announcement={selectedAnnouncement} />
+            <AnnouncementDetailModal isOpen={isDetailModalOpen} onClose={handleModalClose} announcement={selectedAnnouncement} />
         </div>
     );
 }

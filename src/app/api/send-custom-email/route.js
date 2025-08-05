@@ -67,8 +67,8 @@ const generateEmailHtml = (subject, plainTextBody) => {
                             <div class="plain-text-body">${plainTextBody}</div>
                         </td></tr>
                         <tr><td class="footer">
-                            <p style="margin: 0 0 12px;"><a href="${platformUrl}" target="_blank">平台首頁</a>  •  <a href="https://www.ncue.edu.tw/" target="_blank">彰師大官網</a></p>
-                            <p style="margin: 0 0 5px;">© ${currentYear} 彰師大 校外獎學金資訊平台. All Rights Reserved.</p>
+                            <p style="margin: 0 0 12px;"><a href="${platformUrl}" target="_blank">校外獎學金資訊平台</a>  •  <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+                            <p style="margin: 0 0 5px;">© ${currentYear} 彰師 校外獎學金資訊平台. All Rights Reserved.</p>
                             <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
                         </td></tr>
                     </table>
@@ -122,9 +122,9 @@ export async function POST(request) {
 
         // 5. 準備郵件選項
         const mailOptions = {
-            from: '"NCUE 獎學金平台" <noreply@ncuesa.org.tw>',
+            from: '"彰師校外獎學金平台" <noreply@ncuesa.org.tw>',
             to: email,
-            subject: `【NCUE 獎學金平台通知】${subject}`,
+            subject: `校外獎學金通知】${subject}`,
             html: finalHtmlContent, // 使用產生好的 HTML
             text: plainTextBody      // 使用原始的純文字作為備用
         };
