@@ -1,14 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 伺服器端直接連接到本地 Supabase Docker (更安全)
-const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:8000';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://scholarship-api.ncuesa.org.tw';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing Supabase environment variables for server client.');
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase server environment variables. Please check your .env.local file.');
 }
 
-const supabaseServer = createClient(supabaseUrl, serviceRoleKey);
+console.log('[SUPABASE-SERVER] Configured with URL:', supabaseUrl);
 
-export { supabaseServer };
-export default supabaseServer;
+export const supabaseServer = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
