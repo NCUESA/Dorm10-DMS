@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彰師大 校外獎學金資訊平台</title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f2f3f5; font-family: 'Microsoft JhengHei', Arial, sans-serif;">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%"
+                    style="max-width: 600px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.07);">
+                    <!-- HEADER -->
+                    <tr>
+                        <td align="center"
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 24px;">彰師大 校外獎學金資訊平台</h1>
+                        </td>
+                    </tr>
+
+                    <!-- CONTENT -->
+                    <tr>
+                        <td bgcolor="#ffffff"
+                            style="padding: 32px 40px; line-height: 1.7; color: #334155; border-left: 1px solid #e9ecef; border-right: 1px solid #e9ecef;">
+                            <h2 style="color: #2c3e50; margin-top: 0; font-size: 22px;">歡迎加入！</h2>
+                            <p style="margin: 0 0 24px; font-size: 16px;">親愛的使用者，您好：</p>
+                            <p style="margin: 0 0 24px; font-size: 16px;">感謝您的註冊。請點擊下方按鈕以啟用您的帳號，完成最後的驗證步驟。</p>
+
+                            <!-- OPTION 1: BUTTON -->
+                            <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding: 16px 0;">
+                                        <a href="{{ .ConfirmationURL }}" target="_blank"
+                                            style="display: inline-block; background-color: #3498db; color: white; padding: 14px 28px; border-radius: 5px; text-decoration: none; font-size: 18px; font-weight: bold;">
+                                            驗證電子信箱
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- DIVIDER -->
+                            <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin: 24px 0;">
+                                <tr>
+                                    <td align="center" valign="middle" style="font-size: 14px; color: #94a3b8;">
+                                        <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                                            <tr>
+                                                <td style="width: 45%; border-bottom: 1px solid #e2e8f0;"></td>
+                                                <td style="width: 10%; text-align: center;">或</td>
+                                                <td style="width: 45%; border-bottom: 1px solid #e2e8f0;"></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- OPTION 2: OTP / TOKEN -->
+                            <div style="text-align: center;">
+                                <h3 style="font-size: 20px; font-weight: 600; color: #1e293b; margin: 0 0 10px;">使用驗證碼
+                                </h3>
+                                <p style="color: #475569; font-size: 15px; margin: 0 0 20px;">您也可以在網站的驗證頁面輸入以下 6 位數驗證碼：
+                                </p>
+
+                                <div
+                                    style="background-color: #f1f5f9; border-radius: 8px; padding: 20px; margin: 0 auto 20px; max-width: 380px;">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td align="center"
+                                                style="font-size: 28px; font-weight: bold; color: #4338ca; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 24px; padding-left: 12px;">
+                                                {{ .Token }}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div style="text-align: center; margin-top: 32px;">
+                                <p style="font-size: 14px; color: #64748b;">如果您並未在本平台註冊帳號，請直接忽略此電子郵件，您的帳號將不會被建立。</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- FOOTER -->
+                    <tr>
+                        <td bgcolor="#f8fafc" align="center"
+                            style="padding: 24px 40px; font-size: 12px; color: #64748b; line-height: 1.5; border-top: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0 0 12px 0;">
+                                <a href="https://scholarship.ncuesa.org.tw/" target="_blank" rel="noopener"
+                                    style="color: #475569; text-decoration: none; margin: 0 10px;">校外獎學金資訊平台</a>  •  
+                                <a href="https://stuaffweb.ncue.edu.tw/" target="_blank" rel="noopener"
+                                    style="color: #475569; text-decoration: none; margin: 0 10px;">生輔組首頁</a>
+                            </p>
+                            <p style="margin: 0 0 5px 0;">© 2025 彰師校外獎學金資訊平台. All Rights Reserved.</p>
+                            <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

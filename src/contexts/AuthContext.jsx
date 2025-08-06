@@ -174,8 +174,19 @@ export const AuthProvider = ({ children }) => {
     verifyOtp,
     resendOtp,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin' || user?.profile?.role === 'admin'
+    isAdmin: user?.role === 'admin'
   };
+
+  // 調試信息
+  if (user) {
+    console.log('[AUTH-DEBUG] User data:', {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      profile: user.profile,
+      isAdmin: user?.role === 'admin'
+    });
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

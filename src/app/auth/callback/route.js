@@ -6,11 +6,21 @@ export async function GET(request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
+  console.log(`[AUTH-CALLBACK] Request URL: ${requestUrl.href}`)
+  console.log(`[AUTH-CALLBACK] Code: ${code ? 'present' : 'missing'}`)
+
   if (code) {
     const cookieStore = cookies()
+    
+    // 使用與前端一致的配置
+    const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:8000'
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    console.log(`[AUTH-CALLBACK] Using Supabase URL: ${supabaseUrl}`)
+    
     const supabase = createServerClient(
-      process.env.SUPABASE_URL || 'http://localhost:8000',
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      supabaseUrl,
+      supabaseKey,
       {
         cookies: {
           getAll: () => cookieStore.getAll(),
@@ -24,20 +34,24 @@ export async function GET(request) {
     )
     
     try {
+      console.log(`[AUTH-CALLBACK] Exchanging code for session...`)
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
       
       if (error) {
-        console.error('驗證錯誤:', error)
-        return NextResponse.redirect(`${requestUrl.origin}/auth/error?message=${encodeURIComponent(error.message)}`)
+        console.error('[AUTH-CALLBACK] 驗證錯誤:', error)
+        return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`)
       }
 
+      console.log(`[AUTH-CALLBACK] Session exchange successful`, { userId: data?.user?.id })
+
       if (data?.user) {
+        console.log(`[AUTH-CALLBACK] Creating/updating user profile...`)
         // 創建用戶檔案（如果不存在）
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             id: data.user.id,
-            name: data.user.user_metadata?.name || '',
+            name: data.user.user_metadata?.name || data.user.email || '',
             student_id: data.user.user_metadata?.student_id || '',
             department: data.user.user_metadata?.department || '',
             year: data.user.user_metadata?.year || '',
@@ -45,18 +59,23 @@ export async function GET(request) {
           })
         
         if (profileError) {
-          console.error('創建用戶檔案錯誤:', profileError)
+          console.error('[AUTH-CALLBACK] 創建用戶檔案錯誤:', profileError)
+        } else {
+          console.log(`[AUTH-CALLBACK] Profile created/updated successfully`)
         }
       }
 
-      // 驗證成功，重定向到儀表板
-      return NextResponse.redirect(`${requestUrl.origin}/profile`)
+      // 驗證成功，重定向到 profile 頁面
+      const redirectUrl = `${requestUrl.origin}/profile`
+      console.log(`[AUTH-CALLBACK] Redirecting to: ${redirectUrl}`)
+      return NextResponse.redirect(redirectUrl)
     } catch (err) {
-      console.error('處理驗證回調時發生錯誤:', err)
-      return NextResponse.redirect(`${requestUrl.origin}/auth/error?message=${encodeURIComponent('驗證過程中發生錯誤')}`)
+      console.error('[AUTH-CALLBACK] 處理驗證回調時發生錯誤:', err)
+      return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent('驗證過程中發生錯誤')}`)
     }
   }
 
   // 沒有驗證碼，重定向到登入頁面
+  console.log(`[AUTH-CALLBACK] No code provided, redirecting to login`)
   return NextResponse.redirect(`${requestUrl.origin}/login`)
 }
