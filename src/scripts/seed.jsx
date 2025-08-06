@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config'; // Import dotenv to load environment variables
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// 為了 seed 腳本的兼容性，支援兩種 URL 格式
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:8000';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Error: Missing Supabase environment variables.');
-    console.error('Please make sure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your .env.local file.');
+    console.error('Please make sure SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your .env.local file.');
+    console.error('Current config:', { supabaseUrl, hasAnonKey: !!supabaseAnonKey });
     process.exit(1);
 }
 

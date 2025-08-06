@@ -2,8 +2,9 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
 
+// 伺服器端直接連接到 Supabase Docker
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_URL || 'http://localhost:8000',
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
