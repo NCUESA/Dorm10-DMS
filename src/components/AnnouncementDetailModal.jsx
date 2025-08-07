@@ -17,13 +17,11 @@ const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 
 const getPublicAttachmentUrl = (filePath) => {
     if (!filePath) return '#';
-    // The key change: remove the "public/" prefix from the path so it becomes a correct, root-relative URL.
-    if (filePath.startsWith('public/')) {
-        return `/${filePath.substring(7)}`; // Removes 'public/' (7 characters)
-    }
 
-    // If the path is already correct (doesn't start with public/), return as is.
-    return filePath;
+    const parts = filePath.split('/');
+    const fileName = parts[parts.length - 1];
+
+    return `/api/attachments/${fileName}`;
 };
 
 // --- Main Component ---
@@ -63,13 +61,11 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
     };
 
     const startDate = formatDate(announcement.application_start_date);
-    const endDate = formatDate(announcement.application_end_date);
+    const endDate = formatDate(announcement.announcement_end_date);
 
     const dateDisplayString = startDate
         ? `${startDate} ~ ${endDate || '無期限'}`
         : endDate || '未指定';
-
-    const isExpired = announcement.application_end_date && new Date(announcement.application_end_date) < new Date();
 
     const finalContent = announcement.summary || '無詳細內容';
 
@@ -106,7 +102,7 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                 <div className="flex items-start gap-3">
                                     <Calendar className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
                                     <div>
-                                        <p className="font-semibold text-gray-500">{startDate ? '申請期間' : '申請截止'}</p>
+                                        <p className="font-semibold text-gray-500">{startDate ? '申請期間' : '公告結束/申請截止'}</p>
                                         <p className="font-bold text-lg text-gray-900">
                                             {dateDisplayString}
                                         </p>
