@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # uploaded announcement attachments
-# public/storage/attachments/*
+public/storage/attachments/*
 
 # But DO NOT ignore the .gitkeep file, so the empty directory structure is maintained
-# !public/storage/attachments/.gitkeep
+!public/storage/attachments/.gitkeep
