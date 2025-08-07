@@ -1,4 +1,5 @@
 {
+  // pm2 start npm --name "ncue-scholarship" -- run start
   "name": "ncue-scholarship",
   "version": "0.1.0",
   "private": true,
@@ -6,12 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "pm2:start": "pm2 start npm --name 'ncue-scholarship' -- run start",
-    "pm2:stop": "pm2 stop ncue-scholarship",
-    "pm2:restart": "pm2 restart ncue-scholarship",
-    "pm2:delete": "pm2 delete ncue-scholarship",
-    "pm2:logs": "pm2 logs ncue-scholarship"
+    "lint": "next lint"
   },
   "dependencies": {
     "@fontsource/noto-sans-tc": "^5.2.6",

@@ -97,11 +97,16 @@ function AnnouncementListContent() {
 
         const { data, error, count } = await query;
         if (!error) {
-            const dataWithSemester = (data || []).map(item => ({ ...item, semester: calculateSemester(item.application_end_date) }));
+            const dataWithSemester = (data || []).map(item => ({ 
+                ...item, 
+                semester: calculateSemester(item?.application_deadline) 
+            }));
             setAnnouncements(dataWithSemester);
             setTotalCount(count || 0);
         } else {
             console.error("Error fetching announcements:", error);
+            setAnnouncements([]);
+            setTotalCount(0);
         }
 
         setSortLoading(false);
@@ -238,7 +243,7 @@ function AnnouncementListContent() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {loading ? (<tr><td colSpan="5" className="text-center p-16 text-gray-500"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />載入中...</td></tr>) : announcements.map(item => {
+                            {loading ? (<tr><td colSpan="5" className="text-center p-16 text-gray-500"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />載入中...</td></tr>) : (announcements || []).filter(item => item && item.id).map(item => {
                                 const isRead = readIds.has(item.id);
                                 return (
                                     <tr key={item.id} ref={el => (announcementRefs.current[item.id] = el)} onClick={() => handleOpenDetailModal(item)} className={`transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-2xl z-0 hover:z-10 hover:scale-[1.01] cursor-pointer ${isRead ? 'bg-gray-100 text-gray-500' : ''}`}>
@@ -265,7 +270,7 @@ function AnnouncementListContent() {
                 </div>
 
                 <div className="md:hidden flex flex-col gap-3 p-3">
-                    {loading ? (<div className="p-10 text-center text-gray-500"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />載入中...</div>) : announcements.map(item => {
+                    {loading ? (<div className="p-10 text-center text-gray-500"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />載入中...</div>) : (announcements || []).filter(item => item && item.id).map(item => {
                         const isExpanded = expandedId === item.id;
                         const isRead = readIds.has(item.id);
                         const style = getCategoryStyle(item.category);
