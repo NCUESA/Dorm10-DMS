@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Paperclip, Link as LinkIcon, Calendar, Users, Send as SendIcon } from 'lucide-react';
 
@@ -18,8 +18,6 @@ const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 const getPublicAttachmentUrl = (filePath) => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!supabaseUrl || !filePath) return '#';
-
-    // return `${supabaseUrl}/storage/v1/object/public/attachments/${filePath}`;
     return `${filePath}`;
 };
 
@@ -37,14 +35,21 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
         };
     }, [isOpen]);
 
-    const tableStyles = `
-        <style>
-            .prose table { width: 100%; border-collapse: collapse; margin-top: 1.5em; margin-bottom: 1.5em; font-size: 0.9em; border: 1px solid #dee2e6; }
-            .prose th, .prose td { border: 1px solid #dee2e6; padding: 0.75rem 1rem; text-align: left; vertical-align: top; }
-            .prose th { background-color: #f8f9fa; font-weight: 600; color: #495057; }
-            .prose tr:nth-of-type(even) { background-color: #f8f9fa; }
-        </style>
-    `;
+    const parsedUrls = useMemo(() => {
+        if (!announcement?.external_urls) return [];
+        try {
+            const parsed = JSON.parse(announcement.external_urls);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(item => item.url && typeof item.url === 'string');
+            }
+        } catch (e) {
+            if (typeof announcement.external_urls === 'string' && announcement.external_urls.startsWith('http')) {
+                return [{ url: announcement.external_urls }];
+            }
+        }
+        return [];
+    }, [announcement]);
+
 
     if (!announcement) return null;
 
@@ -52,7 +57,7 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
         ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
         : '未指定';
 
-    const finalContent = tableStyles + (announcement.full_content || announcement.summary || '無詳細內容');
+    const finalContent = announcement.full_content || announcement.summary || '無詳細內容';
 
     return (
         <AnimatePresence>
@@ -111,7 +116,8 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
 
                             <div>
                                 <h3 className="text-base font-semibold text-indigo-700 border-l-4 border-indigo-500 pl-3 mb-3">詳細內容</h3>
-                                <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: finalContent }} />
+                                <div className="rich-text-content"
+                                    dangerouslySetInnerHTML={{ __html: finalContent }} />
                             </div>
 
                             {announcement.attachments?.length > 0 && (
@@ -133,14 +139,18 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                 </div>
                             )}
 
-                            {announcement.external_urls && (
+                            {parsedUrls.length > 0 && (
                                 <div>
                                     <h3 className="text-base font-semibold text-indigo-700 border-l-4 border-indigo-500 pl-3 mb-3">外部連結</h3>
-                                    <a href={announcement.external_urls} target="_blank" rel="noopener noreferrer"
-                                        className="group flex items-center gap-3 text-blue-600 hover:text-blue-800 font-semibold transition-colors">
-                                        <LinkIcon className="h-4 w-4 transform group-hover:rotate-[-45deg] transition-transform" />
-                                        <span className="break-all group-hover:underline">{announcement.external_urls}</span>
-                                    </a>
+                                    <div className="space-y-2">
+                                        {parsedUrls.map((item, index) => (
+                                            <a key={index} href={item.url} target="_blank" rel="noopener noreferrer"
+                                                className="group flex items-center gap-3 text-blue-600 hover:text-blue-800 font-semibold transition-colors">
+                                                <LinkIcon className="h-4 w-4 transform group-hover:rotate-[-45deg] transition-transform flex-shrink-0" />
+                                                <span className="break-all group-hover:underline">{item.url}</span>
+                                            </a>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

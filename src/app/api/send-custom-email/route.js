@@ -124,7 +124,7 @@ export async function POST(request) {
         const mailOptions = {
             from: '"彰師校外獎學金平台" <noreply@ncuesa.org.tw>',
             to: email,
-            subject: `校外獎學金通知】${subject}`,
+            subject: `${subject}`,
             html: finalHtmlContent, // 使用產生好的 HTML
             text: plainTextBody      // 使用原始的純文字作為備用
         };

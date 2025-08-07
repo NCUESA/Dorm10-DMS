@@ -55,7 +55,7 @@ function AnnouncementListContent() {
 
     const fetchAnnouncementsList = useCallback(async () => {
         setSortLoading(true);
-        let query = supabase.from('announcements').select('*, attachments(*)', { count: 'exact' });
+        let query = supabase.from('announcements').select('*, attachments(*)', { count: 'exact' }).eq('is_active', true);
 
         if (search) query = query.or(`title.ilike.%${search}%,target_audience.ilike.%${search}%,application_limitations.ilike.%${search}%`);
 

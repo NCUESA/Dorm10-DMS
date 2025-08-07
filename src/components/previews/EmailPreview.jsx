@@ -1,5 +1,3 @@
-// src/components/previews/EmailPreview.jsx
-
 import React from 'react';
 
 const EmailPreview = ({ announcement }) => {
@@ -9,6 +7,43 @@ const EmailPreview = ({ announcement }) => {
 
     const platformUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/?announcement_id=${announcement.id}`;
     const currentYear = new Date().getFullYear();
+    
+    const parseUrls = (urlsString) => {
+        if (!urlsString) return [];
+        try {
+            const parsed = JSON.parse(urlsString);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(item => item.url && typeof item.url === 'string');
+            }
+        } catch (e) {
+            if (typeof urlsString === 'string' && urlsString.startsWith('http')) {
+                return [{ url: urlsString }];
+            }
+        }
+        return [];
+    };
+
+    const externalUrls = parseUrls(announcement.external_urls);
+
+    const renderExternalUrls = () => {
+        if (externalUrls.length === 0) return '';
+
+        const linksHtml = externalUrls.map(item => 
+            `<li style="margin-bottom: 8px;">
+                <a href="${item.url}" target="_blank" style="color: #7c3aed; text-decoration: none; word-break: break-all;">${item.url}</a>
+            </li>`
+        ).join('');
+
+        return `
+            <hr class="divider" />
+            <div>
+                <h3 class="rich-text-h3">相關連結</h3>
+                <ul style="list-style-type: none; padding-left: 0; margin-top: 8px;">
+                    ${linksHtml}
+                </ul>
+            </div>
+        `;
+    };
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -33,33 +68,18 @@ const EmailPreview = ({ announcement }) => {
             .details-table td.value { color: #1f2937; }
             .deadline { color: #9333ea; font-weight: 700; }
             .divider { border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0; }
-            .prose { font-size: 16px; line-height: 1.7; color: #374151; }
-            .prose h3 { font-size: 18px; color: #1f2937; margin-top: 24px; margin-bottom: 12px; }
-            .prose p { margin: 0 0 16px; }
-
-            /* --- 表格樣式 --- */
-            .prose table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-                font-size: 14px;
-                border: 1px solid #dee2e6;
-            }
-            .prose th, .prose td {
-                border: 1px solid #dee2e6;
-                padding: 12px 15px;
-                text-align: left;
-                vertical-align: top;
-            }
-            .prose th {
-                background-color: #f8f9fa;
-                font-weight: 600;
-                color: #495057;
-            }
-            .prose tr:nth-of-type(even) {
-                background-color: #f8f9fa;
-            }
-
+            .rich-text-content { font-size: 16px; line-height: 1.7; color: #374151; }
+            .rich-text-content p { margin: 0 0 16px; }
+            .rich-text-content h1, .rich-text-content h2, .rich-text-h3 { font-weight: 700; color: #1f2937; margin-top: 24px; margin-bottom: 12px; }
+            .rich-text-content h1 { font-size: 22px; }
+            .rich-text-content h2 { font-size: 20px; }
+            .rich-text-h3 { font-size: 18px; }
+            .rich-text-content ul, .rich-text-content ol { padding-left: 24px; margin-bottom: 16px; }
+            .rich-text-content li { margin-bottom: 8px; }
+            .rich-text-content table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; border: 1px solid #dee2e6; }
+            .rich-text-content th, .rich-text-content td { border: 1px solid #dee2e6; padding: 12px 15px; text-align: left; vertical-align: top; }
+            .rich-text-content th { background-color: #f8f9fa; font-weight: 600; color: #495057; }
+            .rich-text-content tr:nth-of-type(even) { background-color: #f8f9fa; }
             .cta-button { display: inline-block; background-color: #7c3aed; color: #ffffff !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 500; }
             .footer { padding: 24px 40px; font-size: 12px; text-align: center; color: #9ca3af; background-color: #f9fafb; }
             .footer a { color: #6b7280; text-decoration: none; }
@@ -70,11 +90,7 @@ const EmailPreview = ({ announcement }) => {
             <tr>
                 <td align="center" style="padding: 24px;">
                     <table class="container" border="0" cellpadding="0" cellspacing="0" width="100%">
-                        <!-- HEADER -->
-                        <tr>
-                            <td class="header"><h1>彰師校外獎學金資訊平台</h1></td>
-                        </tr>
-                        <!-- CONTENT -->
+                        <tr><td class="header"><h1>彰師校外獎學金資訊平台</h1></td></tr>
                         <tr>
                             <td class="content">
                                 <h2>${announcement.title}</h2>
@@ -85,20 +101,19 @@ const EmailPreview = ({ announcement }) => {
                                     ${announcement.submission_method ? `<tr><td class="label">送件方式</td><td class="value">${announcement.submission_method}</td></tr>` : ''}
                                 </table>
                                 <hr class="divider" />
-                                <div class="prose">
+                                <div class="rich-text-content">
                                     <h3>公告摘要</h3>
                                     ${announcement.summary || '<p>請至平台查看詳細內容。</p>'}
                                 </div>
-                                ${announcement.external_urls ? `<hr class="divider" /><div style="font-size: 14px; text-align: left;"><strong style="color: #6b7280;">相關連結：</strong> <a href="${announcement.external_urls}" target="_blank" style="color: #7c3aed;">${announcement.external_urls}</a></div>` : ''}
+                                ${renderExternalUrls()}
                                 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 32px;">
                                     <tr><td align="center"><a href="${platformUrl}" target="_blank" class="cta-button">前往平台查看完整資訊</a></td></tr>
                                 </table>
                             </td>
                         </tr>
-                        <!-- FOOTER -->
                         <tr>
                             <td class="footer">
-                                <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" target="_blank">校外獎學金資訊平台</a>  •  <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+                                <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" target="_blank">校外獎學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
                                 <p style="margin: 0 0 5px;">© ${currentYear} 彰師校外獎學金資訊平台. All Rights Reserved.</p>
                                 <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
                             </td>
