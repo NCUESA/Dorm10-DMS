@@ -4,7 +4,7 @@ import { verifyUserAuth, checkRateLimit, validateRequestData, logSuccessAction }
 
 // --- CORS 處理 ---
 const allowedOrigin = process.env.NODE_ENV === 'production'
-    ? process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_APP_URL
     : 'http://localhost:3000';
 
 const newCorsResponse = (body, status) => {
@@ -32,7 +32,7 @@ export async function OPTIONS(request) {
 // --- 郵件範本產生器 ---
 const generateEmailHtml = (subject, plainTextBody) => {
     const currentYear = new Date().getFullYear();
-    const platformUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     return `
     <!DOCTYPE html>

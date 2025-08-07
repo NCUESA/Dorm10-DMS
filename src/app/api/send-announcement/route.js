@@ -23,7 +23,7 @@ const generateAnnouncementEmailHtml = (announcement) => {
         ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })
         : '未指定';
 
-    const platformUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/?announcement_id=${announcement.id}`;
+    const platformUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?announcement_id=${announcement.id}`;
     const currentYear = new Date().getFullYear();
     const externalUrls = parseUrls(announcement.external_urls);
 

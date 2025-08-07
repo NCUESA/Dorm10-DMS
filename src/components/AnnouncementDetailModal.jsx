@@ -16,7 +16,14 @@ const categoryStyles = {
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 
 const getPublicAttachmentUrl = (filePath) => {
-    return filePath || '#';
+    if (!filePath) return '#';
+    // The key change: remove the "public/" prefix from the path so it becomes a correct, root-relative URL.
+    if (filePath.startsWith('public/')) {
+        return `/${filePath.substring(7)}`; // Removes 'public/' (7 characters)
+    }
+
+    // If the path is already correct (doesn't start with public/), return as is.
+    return filePath;
 };
 
 // --- Main Component ---

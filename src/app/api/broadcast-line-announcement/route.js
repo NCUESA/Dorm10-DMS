@@ -202,7 +202,7 @@ const buildFlexMessage = (announcement, platformUrl) => {
 
 // --- CORS Handling ---
 const allowedOrigin = process.env.NODE_ENV === 'production'
-    ? process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_APP_URL
     : 'http://localhost:3000';
 
 const newCorsResponse = (body, status) => {
@@ -255,9 +255,9 @@ export async function POST(request) {
         }
 
         // 5. Build LINE Flex Message from database fields
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        if (!process.env.NEXT_PUBLIC_SITE_URL) {
-            console.warn(`[WARNING] NEXT_PUBLIC_SITE_URL environment variable is not set. Using fallback "${siteUrl}".`);
+        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        if (!process.env.NEXT_PUBLIC_APP_URL) {
+            console.warn(`[WARNING] NEXT_PUBLIC_APP_URL environment variable is not set. Using fallback "${siteUrl}".`);
         }
         const platformUrl = `${siteUrl}/?announcement_id=${announcementId}`;
         
