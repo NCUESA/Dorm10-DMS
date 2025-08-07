@@ -120,7 +120,7 @@ const htmlToFlexComponents = (html) => {
     return components;
 };
 
-// **MODIFIED**: This function is now an exact replica of the preview's builder.
+// **MODIFIED**: The builder function now uses the correct parser for target_audience.
 const buildFlexMessage = (announcement, platformUrl) => {
     const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
     const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
@@ -128,7 +128,8 @@ const buildFlexMessage = (announcement, platformUrl) => {
     const categoryText = `分類 ${announcement.category || '未分類'}`;
     
     const summaryComponents = htmlToFlexComponents(announcement.summary);
-    const audienceSpans = htmlToFlexSpans(announcement.target_audience);
+    // **CRITICAL FIX**: Use the block-level component parser for target_audience as well.
+    const audienceComponents = htmlToFlexComponents(announcement.target_audience);
 
     return {
         type: 'flex',
@@ -171,11 +172,18 @@ const buildFlexMessage = (announcement, platformUrl) => {
                             },
                             {
                                 type: 'box',
-                                layout: 'baseline',
+                                layout: 'vertical', // Changed to vertical for better alignment of multi-line content
                                 spacing: 'sm',
                                 contents: [
-                                    { type: 'text', text: '適用對象', size: 'sm', color: '#94a3b8', flex: 0, weight: 'bold' },
-                                    { type: 'text', size: 'sm', color: '#334155', align: 'end', wrap: true, contents: audienceSpans },
+                                    { type: 'text', text: '適用對象', size: 'sm', color: '#94a3b8', weight: 'bold' },
+                                    // **CRITICAL FIX**: The content is now a box containing the parsed components.
+                                    { 
+                                        type: 'box', 
+                                        layout: 'vertical',
+                                        spacing: 'xs',
+                                        contents: audienceComponents,
+                                        margin: 'sm',
+                                    },
                                 ],
                             },
                         ],
@@ -230,20 +238,17 @@ export async function OPTIONS(request) {
 // --- Main POST Handler ---
 export async function POST(request) {
     try {
-        // 1. Rate limiting & 2. Admin Auth
         const rateLimitCheck = checkRateLimit(request, 'broadcast-line-announcement', 5, 60000);
         if (!rateLimitCheck.success) return newCorsResponse(rateLimitCheck.error, 429);
 
         const authCheck = await verifyUserAuth(request, { requireAuth: true, requireAdmin: true, endpoint: '/api/broadcast-line-announcement' });
         if (!authCheck.success) return authCheck.error;
 
-        // 3. Validate Request Data
         const body = await request.json();
         const dataValidation = validateRequestData(body, ['announcementId'], []);
         if (!dataValidation.success) return newCorsResponse(dataValidation.error, 400);
         const { announcementId } = dataValidation.data;
 
-        // 4. Fetch all necessary fields for the Flex Message
         const { data: announcement, error: annError } = await supabaseServer
             .from('announcements')
             .select('title, summary, category, application_start_date, application_end_date, target_audience')
@@ -254,7 +259,6 @@ export async function POST(request) {
             return newCorsResponse({ error: '找不到指定的公告' }, 404);
         }
 
-        // 5. Build LINE Flex Message from database fields
         const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         if (!process.env.NEXT_PUBLIC_APP_URL) {
             console.warn(`[WARNING] NEXT_PUBLIC_APP_URL environment variable is not set. Using fallback "${siteUrl}".`);
@@ -266,7 +270,6 @@ export async function POST(request) {
         
         console.log(`[LINE Broadcast] Built Flex Message for announcement ${announcementId}`);
 
-        // 6. Call LINE API
         const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
         if (!channelAccessToken) throw new Error('伺服器設定不完整：缺少 LINE Channel Access Token');
 
@@ -283,7 +286,6 @@ export async function POST(request) {
             throw new Error(`LINE API 錯誤: ${errorData.message} (詳情: ${details})`);
         }
 
-        // 7. Log Success
         logSuccessAction('LINE_BROADCAST_SENT', '/api/broadcast-line-announcement', {
             adminId: authCheck.user.id,
             announcementId,

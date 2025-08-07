@@ -99,7 +99,7 @@ function AnnouncementListContent() {
         if (!error) {
             const dataWithSemester = (data || []).map(item => ({ 
                 ...item, 
-                semester: calculateSemester(item?.application_deadline) 
+                semester: calculateSemester(item?.application_end_date) 
             }));
             setAnnouncements(dataWithSemester);
             setTotalCount(count || 0);

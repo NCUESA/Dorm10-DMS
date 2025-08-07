@@ -54,7 +54,7 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
             <div class="plain-text-body">${emailData.body.replace(/\n/g, '<br />') || '(預覽內文)'}</div>
         </td></tr>
         <tr><td class="footer">
-            <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" target="_blank">校外獎學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+            <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" target="_blank">校外獎學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
             <p style="margin: 0 0 5px;">© ${currentYear} 彰師校外獎學金資訊平台. All Rights Reserved.</p>
             <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
         </td></tr>
