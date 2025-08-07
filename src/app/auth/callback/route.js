@@ -6,7 +6,30 @@ export async function GET(request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
+  // 獲取正確的域名 (支援反向代理)
+  const getOrigin = () => {
+    // 檢查 X-Forwarded-Host 或 Host headers
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+    const host = request.headers.get('host');
+    
+    if (forwardedHost) {
+      return `${forwardedProto}://${forwardedHost}`;
+    }
+    
+    // 從環境變數取得
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+      return process.env.NEXT_PUBLIC_APP_URL;
+    }
+    
+    // fallback 到 request origin
+    return requestUrl.origin;
+  };
+
+  const origin = getOrigin();
+
   console.log(`[AUTH-CALLBACK] Request URL: ${requestUrl.href}`)
+  console.log(`[AUTH-CALLBACK] Detected Origin: ${origin}`)
   console.log(`[AUTH-CALLBACK] Code: ${code ? 'present' : 'missing'}`)
 
   if (code) {
@@ -39,7 +62,7 @@ export async function GET(request) {
       
       if (error) {
         console.error('[AUTH-CALLBACK] 驗證錯誤:', error)
-        return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`)
+        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`)
       }
 
       console.log(`[AUTH-CALLBACK] Session exchange successful`, { userId: data?.user?.id })
@@ -66,16 +89,16 @@ export async function GET(request) {
       }
 
       // 驗證成功，重定向到 profile 頁面
-      const redirectUrl = `${requestUrl.origin}/profile`
+      const redirectUrl = `${origin}/profile`
       console.log(`[AUTH-CALLBACK] Redirecting to: ${redirectUrl}`)
       return NextResponse.redirect(redirectUrl)
     } catch (err) {
       console.error('[AUTH-CALLBACK] 處理驗證回調時發生錯誤:', err)
-      return NextResponse.redirect(`${requestUrl.origin}/login?error=${encodeURIComponent('驗證過程中發生錯誤')}`)
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent('驗證過程中發生錯誤')}`)
     }
   }
 
   // 沒有驗證碼，重定向到登入頁面
   console.log(`[AUTH-CALLBACK] No code provided, redirecting to login`)
-  return NextResponse.redirect(`${requestUrl.origin}/login`)
+  return NextResponse.redirect(`${origin}/login`)
 }
