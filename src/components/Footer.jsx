@@ -117,7 +117,7 @@ export default function Footer() {
                 {/* 版權資訊 */}
                 <div className="border-t border-gray-700 mt-12 pt-8 text-center text-sm">
                     <p className="text-gray-400">
-                        © 2025 NCUE 獎助學金資訊平台. All Rights Reserved.
+                        © 2025 彰師校外獎學金資訊平台. All Rights Reserved.
                     </p>
                 </div>
             </div>
