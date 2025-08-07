@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-// ** CRITICAL FIX: Import the existing `supabaseServer` constant, not the non-existent function **
 import { supabaseServer } from '@/lib/supabase/server'; 
 import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware';
 
@@ -104,12 +103,10 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function POST(request) {
-    // ** CRITICAL FIX: No client creation needed here, as supabaseServer is already an instance **
     try {
         const rateLimitCheck = checkRateLimit(request, 'send-announcement', 5, 300000);
         if (!rateLimitCheck.success) return rateLimitCheck.error;
 
-        // The middleware will use the cookie-based auth, which should be configured correctly in your project
         const authCheck = await verifyUserAuth(request, {
             requireAuth: true,
             requireAdmin: true,

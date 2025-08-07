@@ -8,7 +8,7 @@ import { Search, ChevronsUpDown, ArrowUp, ArrowDown, Award, Loader2, ChevronsLef
 import Button from '@/components/ui/Button';
 import AnnouncementDetailModal from './AnnouncementDetailModal';
 
-// --- Helper Functions & Constants ---
+// --- Helper Functions & Components ---
 const categoryStyles = {
     A: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
     B: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' },
@@ -19,15 +19,35 @@ const categoryStyles = {
 };
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 
-const calculateSemester = (deadlineStr) => {
-    if (!deadlineStr) return 'N/A';
-    const deadline = new Date(deadlineStr);
-    const year = deadline.getFullYear();
-    const month = deadline.getMonth() + 1;
-    const academicYear = year - 1912 + Math.floor(month / 7);
-    const semester = (month >= 8 || month === 1) ? 1 : 2;
+const calculateSemester = (endDateStr) => {
+    if (!endDateStr) return '長期';
+    const endDate = new Date(endDateStr);
+    const year = endDate.getFullYear();
+    const month = endDate.getMonth() + 1;
+    const academicYear = month >= 8 ? year - 1911 : year - 1912;
+    const semester = month >= 2 && month <= 7 ? 2 : 1;
     return `${academicYear}-${semester}`;
 };
+
+const ApplicationLimitations = ({ limitations }) => {
+    if (limitations === 'N') {
+        return <span className="text-green-600">N</span>;
+    }
+    return <span className="text-red-600">Y</span>;
+};
+
+const DateDisplay = ({ item, className }) => {
+    const startDate = item.application_start_date;
+    const endDate = item.application_end_date;
+    const endDateFormatted = endDate ? new Date(endDate).toLocaleDateString('en-CA') : '無期限';
+
+    const dateString = startDate
+        ? `${new Date(startDate).toLocaleDateString('en-CA')} ~ ${endDateFormatted}`
+        : endDateFormatted;
+
+    return <div className={className}>{dateString}</div>;
+};
+
 
 // --- Main Component ---
 function AnnouncementListContent() {
@@ -41,7 +61,7 @@ function AnnouncementListContent() {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
-    const [sort, setSort] = useState({ column: 'application_deadline', ascending: false });
+    const [sort, setSort] = useState({ column: 'application_end_date', ascending: true });
 
     const [expandedId, setExpandedId] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -50,21 +70,26 @@ function AnnouncementListContent() {
     const isInitialLoad = useRef(true);
 
     const [readIds, setReadIds] = useState(new Set());
-    const [deepLinkedInfo, setDeepLinkedInfo] = useState(null);
-
 
     const fetchAnnouncementsList = useCallback(async () => {
         setSortLoading(true);
         let query = supabase.from('announcements').select('*, attachments(*)', { count: 'exact' }).eq('is_active', true);
 
-        if (search) query = query.or(`title.ilike.%${search}%,target_audience.ilike.%${search}%,application_limitations.ilike.%${search}%`);
+        if (search) {
+            query = query.or(`title.ilike.%${search}%,summary.ilike.%${search}%,target_audience.ilike.%${search}%`);
+        }
 
         const today = new Date().toISOString().slice(0, 10);
-        if (filter === 'open') query = query.gte('application_deadline', today);
-        else if (filter === 'expired') query = query.lt('application_deadline', today);
 
-        const orderColumn = sort.column === 'semester' ? 'application_deadline' : sort.column;
-        query = query.order(orderColumn, { ascending: sort.ascending });
+        if (filter === 'open') {
+            query = query.or(`application_end_date.gte.${today},application_end_date.is.null`);
+        } else if (filter === 'expired') {
+            query = query.lt('application_end_date', today);
+        }
+
+        const orderColumn = sort.column === 'semester' ? 'application_end_date' : sort.column;
+        const sortOptions = { ascending: sort.ascending, nullsFirst: false };
+        query = query.order(orderColumn, sortOptions);
 
         const from = (page - 1) * rowsPerPage;
         const to = from + rowsPerPage - 1;
@@ -72,10 +97,12 @@ function AnnouncementListContent() {
 
         const { data, error, count } = await query;
         if (!error) {
-            const dataWithSemester = (data || []).map(item => ({ ...item, semester: calculateSemester(item.application_deadline) }));
+            const dataWithSemester = (data || []).map(item => ({ ...item, semester: calculateSemester(item.application_end_date) }));
             setAnnouncements(dataWithSemester);
             setTotalCount(count || 0);
-        } else console.error("Error fetching announcements:", error);
+        } else {
+            console.error("Error fetching announcements:", error);
+        }
 
         setSortLoading(false);
     }, [search, filter, page, rowsPerPage, sort]);
@@ -91,6 +118,9 @@ function AnnouncementListContent() {
             const announcementIdFromUrl = searchParams.get('announcement_id');
 
             if (announcementIdFromUrl) {
+                setFilter('all');
+                setExpandedId(announcementIdFromUrl);
+
                 const { data: targetAnnouncement, error } = await supabase
                     .from('announcements')
                     .select('*, attachments(*)')
@@ -98,20 +128,8 @@ function AnnouncementListContent() {
                     .single();
 
                 if (targetAnnouncement && !error) {
+                    // Open the modal immediately.
                     handleOpenDetailModal(targetAnnouncement);
-
-                    const { data: allIds, error: idsError } = await supabase
-                        .from('announcements')
-                        .select('id')
-                        .order(sort.column, { ascending: sort.ascending });
-
-                    if (allIds && !idsError) {
-                        const index = allIds.findIndex(item => item.id === announcementIdFromUrl);
-                        if (index !== -1) {
-                            const targetPage = Math.floor(index / rowsPerPage) + 1;
-                            setDeepLinkedInfo({ page: targetPage, filter: 'all' });
-                        }
-                    }
                 } else {
                     console.error("Could not fetch announcement from URL parameter:", error);
                 }
@@ -121,23 +139,20 @@ function AnnouncementListContent() {
             isInitialLoad.current = false;
         };
         initialFetch();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
-        if (deepLinkedInfo && announcements.length > 0) {
-            const announcementIdFromUrl = searchParams.get('announcement_id');
-            if (announcementIdFromUrl) {
-                const targetElement = announcementRefs.current[announcementIdFromUrl];
-                if (targetElement) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                    });
-                }
+        const announcementIdFromUrl = searchParams.get('announcement_id');
+        if (announcementIdFromUrl && !isInitialLoad.current && announcements.length > 0) {
+            const targetElement = announcementRefs.current[announcementIdFromUrl];
+            if (targetElement) {
+                setTimeout(() => {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    router.replace('/', { shallow: true });
+                }, 300); // 300ms delay to accommodate rendering and animation.
             }
         }
-    }, [announcements, deepLinkedInfo, searchParams]);
+    }, [announcements]);
 
     const handleSort = (field) => {
         setSort(prev => ({ column: field, ascending: prev.column === field ? !prev.ascending : true }));
@@ -146,24 +161,35 @@ function AnnouncementListContent() {
 
     const handleOpenDetailModal = (announcement) => {
         setReadIds(prev => new Set(prev).add(announcement.id));
-        const announcementWithSemester = { ...announcement, semester: calculateSemester(announcement.application_deadline) };
+        const announcementWithSemester = { ...announcement, semester: calculateSemester(announcement.application_end_date) };
         setSelectedAnnouncement(announcementWithSemester);
         setIsDetailModalOpen(true);
     };
 
     const handleModalClose = () => {
         setIsDetailModalOpen(false);
-        if (deepLinkedInfo) {
-            setFilter(deepLinkedInfo.filter);
-            setPage(deepLinkedInfo.page);
-            setDeepLinkedInfo(null);
-            router.replace('/', undefined, { shallow: true });
+        const announcementIdFromUrl = searchParams.get('announcement_id');
+        if (announcementIdFromUrl) {
+            router.replace('/', { shallow: true });
         }
     };
 
     const renderSortIcon = (column) => {
         if (sort.column !== column) return <ChevronsUpDown className="h-4 w-4 ml-1 text-gray-400" />;
         return sort.ascending ? <ArrowUp className="h-4 w-4 ml-1 text-indigo-600" /> : <ArrowDown className="h-4 w-4 ml-1 text-indigo-600" />;
+    };
+
+    const getDateColorClass = (item) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = item.application_end_date ? new Date(item.application_end_date) : null;
+        const startDate = item.application_start_date ? new Date(item.application_start_date) : null;
+
+        if (endDate === null) return 'text-green-600';
+        if (endDate < today) return 'text-red-600';
+        if (startDate && startDate > today) return 'text-red-600';
+
+        return 'text-green-600';
     };
 
     const totalPages = Math.ceil(totalCount / rowsPerPage);
@@ -184,17 +210,17 @@ function AnnouncementListContent() {
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <div className="relative w-full md:max-w-md">
+                <div className="relative w-full md:w-auto md:flex-1 md:max-w-md">
                     <Search className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input type="text" placeholder="搜尋公告標題、摘要、適用對象..." value={search} onChange={e => setSearch(e.target.value)}
                         className="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-300
                                     focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
                     />
                 </div>
-                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
-                    <Button variant={filter === 'open' ? 'primary' : 'ghost'} onClick={() => { setFilter('open'); setPage(1); }}>開放申請中</Button>
-                    <Button variant={filter === 'all' ? 'primary' : 'ghost'} onClick={() => { setFilter('all'); setPage(1); }}>全部公告</Button>
-                    <Button variant={filter === 'expired' ? 'primary' : 'ghost'} onClick={() => { setFilter('expired'); setPage(1); }}>已過期</Button>
+                <div className="grid grid-cols-3 md:flex items-center gap-1 bg-slate-100 p-1 rounded-lg w-full md:w-auto">
+                    <Button variant={filter === 'open' ? 'primary' : 'ghost'} onClick={() => { setFilter('open'); setPage(1); }} className="w-full whitespace-nowrap">未逾期</Button>
+                    <Button variant={filter === 'all' ? 'primary' : 'ghost'} onClick={() => { setFilter('all'); setPage(1); }} className="w-full whitespace-nowrap">全部公告</Button>
+                    <Button variant={filter === 'expired' ? 'primary' : 'ghost'} onClick={() => { setFilter('expired'); setPage(1); }} className="w-full whitespace-nowrap">已逾期</Button>
                 </div>
             </div>
 
@@ -208,13 +234,12 @@ function AnnouncementListContent() {
                                 <th className="p-4 px-6 font-semibold text-gray-500 w-[25%]">獎助學金資料</th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 w-[35%]">適用對象</th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 w-[10%]">兼領限制</th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-[20%]" onClick={() => handleSort('application_deadline')}><div className="flex items-center">申請期限 / 送件方式 {renderSortIcon('application_deadline')}</div></th>
+                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-[20%]" onClick={() => handleSort('application_end_date')}><div className="flex items-center">申請期限 / 送件方式 {renderSortIcon('application_end_date')}</div></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (<tr><td colSpan="5" className="text-center p-16 text-gray-500"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />載入中...</td></tr>) : announcements.map(item => {
                                 const isRead = readIds.has(item.id);
-                                const isExpired = item.application_deadline && new Date(item.application_deadline) < new Date();
                                 return (
                                     <tr key={item.id} ref={el => (announcementRefs.current[item.id] = el)} onClick={() => handleOpenDetailModal(item)} className={`transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-2xl z-0 hover:z-10 hover:scale-[1.01] cursor-pointer ${isRead ? 'bg-gray-100 text-gray-500' : ''}`}>
                                         <td className="p-4 px-6 font-medium align-top">{item.semester}</td>
@@ -224,14 +249,12 @@ function AnnouncementListContent() {
                                                 <p className={`font-semibold ${isRead ? '' : 'text-gray-900'}`}>{item.title}</p>
                                             </div>
                                         </td>
-                                        <td className="p-4 px-6 text-sm align-top">{item.target_audience}</td>
+                                        <td className="p-4 px-6 text-sm align-top"><div className="line-clamp-3" dangerouslySetInnerHTML={{ __html: item.target_audience }} /></td>
                                         <td className="p-4 px-6 text-sm font-bold align-top">
-                                            {item.application_limitations === 'Y' ? <span className="text-red-600">Y</span> : <span className="text-green-600">N</span>}
+                                            <ApplicationLimitations limitations={item.application_limitations} />
                                         </td>
                                         <td className="p-4 px-6 text-sm align-top">
-                                            <div className={`font-bold ${isExpired ? 'text-red-600' : 'text-green-600'}`}>
-                                                {item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : 'N/A'}
-                                            </div>
+                                            <DateDisplay item={item} className={`font-bold ${getDateColorClass(item)}`} />
                                             <div className={`mt-1 ${isRead ? '' : 'text-slate-500'}`}>{item.submission_method}</div>
                                         </td>
                                     </tr>
@@ -245,7 +268,6 @@ function AnnouncementListContent() {
                     {loading ? (<div className="p-10 text-center text-gray-500"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />載入中...</div>) : announcements.map(item => {
                         const isExpanded = expandedId === item.id;
                         const isRead = readIds.has(item.id);
-                        const isExpired = item.application_deadline && new Date(item.application_deadline) < new Date();
                         const style = getCategoryStyle(item.category);
                         return (
                             <motion.div key={item.id} layout ref={el => (announcementRefs.current[item.id] = el)} className={`rounded-lg transition-all duration-300 border ${isExpanded ? 'shadow-xl ring-2 ring-indigo-400' : 'shadow-md border-gray-200/60'} ${isRead ? 'bg-gray-100 text-gray-500' : 'bg-white'}`}>
@@ -264,10 +286,16 @@ function AnnouncementListContent() {
                                 <AnimatePresence>{isExpanded && (
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="overflow-hidden">
                                         <div className="pt-2 pb-4 px-4 border-t border-gray-200 space-y-3 text-sm">
-                                            <div><div className="font-semibold text-gray-500 mb-1">申請截止</div><div className={`font-bold ${isExpired ? 'text-red-600' : 'text-green-600'}`}>{item.application_deadline ? new Date(item.application_deadline).toLocaleDateString('en-CA') : 'N/A'}</div></div>
-                                            <div><div className="font-semibold text-gray-500 mb-1">適用對象</div><p className="text-gray-700">{item.target_audience}</p></div>
-                                            <div><div className="font-semibold text-gray-500 mb-1">兼領限制</div>{item.application_limitations === 'Y' ? <p className="font-bold text-red-600">Y</p> : <p className="font-bold text-green-600">N</p>}</div>
-                                            <div className="pt-2"><Button size="sm" onClick={() => handleOpenDetailModal(item)}>查看詳細內容</Button></div>
+                                            <div>
+                                                <div className="font-semibold text-gray-500 mb-1">申請期限</div>
+                                                <DateDisplay item={item} className={`font-bold ${getDateColorClass(item)}`} />
+                                            </div>
+                                            <div><div className="font-semibold text-gray-500 mb-1">適用對象</div><div className="line-clamp-3 text-gray-700" dangerouslySetInnerHTML={{ __html: item.target_audience }} /></div>
+                                            <div>
+                                                <div className="font-semibold text-gray-500 mb-1">兼領限制</div>
+                                                <div className="font-bold"><ApplicationLimitations limitations={item.application_limitations} /></div>
+                                            </div>
+                                            <div className="pt-2 flex justify-end"><Button size="sm" onClick={() => handleOpenDetailModal(item)}>查看詳細內容</Button></div>
                                         </div>
                                     </motion.div>
                                 )}</AnimatePresence>

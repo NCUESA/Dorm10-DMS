@@ -4,17 +4,131 @@ import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, lo
 
 const LINE_BROADCAST_URL = 'https://api.line.me/v2/bot/message/broadcast';
 
-// --- Helper Functions ---
+// --- Helper Functions (Copied EXACTLY from the latest LinePreview.jsx) ---
 
 const htmlToPlainText = (html) => {
     if (!html) return '';
-    return html.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+    return html.replace(/<[^>]*>?/gm, ' ').replace(/(\r\n|\n|\r)/gm, "").replace(/\s+/g, ' ').trim();
 };
 
+const htmlToFlexSpans = (html) => {
+    if (!html) return [{ type: 'span', text: '' }];
+
+    const spans = [];
+    const spanRegex = /<span[^>]*style="[^"]*color:\s*([^;"]+)[^"]*"[^>]*>(.*?)<\/span>/gs;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = spanRegex.exec(html)) !== null) {
+        if (match.index > lastIndex) {
+            const text = htmlToPlainText(html.substring(lastIndex, match.index));
+            if (text) spans.push({ type: 'span', text: text });
+        }
+        
+        const color = match[1].trim();
+        const content = htmlToPlainText(match[2]);
+        if (content) {
+            spans.push({
+                type: 'span',
+                text: content,
+                color: color,
+                weight: 'bold',
+            });
+        }
+        
+        lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < html.length) {
+        const text = htmlToPlainText(html.substring(lastIndex));
+        if (text) spans.push({ type: 'span', text: text });
+    }
+
+    return spans.length > 0 ? spans : [{ type: 'span', text: htmlToPlainText(html) }];
+};
+
+const htmlToFlexComponents = (html) => {
+    if (!html) return [];
+
+    const components = [];
+    const elementRegex = /<(h4|p|ul|ol|table)[\s\S]*?>(.*?)<\/\1>/gs;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = elementRegex.exec(html)) !== null) {
+        if (match.index > lastIndex) {
+            const textContent = html.substring(lastIndex, match.index);
+            if (htmlToPlainText(textContent)) {
+                components.push({ type: 'text', contents: htmlToFlexSpans(textContent), wrap: true, size: 'sm', margin: 'md' });
+            }
+        }
+        
+        const [fullMatch, tagName, innerHtml] = match;
+        const plainText = (text) => text.replace(/<[^>]*>?/gm, '').trim();
+
+        switch (tagName) {
+            case 'h4':
+                components.push({ type: 'text', text: plainText(innerHtml), weight: 'bold', size: 'md', margin: 'lg', color: '#6D28D9' });
+                break;
+            case 'p':
+                components.push({ type: 'text', contents: htmlToFlexSpans(innerHtml), wrap: true, size: 'sm', margin: 'md' });
+                break;
+            case 'ul':
+            case 'ol':
+                const items = innerHtml.match(/<li.*?>(.*?)<\/li>/gs) || [];
+                items.forEach(item => {
+                    components.push({
+                        type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs',
+                        contents: [
+                            { type: 'text', text: '•', flex: 0, color: '#9ca3af', margin: 'xs' },
+                            { type: 'text', contents: htmlToFlexSpans(item), wrap: true, size: 'sm', flex: 1 }
+                        ]
+                    });
+                });
+                break;
+            case 'table':
+                const rows = innerHtml.match(/<tr.*?>(.*?)<\/tr>/gs) || [];
+                rows.forEach(row => {
+                    const cells = row.match(/<td.*?>(.*?)<\/td>/gs) || [];
+                    if (cells.length > 0) {
+                        components.push({
+                            type: 'box', layout: 'horizontal', margin: 'sm', spacing: 'md',
+                            contents: cells.map(cell => ({
+                                type: 'text', 
+                                contents: htmlToFlexSpans(cell), 
+                                wrap: true, 
+                                size: 'sm', 
+                                flex: 1, 
+                                margin: 'xs'
+                            }))
+                        });
+                    }
+                });
+                break;
+            default: break;
+        }
+        lastIndex = match.index + fullMatch.length;
+    }
+
+    if (lastIndex < html.length) {
+        const textContent = html.substring(lastIndex);
+        if (htmlToPlainText(textContent)) {
+            components.push({ type: 'text', contents: htmlToFlexSpans(textContent), wrap: true, size: 'sm', margin: 'md' });
+        }
+    }
+
+    return components;
+};
+
+// **MODIFIED**: This function is now an exact replica of the preview's builder.
 const buildFlexMessage = (announcement, platformUrl) => {
-    const deadline = announcement.application_deadline ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW') : '未指定';
-    const summaryText = htmlToPlainText(announcement.summary).substring(0, 80) + (htmlToPlainText(announcement.summary).length > 80 ? '...' : '');
-    const audienceText = htmlToPlainText(announcement.target_audience) || '所有學生';
+    const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
+    const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
+    const dateString = startDate ? `${startDate} ~ ${endDate}` : endDate;
+    const categoryText = `分類 ${announcement.category || '未分類'}`;
+    
+    const summaryComponents = htmlToFlexComponents(announcement.summary);
+    const audienceSpans = htmlToFlexSpans(announcement.target_audience);
 
     return {
         type: 'flex',
@@ -24,79 +138,67 @@ const buildFlexMessage = (announcement, platformUrl) => {
             header: {
                 type: 'box',
                 layout: 'vertical',
-                contents: [{
-                    type: 'text',
-                    text: `【${announcement.title}】`,
-                    weight: 'bold',
-                    size: 'lg',
-                    wrap: true,
-                    color: '#1E3A8A' // Dark Blue
-                }]
+                paddingAll: '20px',
+                backgroundColor: '#A78BFA',
+                spacing: 'md',
+                contents: [
+                    { type: 'text', text: categoryText, color: '#EDE9FE', size: 'sm' },
+                    { type: 'text', text: announcement.title || '無標題', color: '#FFFFFF', size: 'lg', weight: 'bold', wrap: true },
+                ],
             },
             body: {
                 type: 'box',
                 layout: 'vertical',
-                spacing: 'md',
+                paddingAll: '20px',
+                spacing: 'xl',
                 contents: [
-                    {
-                        type: 'text',
-                        text: summaryText,
-                        wrap: true,
-                        size: 'sm',
-                        color: '#374151' // Gray
-                    },
-                    {
-                        type: 'separator',
-                        margin: 'lg'
-                    },
+                    ...summaryComponents,
+                    { type: 'separator', margin: 'xl' },
                     {
                         type: 'box',
                         layout: 'vertical',
                         margin: 'lg',
-                        spacing: 'sm',
+                        spacing: 'md',
                         contents: [
                             {
                                 type: 'box',
                                 layout: 'baseline',
                                 spacing: 'sm',
                                 contents: [
-                                    { type: 'text', text: '申請截止', size: 'sm', color: '#6B7280', flex: 3 },
-                                    { type: 'text', text: deadline, size: 'sm', color: '#111827', flex: 5, weight: 'bold' }
-                                ]
+                                    { type: 'text', text: '申請期間', size: 'sm', color: '#94a3b8', flex: 0, weight: 'bold' },
+                                    { type: 'text', text: dateString, size: 'sm', color: '#334155', align: 'end', wrap: true },
+                                ],
                             },
                             {
                                 type: 'box',
                                 layout: 'baseline',
                                 spacing: 'sm',
                                 contents: [
-                                    { type: 'text', text: '適用對象', size: 'sm', color: '#6B7280', flex: 3 },
-                                    { type: 'text', text: audienceText, size: 'sm', color: '#111827', flex: 5, wrap: true }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+                                    { type: 'text', text: '適用對象', size: 'sm', color: '#94a3b8', flex: 0, weight: 'bold' },
+                                    { type: 'text', size: 'sm', color: '#334155', align: 'end', wrap: true, contents: audienceSpans },
+                                ],
+                            },
+                        ],
+                    },
+                ],
             },
             footer: {
                 type: 'box',
                 layout: 'vertical',
-                spacing: 'sm',
-                contents: [{
-                    type: 'button',
-                    style: 'primary',
-                    height: 'sm',
-                    color: '#3B82F6', // Blue
-                    action: {
-                        type: 'uri',
-                        label: '查看更多資訊',
-                        uri: platformUrl
-                    }
-                }]
-            }
+                paddingAll: '20px',
+                backgroundColor: '#f8fafc',
+                contents: [
+                    {
+                        type: 'button',
+                        style: 'primary',
+                        color: '#8B5CF6',
+                        action: { type: 'uri', label: '查看更多資訊', uri: platformUrl },
+                    },
+                ],
+            },
         }
     };
 };
-
 
 // --- CORS Handling ---
 const allowedOrigin = process.env.NODE_ENV === 'production'
@@ -141,27 +243,28 @@ export async function POST(request) {
         if (!dataValidation.success) return newCorsResponse(dataValidation.error, 400);
         const { announcementId } = dataValidation.data;
 
-        // 4. Fetch Announcement
+        // 4. Fetch all necessary fields for the Flex Message
         const { data: announcement, error: annError } = await supabaseServer
             .from('announcements')
-            .select('title, summary, application_deadline, target_audience') // Select only needed fields
+            .select('title, summary, category, application_start_date, application_end_date, target_audience')
             .eq('id', announcementId)
             .single();
         if (annError || !announcement) {
+            console.error('Supabase fetch error:', annError);
             return newCorsResponse({ error: '找不到指定的公告' }, 404);
         }
 
-        // 5. Build LINE Message from database fields
+        // 5. Build LINE Flex Message from database fields
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
         if (!process.env.NEXT_PUBLIC_SITE_URL) {
             console.warn(`[WARNING] NEXT_PUBLIC_SITE_URL environment variable is not set. Using fallback "${siteUrl}".`);
         }
         const platformUrl = `${siteUrl}/?announcement_id=${announcementId}`;
-
+        
         const flexMessage = buildFlexMessage(announcement, platformUrl);
         const lineMessages = [flexMessage];
         
-        console.log(`[LINE Broadcast] Manually built Flex Message for announcement ${announcementId}`);
+        console.log(`[LINE Broadcast] Built Flex Message for announcement ${announcementId}`);
 
         // 6. Call LINE API
         const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;

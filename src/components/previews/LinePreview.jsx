@@ -1,73 +1,279 @@
-// src/components/previews/LinePreview.jsx
 import React from 'react';
-import { Smartphone } from 'lucide-react';
 
-// --- Helper Components for rendering Flex Message ---
+// --- Helper Functions & Components ---
 
-// 轉換 LINE 的樣式屬性為 Tailwind CSS
+const htmlToPlainText = (html) => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>?/gm, ' ').replace(/(\r\n|\n|\r)/gm, "").replace(/\s+/g, ' ').trim();
+};
+
+// **MODIFIED**: A robust, iterative parser for HTML spans. This is the core of the fix.
+const htmlToFlexSpans = (html) => {
+    if (!html) return [{ type: 'span', text: '' }];
+
+    const spans = [];
+    // Regex to find <span> tags with a color style. It captures the color and the content.
+    const spanRegex = /<span[^>]*style="[^"]*color:\s*([^;"]+)[^"]*"[^>]*>(.*?)<\/span>/gs;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = spanRegex.exec(html)) !== null) {
+        // 1. Add any plain text that appeared before this styled span.
+        if (match.index > lastIndex) {
+            const text = htmlToPlainText(html.substring(lastIndex, match.index));
+            if (text) spans.push({ type: 'span', text: text });
+        }
+        
+        // 2. Add the styled span itself.
+        const color = match[1].trim();
+        const content = htmlToPlainText(match[2]);
+        if (content) {
+            spans.push({
+                type: 'span',
+                text: content,
+                color: color,
+                weight: 'bold', // Assume colored text is always bold.
+            });
+        }
+        
+        // 3. Update the position for the next search.
+        lastIndex = match.index + match[0].length;
+    }
+
+    // 4. Add any remaining plain text after the last styled span.
+    if (lastIndex < html.length) {
+        const text = htmlToPlainText(html.substring(lastIndex));
+        if (text) spans.push({ type: 'span', text: text });
+    }
+
+    // If the HTML had no spans at all, return the plain text version.
+    return spans.length > 0 ? spans : [{ type: 'span', text: htmlToPlainText(html) }];
+};
+
+
+// **MODIFIED**: This function now correctly passes the full inner HTML to the span parser.
+const htmlToFlexComponents = (html) => {
+    if (!html) return [];
+
+    const components = [];
+    const elementRegex = /<(h4|p|ul|ol|table)[\s\S]*?>(.*?)<\/\1>/gs;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = elementRegex.exec(html)) !== null) {
+        if (match.index > lastIndex) {
+            const textContent = html.substring(lastIndex, match.index);
+            if (htmlToPlainText(textContent)) {
+                components.push({ type: 'text', contents: htmlToFlexSpans(textContent), wrap: true, size: 'sm', margin: 'md' });
+            }
+        }
+        
+        const [fullMatch, tagName, innerHtml] = match;
+        const plainText = (text) => text.replace(/<[^>]*>?/gm, '').trim();
+
+        switch (tagName) {
+            case 'h4':
+                components.push({ type: 'text', text: plainText(innerHtml), weight: 'bold', size: 'md', margin: 'lg', color: '#6D28D9' });
+                break;
+            case 'p':
+                // Pass the inner HTML to the span parser
+                components.push({ type: 'text', contents: htmlToFlexSpans(innerHtml), wrap: true, size: 'sm', margin: 'md' });
+                break;
+            case 'ul':
+            case 'ol':
+                const items = innerHtml.match(/<li.*?>(.*?)<\/li>/gs) || [];
+                items.forEach(item => {
+                    components.push({
+                        type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs',
+                        contents: [
+                            { type: 'text', text: '•', flex: 0, color: '#9ca3af', margin: 'xs' },
+                            // Pass the inner HTML of the <li> to the span parser
+                            { type: 'text', contents: htmlToFlexSpans(item), wrap: true, size: 'sm', flex: 1 }
+                        ]
+                    });
+                });
+                break;
+            case 'table':
+                const rows = innerHtml.match(/<tr.*?>(.*?)<\/tr>/gs) || [];
+                rows.forEach(row => {
+                    const cells = row.match(/<td.*?>(.*?)<\/td>/gs) || [];
+                    if (cells.length > 0) {
+                        components.push({
+                            type: 'box', layout: 'horizontal', margin: 'sm', spacing: 'md',
+                            contents: cells.map(cell => ({
+                                type: 'text', 
+                                // Pass the inner HTML of the <td> to the span parser
+                                contents: htmlToFlexSpans(cell), 
+                                wrap: true, 
+                                size: 'sm', 
+                                flex: 1, 
+                                margin: 'xs'
+                            }))
+                        });
+                    }
+                });
+                break;
+            default: break;
+        }
+        lastIndex = match.index + fullMatch.length;
+    }
+
+    if (lastIndex < html.length) {
+        const textContent = html.substring(lastIndex);
+        if (htmlToPlainText(textContent)) {
+            components.push({ type: 'text', contents: htmlToFlexSpans(textContent), wrap: true, size: 'sm', margin: 'md' });
+        }
+    }
+
+    return components;
+};
+
+
+const buildFlexMessageForPreview = (announcement) => {
+    if (!announcement) return null;
+
+    const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
+    const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
+    const dateString = startDate ? `${startDate} ~ ${endDate}` : endDate;
+    const categoryText = `分類 ${announcement.category || '未分類'}`;
+    
+    const summaryComponents = htmlToFlexComponents(announcement.summary);
+    const audienceSpans = htmlToFlexSpans(announcement.target_audience);
+
+    return {
+        type: 'bubble',
+        header: {
+            type: 'box',
+            layout: 'vertical',
+            paddingAll: '20px',
+            backgroundColor: '#A78BFA',
+            spacing: 'md',
+            contents: [
+                { type: 'text', text: categoryText, color: '#EDE9FE', size: 'sm' },
+                { type: 'text', text: announcement.title || '無標題', color: '#FFFFFF', size: 'lg', weight: 'bold', wrap: true },
+            ],
+        },
+        body: {
+            type: 'box',
+            layout: 'vertical',
+            paddingAll: '20px',
+            spacing: 'xl',
+            contents: [
+                ...summaryComponents,
+                { type: 'separator', margin: 'xl' },
+                {
+                    type: 'box',
+                    layout: 'vertical',
+                    margin: 'lg',
+                    spacing: 'md',
+                    contents: [
+                        {
+                            type: 'box',
+                            layout: 'baseline',
+                            spacing: 'sm',
+                            contents: [
+                                { type: 'text', text: '申請期間', size: 'sm', color: '#94a3b8', flex: 0, weight: 'bold' },
+                                { type: 'text', text: dateString, size: 'sm', color: '#334155', align: 'end', wrap: true },
+                            ],
+                        },
+                        {
+                            type: 'box',
+                            layout: 'baseline',
+                            spacing: 'sm',
+                            contents: [
+                                { type: 'text', text: '適用對象', size: 'sm', color: '#94a3b8', flex: 0, weight: 'bold' },
+                                { type: 'text', size: 'sm', color: '#334155', align: 'end', wrap: true, contents: audienceSpans },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+        footer: {
+            type: 'box',
+            layout: 'vertical',
+            paddingAll: '20px',
+            backgroundColor: '#f8fafc',
+            contents: [
+                {
+                    type: 'button',
+                    style: 'primary',
+                    color: '#8B5CF6',
+                    action: { type: 'uri', label: '查看更多資訊', uri: '#' },
+                },
+            ],
+        },
+    };
+};
+
+// --- Flex Message Rendering Components ---
 const mapStyleToProps = (props = {}) => {
     const styles = [];
     if (props.size) {
-        const sizeMap = { 'xs': 'text-xs', 'sm': 'text-sm', 'md': 'text-base', 'lg': 'text-lg', 'xl': 'text-xl' };
+        const sizeMap = { 'xxs': 'text-[10px]', 'xs': 'text-xs', 'sm': 'text-sm', 'md': 'text-base', 'lg': 'text-lg', 'xl': 'text-xl', 'xxl': 'text-2xl' };
         styles.push(sizeMap[props.size] || 'text-sm');
     }
     if (props.weight === 'bold') styles.push('font-bold');
-    if (props.color) styles.push(`[color:${props.color}]`); // 使用任意值語法
+    if (props.color) styles.push(`[color:${props.color}]`);
     if (props.align) {
         const alignMap = { 'start': 'text-left', 'center': 'text-center', 'end': 'text-right' };
         styles.push(alignMap[props.align]);
     }
     if (props.margin) {
-        const marginMap = { 'xs': 'mt-1', 'sm': 'mt-2', 'md': 'mt-4', 'lg': 'mt-6', 'xl': 'mt-8' };
+        const marginMap = { 'none': 'mt-0', 'xs': 'mt-1', 'sm': 'mt-2', 'md': 'mt-4', 'lg': 'mt-6', 'xl': 'mt-8' };
         styles.push(marginMap[props.margin]);
     }
+    if (props.flex === 0) styles.push('flex-initial');
+    else if (props.flex) styles.push(`flex-[${props.flex}]`);
+    else styles.push('flex-1');
     return styles.join(' ');
 };
 
-const FlexText = ({ component }) => (
-    <p className={`${mapStyleToProps(component)} ${component.wrap ? 'whitespace-pre-wrap break-words' : 'truncate'}`}>
-        {component.text}
-    </p>
-);
-
-const FlexButton = ({ component }) => {
-    const styleMap = {
-        primary: 'bg-blue-500 text-white',
-        secondary: 'bg-gray-200 text-black',
-        link: 'bg-transparent text-blue-500'
-    };
+const FlexText = ({ component }) => {
+    if (component.contents && Array.isArray(component.contents)) {
+        return (
+            <div className={`${mapStyleToProps(component)} ${component.wrap ? 'whitespace-pre-wrap break-words' : 'leading-snug'}`}>
+                {component.contents.map((span, index) => (
+                    <span key={index} className={`${mapStyleToProps(span)}`}>{span.text}</span>
+                ))}
+            </div>
+        );
+    }
     return (
-        <div className={`w-full rounded-md text-center p-2 font-bold ${styleMap[component.style] || styleMap.primary} ${mapStyleToProps(component)}`}>
-            {component.action.label}
-        </div>
+        <p className={`${mapStyleToProps(component)} ${component.wrap ? 'whitespace-pre-wrap break-words' : 'leading-snug'}`}>
+            {component.text}
+        </p>
     );
 };
 
-// 這是核心的遞迴渲染組件
+const FlexButton = ({ component }) => (
+    <div className={`w-full rounded-lg text-center py-3 px-3 font-bold text-white ${mapStyleToProps(component)}`} style={{ backgroundColor: component.color || '#8B5CF6' }}>
+        {component.action.label}
+    </div>
+);
+
+const FlexSeparator = ({ component }) => (
+    <div className={`w-full h-px bg-gray-200/80 ${mapStyleToProps(component)}`}></div>
+);
+
 const FlexContent = ({ component }) => {
     if (!component) return null;
     switch (component.type) {
-        case 'box':
-            return <FlexBox box={component} />;
-        case 'text':
-            return <FlexText component={component} />;
-        case 'button':
-            return <FlexButton component={component} />;
-        default:
-            return null;
+        case 'box': return <FlexBox box={component} />;
+        case 'text': return <FlexText component={component} />;
+        case 'button': return <FlexButton component={component} />;
+        case 'separator': return <FlexSeparator component={component} />;
+        default: return null;
     }
 };
 
 const FlexBox = ({ box }) => {
-    const layoutMap = {
-        vertical: 'flex-col',
-        horizontal: 'flex-row items-center'
-    };
-    const spacingMap = {
-        'xs': 'gap-1', 'sm': 'gap-2', 'md': 'gap-4', 'lg': 'gap-6', 'xl': 'gap-8'
-    };
+    const layoutMap = { vertical: 'flex-col', horizontal: 'flex-row items-center', baseline: 'flex-row items-baseline' };
+    const spacingMap = { 'xs': 'gap-1', 'sm': 'gap-2', 'md': 'gap-4', 'lg': 'gap-6', 'xl': 'gap-8' };
+    const paddingStyle = box.paddingAll ? { padding: box.paddingAll } : {};
+    
     return (
-        <div className={`flex ${layoutMap[box.layout] || 'flex-col'} ${spacingMap[box.spacing] || ''} ${mapStyleToProps(box)} w-full`}>
+        <div className={`flex ${layoutMap[box.layout] || 'flex-col'} ${spacingMap[box.spacing] || ''} ${mapStyleToProps(box)} w-full`} style={{ backgroundColor: box.backgroundColor, ...paddingStyle }}>
             {box.contents.map((content, index) => (
                 <FlexContent key={index} component={content} />
             ))}
@@ -75,100 +281,24 @@ const FlexBox = ({ box }) => {
     );
 };
 
-
-// --- Main Preview Component ---
-
-const LinePreview = ({ announcement }) => {
-    let flexMessage = null;
-
-    // 嘗試解析 AI 生成的 Flex Message
-    if (announcement?.line_msg) {
-        try {
-            const parsed = JSON.parse(announcement.line_msg);
-            // 確保解析出來的是一個有效的 Flex Message 物件
-            if (parsed.type === 'flex' && parsed.contents) {
-                flexMessage = parsed.contents; // 我們只需要渲染 bubble 的內容
-            }
-        } catch (e) {
-            console.warn("Failed to parse line_msg, falling back to text preview.", e);
-            flexMessage = null; // 解析失敗則退回
-        }
-    }
-
-    // --- 備用方案：純文字預覽 ---
-    const PlainTextPreview = () => {
-        const deadline = announcement.application_deadline 
-            ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW') 
-            : '未指定';
-        const platformUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/?announcement_id=${announcement.id}`;
-        const textContent = `🎓 獎學金新公告\n\n【${announcement.title}】\n\n- 截止日期：${deadline}\n- 適用對象：${announcement.target_audience || '所有學生'}\n\n👇 點擊下方連結查看完整資訊與附件\n${platformUrl}`;
-        
-        return (
-             <div className="bg-white rounded-lg p-3 max-w-full">
-                <p className="whitespace-pre-wrap text-sm text-gray-800">{textContent}</p>
-            </div>
-        );
-    };
-
-    // --- Flex Message 預覽 ---
-    const FlexMessagePreview = ({ bubble }) => (
-        <div className="bg-white rounded-lg w-full overflow-hidden">
-            {/* 渲染 Header */}
-            {bubble.header && (
-                <div className="p-4 bg-gray-50 border-b">
-                    <FlexBox box={bubble.header} />
-                </div>
-            )}
-            {/* 渲染 Hero (圖片) */}
-            {bubble.hero && (
-                 <div className="w-full h-40 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400">Hero Image Preview</span>
-                </div>
-            )}
-            {/* 渲染 Body */}
-            {bubble.body && (
-                <div className="p-4">
-                    <FlexBox box={bubble.body} />
-                </div>
-            )}
-            {/* 渲染 Footer */}
-            {bubble.footer && (
-                 <div className="p-4 border-t">
-                    <FlexBox box={bubble.footer} />
-                </div>
-            )}
+const FlexMessagePreview = ({ bubble }) => {
+    if (!bubble) return <div className="text-gray-500 text-center p-4">無法產生預覽</div>;
+    return (
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl w-full max-w-sm overflow-hidden shadow-lg border border-gray-200/30">
+            {bubble.header && <FlexBox box={bubble.header} />}
+            {bubble.body && <FlexBox box={bubble.body} />}
+            {bubble.footer && <FlexBox box={bubble.footer} />}
         </div>
     );
+};
 
+// --- Main Preview Component ---
+const LinePreview = ({ announcement }) => {
+    const flexMessageBubble = buildFlexMessageForPreview(announcement);
 
     return (
-        <div className="flex justify-center items-center h-full bg-slate-200/80 p-4 rounded-lg">
-            <div className="w-full max-w-[320px] bg-[#78829c] rounded-3xl shadow-2xl p-2 font-sans">
-                {/* 手機頂部狀態欄 */}
-                <div className="flex justify-between items-center px-4 pt-1">
-                    <span className="text-white text-xs font-bold">11:24</span>
-                    <div className="flex items-center gap-1">
-                        <Smartphone size={12} className="text-white" />
-                        <span className="text-white text-xs font-bold">5G</span>
-                    </div>
-                </div>
-
-                {/* LINE 聊天室標題 */}
-                <div className="bg-[#8c94ac] rounded-t-2xl px-4 py-2 text-white text-center text-sm mt-1">
-                    NCUE 獎學金平台
-                </div>
-
-                {/* 聊天內容區域 */}
-                <div className="p-4 space-y-2 bg-[#8c94ac] min-h-[450px] flex flex-col items-start">
-                    {/* 根據是否有 flexMessage 決定渲染哪個版本 */}
-                    {flexMessage ? <FlexMessagePreview bubble={flexMessage} /> : <PlainTextPreview />}
-                </div>
-
-                {/* 輸入框區域 */}
-                <div className="flex items-center gap-2 p-2 bg-[#8c94ac] rounded-b-2xl">
-                    <input type="text" disabled placeholder="輸入訊息..." className="flex-grow bg-white rounded-full px-4 py-2 text-sm focus:outline-none" />
-                </div>
-            </div>
+        <div className="flex justify-center items-center h-full w-full p-4 font-sans">
+            <FlexMessagePreview bubble={flexMessageBubble} />
         </div>
     );
 };

@@ -16,9 +16,7 @@ const categoryStyles = {
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 
 const getPublicAttachmentUrl = (filePath) => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || !filePath) return '#';
-    return `${filePath}`;
+    return filePath || '#';
 };
 
 // --- Main Component ---
@@ -50,14 +48,23 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
         return [];
     }, [announcement]);
 
+    if (!isOpen || !announcement) return null;
 
-    if (!announcement) return null;
+    const formatDate = (dateString) => {
+        if (!dateString) return null;
+        return new Date(dateString).toLocaleDateString('en-CA');
+    };
 
-    const deadline = announcement.application_deadline
-        ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
-        : '未指定';
+    const startDate = formatDate(announcement.application_start_date);
+    const endDate = formatDate(announcement.application_end_date);
 
-    const finalContent = announcement.full_content || announcement.summary || '無詳細內容';
+    const dateDisplayString = startDate
+        ? `${startDate} ~ ${endDate || '無期限'}`
+        : endDate || '未指定';
+
+    const isExpired = announcement.application_end_date && new Date(announcement.application_end_date) < new Date();
+
+    const finalContent = announcement.summary || '無詳細內容';
 
     return (
         <AnimatePresence>
@@ -92,22 +99,27 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                 <div className="flex items-start gap-3">
                                     <Calendar className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
                                     <div>
-                                        <p className="font-semibold text-gray-500">申請截止</p>
-                                        <p className={`font-bold text-lg ${new Date(announcement.application_deadline) < new Date() ? 'text-gray-600' : 'text-red-600'}`}>{deadline}</p>
+                                        <p className="font-semibold text-gray-500">{startDate ? '申請期間' : '申請截止'}</p>
+                                        <p className="font-bold text-lg text-gray-900">
+                                            {dateDisplayString}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <Users className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
                                     <div>
                                         <p className="font-semibold text-gray-500">適用對象</p>
-                                        <p className="text-gray-800">{announcement.target_audience}</p>
+                                        <div
+                                            className="text-gray-800 rich-text-content"
+                                            dangerouslySetInnerHTML={{ __html: announcement.target_audience || '未指定' }}
+                                        />
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <SendIcon className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
                                     <div>
                                         <p className="font-semibold text-gray-500">送件方式</p>
-                                        <p className="text-gray-800">{announcement.submission_method}</p>
+                                        <p className="text-gray-800">{announcement.submission_method || '未指定'}</p>
                                     </div>
                                 </div>
                             </div>
