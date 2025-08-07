@@ -7,7 +7,7 @@ import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
 import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
 import AnnouncementPreviewModal from '@/components/AnnouncementPreviewModal';
 import Toast from '@/components/ui/Toast';
-import { Plus, Search, ChevronsUpDown, ArrowDown, ArrowUp, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown } from 'lucide-react';
+import { Plus, Search, ChevronsUpDown, ArrowDown, ArrowUp, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown, Link } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -123,6 +123,17 @@ export default function AnnouncementsTab() {
         setPreview(prev => ({ ...prev, open: false }));
     };
 
+    const handleCopyLink = async (announcementId) => {
+        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+        const link = `${siteUrl}/?announcement_id=${announcementId}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            showToast('公告連結已成功複製！', 'success');
+        } catch (err) {
+            showToast('複製連結失敗', 'error');
+        }
+    };
+
     const ghostButtonBase = "flex items-center justify-center gap-1.5 rounded-lg border transition-all duration-300 ease-in-out transform disabled:transform-none disabled:shadow-none";
     const buttonStyles = {
         add: `${ghostButtonBase} px-4 py-2 text-sm font-semibold border-indigo-200 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/40`,
@@ -130,184 +141,187 @@ export default function AnnouncementsTab() {
         delete: `${ghostButtonBase} px-3 py-1.5 text-xs font-semibold border-rose-200 bg-transparent text-rose-600 hover:bg-rose-100 hover:text-rose-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-rose-500/20`,
         send: `${ghostButtonBase} px-3 py-1.5 text-xs font-semibold border-sky-200 bg-transparent text-sky-600 hover:bg-sky-100 hover:text-sky-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20`,
         line: `${ghostButtonBase} px-3 py-1.5 text-xs font-semibold border-green-200 bg-transparent text-green-600 hover:bg-green-100 hover:text-green-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-green-500/20`,
+        link: `${ghostButtonBase} px-3 py-1.5 text-xs font-semibold border-amber-200 bg-transparent text-amber-600 hover:bg-amber-100 hover:text-amber-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20`,
     };
 
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="relative w-full flex-grow">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input type="text" placeholder="搜尋標題、分類..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-300
+return (
+    <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="relative w-full flex-grow">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input type="text" placeholder="搜尋標題、分類..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-300
                             focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
-                    />
-                </div>
-                <button onClick={() => setIsModalOpen(true)} className={`${buttonStyles.add} w-full sm:w-auto whitespace-nowrap`}>
-                    <Plus size={16} /> 新增公告
-                </button>
+                />
             </div>
+            <button onClick={() => setIsModalOpen(true)} className={`${buttonStyles.add} w-full sm:w-auto whitespace-nowrap`}>
+                <Plus size={16} /> 新增公告
+            </button>
+        </div>
 
-            <div className="rounded-xl w-full bg-white shadow-lg overflow-hidden border border-gray-200/80">
-                {/* --- DESKTOP TABLE VIEW --- */}
-                <div className="hidden md:block">
-                    <table className="w-full text-sm table-layout-fixed">
-                        <thead className="bg-gray-50/70 text-left">
-                            <tr>
-                                <th className="p-4 px-6 font-semibold text-gray-500">標題</th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 w-24">分類</th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('application_end_date')}>
-                                    <div className="flex items-center">申請截止日 {renderSortIcon('application_end_date')}</div>
-                                </th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 w-28">狀態</th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('created_at')}>
-                                    <div className="flex items-center">最後更新 {renderSortIcon('created_at')}</div>
-                                </th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 text-center w-48">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {loading ? (
-                                <tr><td colSpan="6" className="text-center p-12 text-gray-500">載入中...</td></tr>
-                            ) : paginatedAnnouncements.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center p-12 text-gray-500">找不到符合條件的公告。</td></tr>
-                            ) : (
-                                paginatedAnnouncements.map((ann) => (
-                                    <tr key={ann.id} className="transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-xl z-0 hover:z-10 hover:scale-[1.02]">
-                                        <td className="p-4 px-6 font-medium text-gray-800 break-words">{ann.title}</td>
-                                        <td className="p-4 px-6 text-gray-600">{ann.category}</td>
-                                        <td className="p-4 px-6 text-gray-600 font-medium">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</td>
-                                        <td className="p-4 px-6">
-                                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span>
-                                        </td>
-                                        <td className="p-4 px-6 text-gray-600">{new Date(ann.created_at).toLocaleDateString()}</td>
-                                        <td className="p-4 px-6">
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
-                                                <button onClick={() => setDeletingId(ann.id)} className={`${buttonStyles.delete} whitespace-nowrap`}>刪除</button>
-                                                <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
-                                                <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                {/* --- MOBILE VIEW (NEW ACCORDION CARD DESIGN) --- */}
-                <div className="md:hidden px-2 py-4 flex flex-col gap-3">
-                    {loading ? (
-                        <div className="text-center p-8 text-gray-500">載入中...</div>
-                    ) : paginatedAnnouncements.length === 0 ? (
-                        <div className="text-center p-8 text-gray-500">找不到符合條件的公告。</div>
-                    ) : (
-                        paginatedAnnouncements.map(ann => {
-                            const isExpanded = expandedId === ann.id;
-                            return (
-                                <div key={ann.id}
-                                    className={`
+        <div className="rounded-xl w-full bg-white shadow-lg overflow-hidden border border-gray-200/80">
+            {/* --- DESKTOP TABLE VIEW --- */}
+            <div className="hidden md:block">
+                <table className="w-full text-sm table-layout-fixed">
+                    <thead className="bg-gray-50/70 text-left">
+                        <tr>
+                            <th className="p-4 px-6 font-semibold text-gray-500">標題</th>
+                            <th className="p-4 px-6 font-semibold text-gray-500 w-24">分類</th>
+                            <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('application_end_date')}>
+                                <div className="flex items-center">申請截止日 {renderSortIcon('application_end_date')}</div>
+                            </th>
+                            <th className="p-4 px-6 font-semibold text-gray-500 w-28">狀態</th>
+                            <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('created_at')}>
+                                <div className="flex items-center">最後更新 {renderSortIcon('created_at')}</div>
+                            </th>
+                            <th className="p-4 px-6 font-semibold text-gray-500 text-center w-48">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {loading ? (
+                            <tr><td colSpan="6" className="text-center p-12 text-gray-500">載入中...</td></tr>
+                        ) : paginatedAnnouncements.length === 0 ? (
+                            <tr><td colSpan="6" className="text-center p-12 text-gray-500">找不到符合條件的公告。</td></tr>
+                        ) : (
+                            paginatedAnnouncements.map((ann) => (
+                                <tr key={ann.id} className="transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-xl z-0 hover:z-10 hover:scale-[1.02]">
+                                    <td className="p-4 px-6 font-medium text-gray-800 break-words">{ann.title}</td>
+                                    <td className="p-4 px-6 text-gray-600">{ann.category}</td>
+                                    <td className="p-4 px-6 text-gray-600 font-medium">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</td>
+                                    <td className="p-4 px-6">
+                                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span>
+                                    </td>
+                                    <td className="p-4 px-6 text-gray-600">{new Date(ann.created_at).toLocaleDateString()}</td>
+                                    <td className="p-4 px-6">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <button onClick={() => handleCopyLink(ann.id)} className={`${buttonStyles.link} whitespace-nowrap`}>複製連結</button>
+                                            <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
+                                            <button onClick={() => setDeletingId(ann.id)} className={`${buttonStyles.delete} whitespace-nowrap`}>刪除</button>
+                                            <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
+                                            <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+            {/* --- MOBILE VIEW (NEW ACCORDION CARD DESIGN) --- */}
+            <div className="md:hidden px-2 py-4 flex flex-col gap-3">
+                {loading ? (
+                    <div className="text-center p-8 text-gray-500">載入中...</div>
+                ) : paginatedAnnouncements.length === 0 ? (
+                    <div className="text-center p-8 text-gray-500">找不到符合條件的公告。</div>
+                ) : (
+                    paginatedAnnouncements.map(ann => {
+                        const isExpanded = expandedId === ann.id;
+                        return (
+                            <div key={ann.id}
+                                className={`
                         bg-white rounded-lg transition-all duration-300
                         ${isExpanded ? 'shadow-lg ring-2 ring-indigo-500 ring-offset-2' : 'shadow-md border border-gray-200/80'}
                     `}
+                            >
+                                {/* --- Card Header (Always Visible Trigger) --- */}
+                                <button
+                                    onClick={() => setExpandedId(isExpanded ? null : ann.id)}
+                                    className="w-full flex items-center justify-between text-left p-4"
                                 >
-                                    {/* --- Card Header (Always Visible Trigger) --- */}
-                                    <button
-                                        onClick={() => setExpandedId(isExpanded ? null : ann.id)}
-                                        className="w-full flex items-center justify-between text-left p-4"
-                                    >
-                                        <div className="flex-1 pr-4">
-                                            <h3 className="font-bold text-base text-gray-900">{ann.title}</h3>
-                                        </div>
-                                        <div className="flex items-center gap-x-3 flex-shrink-0">
-                                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                {ann.is_active ? '上架' : '下架'}
-                                            </span>
-                                            <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                                        </div>
-                                    </button>
+                                    <div className="flex-1 pr-4">
+                                        <h3 className="font-bold text-base text-gray-900">{ann.title}</h3>
+                                    </div>
+                                    <div className="flex items-center gap-x-3 flex-shrink-0">
+                                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                            {ann.is_active ? '上架' : '下架'}
+                                        </span>
+                                        <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </div>
+                                </button>
 
-                                    {/* --- Collapsible Content --- */}
-                                    <AnimatePresence>
-                                        {isExpanded && (
-                                            <motion.div
-                                                key="content"
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                                className="overflow-hidden"
-                                            >
-                                                <div className="border-t border-gray-200 p-4 pt-3">
-                                                    {/* Details Grid */}
-                                                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-4">
-                                                        <div className="font-semibold text-gray-500">分類</div>
-                                                        <div className="text-gray-700">{ann.category || '-'}</div>
+                                {/* --- Collapsible Content --- */}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            key="content"
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="border-t border-gray-200 p-4 pt-3">
+                                                {/* Details Grid */}
+                                                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-4">
+                                                    <div className="font-semibold text-gray-500">分類</div>
+                                                    <div className="text-gray-700">{ann.category || '-'}</div>
 
-                                                        <div className="font-semibold text-gray-500">申請截止</div>
-                                                        <div className="text-gray-700">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</div>
+                                                    <div className="font-semibold text-gray-500">申請截止</div>
+                                                    <div className="text-gray-700">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</div>
 
-                                                        <div className="font-semibold text-gray-500">最後更新</div>
-                                                        <div className="text-gray-700">{new Date(ann.created_at).toLocaleDateString()}</div>
-                                                    </div>
-
-                                                    {/* Action Buttons */}
-                                                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-200">
-                                                        <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
-                                                        <button onClick={() => setDeletingId(ann.id)} className={`${buttonStyles.delete} whitespace-nowrap`}>刪除</button>
-                                                        <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
-                                                        <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
-                                                    </div>
+                                                    <div className="font-semibold text-gray-500">最後更新</div>
+                                                    <div className="text-gray-700">{new Date(ann.created_at).toLocaleDateString()}</div>
                                                 </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-sm text-gray-600">共 {processedAnnouncements.length} 筆資料，第 {currentPage} / {totalPages || 1} 頁</div>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <select
-                            value={rowsPerPage}
-                            onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                            className="appearance-none w-full bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-10 text-sm shadow-sm
+                                                {/* Action Buttons */}
+                                                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-200">
+                                                    <button onClick={() => handleCopyLink(ann.id)} className={`${buttonStyles.link} whitespace-nowrap`}>複製連結</button>
+                                                    <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
+                                                    <button onClick={() => setDeletingId(ann.id)} className={`${buttonStyles.delete} whitespace-nowrap`}>刪除</button>
+                                                    <button onClick={() => openPreview('email', ann)} className={buttonStyles.send}><GmailIcon /></button>
+                                                    <button onClick={() => openPreview('line', ann)} className={buttonStyles.line}><LineIcon /></button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-600">共 {processedAnnouncements.length} 筆資料，第 {currentPage} / {totalPages || 1} 頁</div>
+            <div className="flex items-center gap-2">
+                <div className="relative">
+                    <select
+                        value={rowsPerPage}
+                        onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                        className="appearance-none w-full bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-10 text-sm shadow-sm
                                 transition-all duration-300
                                 focus:outline-none focus:border-indigo-500
                                 focus:ring-4 focus:ring-indigo-500/30"
-                        >
-                            {[10, 25, 50].map(v => <option key={v} value={v}>{v} 筆 / 頁</option>)}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
+                    >
+                        {[10, 25, 50].map(v => <option key={v} value={v}>{v} 筆 / 頁</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
                     </div>
-                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronsLeft className="h-5 w-5" /></button>
-                        <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronLeft className="h-5 w-5" /></button>
-                        <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0} className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronRight className="h-5 w-5" /></button>
-                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronsRight className="h-5 w-5" /></button>
-                    </nav>
                 </div>
+                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronsLeft className="h-5 w-5" /></button>
+                    <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronLeft className="h-5 w-5" /></button>
+                    <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0} className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronRight className="h-5 w-5" /></button>
+                    <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"><ChevronsRight className="h-5 w-5" /></button>
+                </nav>
             </div>
-
-            <CreateAnnouncementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} refreshAnnouncements={fetchAnnouncements} />
-            <UpdateAnnouncementModal isOpen={!!editing} onClose={() => setEditing(null)} announcement={editing} refreshAnnouncements={fetchAnnouncements} />
-            <DeleteAnnouncementModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} announcementId={deletingId} refreshAnnouncements={fetchAnnouncements} />
-            <AnnouncementPreviewModal
-                isOpen={preview.open}
-                type={preview.type}
-                announcement={preview.announcement} // Pass the announcement object
-                onConfirm={handlePreviewConfirm}
-                onClose={() => setPreview(prev => ({ ...prev, open: false }))}
-            />
-            <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
         </div>
-    );
+
+        <CreateAnnouncementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} refreshAnnouncements={fetchAnnouncements} />
+        <UpdateAnnouncementModal isOpen={!!editing} onClose={() => setEditing(null)} announcement={editing} refreshAnnouncements={fetchAnnouncements} />
+        <DeleteAnnouncementModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} announcementId={deletingId} refreshAnnouncements={fetchAnnouncements} />
+        <AnnouncementPreviewModal
+            isOpen={preview.open}
+            type={preview.type}
+            announcement={preview.announcement} // Pass the announcement object
+            onConfirm={handlePreviewConfirm}
+            onClose={() => setPreview(prev => ({ ...prev, open: false }))}
+        />
+        <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
+    </div>
+);
 }
