@@ -103,8 +103,10 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         color: colors.text,
-        marginBottom: 25,
+        marginTop: 10,
+        marginBottom: 20,
         textAlign: 'center',
+        lineHeight: 1.2,
     },
     mainContent: {
         display: 'flex',
@@ -250,30 +252,30 @@ const AnnouncementPDF = ({ announcement }) => {
 
                 <Text style={styles.header} fixed>此文件下載於: {new Date().toLocaleString('zh-TW')}</Text>
 
-                <Text style={styles.title}>{announcement.title || '公告詳情'}</Text>
+                <Text style={styles.title}>{breakTextForAllChars(announcement.title || '公告詳情', 20)}</Text>
 
                 <View style={styles.mainContent}>
                     <View style={styles.leftColumn}>
                         <View style={styles.section} wrap={false}>
                             <Text style={styles.sectionTitle}>公告資訊</Text>
                             <Text style={styles.infoTextLabel}>公告資料庫 ID</Text>
-                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.id, 20)}</Text>
+                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.id, 23)}</Text>
                             <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>最近編輯日期</Text>
                             <Text style={styles.infoTextValue}>{new Date(announcement.updated_at).toLocaleString('zh-TW')}</Text>
                         </View>
                         <View style={styles.section} wrap={false}>
                             <Text style={styles.sectionTitle}>公告日程</Text>
                             <Text style={styles.infoTextLabel}>申請開始日</Text>
-                            <Text style={styles.infoTextValue}>{formatDate(announcement.application_start_date)}</Text>
+                            <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_start_date)}</Text>
                             <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>申請截止日</Text>
-                            <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.announcement_end_date)}</Text>
+                            <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_end_date)}</Text>
                         </View>
                         <View style={styles.section} wrap={false}>
                             <Text style={styles.sectionTitle}>申請辦法</Text>
                             <Text style={styles.infoTextLabel}>申請限制</Text>
                             <Text style={styles.infoTextValue}>{announcement.application_limitations || '未指定'}</Text>
                             <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>送件方式</Text>
-                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.submission_method || '未指定', 14)}</Text>
+                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.submission_method || '未指定', 13)}</Text>
                         </View>
                         <View style={styles.section} wrap={false}>
                             {qrCodeDataUrl && <Image style={styles.qrCodeImage} src={qrCodeDataUrl} />}

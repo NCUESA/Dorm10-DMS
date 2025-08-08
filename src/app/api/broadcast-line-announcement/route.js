@@ -4,13 +4,12 @@ import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, lo
 
 const LINE_BROADCAST_URL = 'https://api.line.me/v2/bot/message/broadcast';
 
-// --- Helper Function (Copied EXACTLY from the latest LinePreview.jsx) ---
 const htmlToPlainText = (html) => {
     if (!html) return '';
     let text = html
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/p>/gi, '\n')
-        .replace(/<li.*?>/gi, '\n✅ ') // Using the same emoji
+        .replace(/<li.*?>/gi, '\n✅ ')
         .replace(/<[^>]*>?/gm, '');
     return text.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
 };
