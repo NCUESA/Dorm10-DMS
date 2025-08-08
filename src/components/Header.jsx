@@ -22,14 +22,6 @@ const Header = forwardRef((props, ref) => {
 	const { user, loading, signOut, isAuthenticated, isAdmin } = useAuth();
 	const pathname = usePathname();
 
-	// 調試信息
-	console.log('[HEADER-DEBUG] Auth state:', {
-		isAuthenticated,
-		isAdmin,
-		userRole: user?.role,
-		userProfile: user?.profile
-	});
-
 	const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 	const closeMenu = () => setIsMenuOpen(false);
 

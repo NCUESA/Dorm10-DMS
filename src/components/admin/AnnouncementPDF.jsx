@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     },
 
     watermarkText: {
-        marginTop: 30, // 與圖片的間距
+        marginTop: 30,
         fontSize: 50,
         fontWeight: 'bold',
         color: colors.muted,
@@ -94,10 +94,11 @@ const styles = StyleSheet.create({
         position: 'absolute',
         fontSize: 8,
         bottom: 60,
-        left: 0,
-        right: 0,
+        left: 40,
+        right: 40,
         textAlign: 'center',
         color: colors.muted,
+        zIndex: 10,
     },
     title: {
         fontSize: 22,
@@ -176,8 +177,41 @@ const htmlStyles = StyleSheet.create({
     b: { fontWeight: 'bold' },
     u: { textDecoration: 'underline' },
     i: { fontStyle: 'italic' },
-    h4: { fontSize: 11, fontWeight: 'bold', color: colors.primary, margin: 0, marginBottom: 6 },
+    h4: { fontSize: 11, fontWeight: 'bold', color: colors.primary, margin: 0 },
     span: {},
+    table: {
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    thead: {
+        backgroundColor: '#F3F4F6',
+        fontWeight: 'bold',
+    },
+    tbody: {},
+    tr: {
+        display: 'flex',
+        flexDirection: 'row',
+    },
+    th: {
+        flex: 1,
+        padding: 6,
+        fontSize: 10,
+        fontWeight: 'bold',
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderColor: colors.text,
+    },
+    td: {
+        flex: 1,
+        padding: 6,
+        fontSize: 10,
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderColor: colors.text,
+    },
 });
 
 const breakTextForAllChars = (text, maxLength = 27) => {
@@ -210,6 +244,19 @@ const breakWordsInHtml = (htmlString) => {
     });
 };
 
+const convertEmToPt = (htmlString) => {
+    if (!htmlString) return '';
+    const regex = /(margin-(?:top|bottom)):\s*([\d.]+)(em)/g;
+
+    return htmlString.replace(regex, (match, property, value) => {
+        const emValue = parseFloat(value);
+        const h4FontSize = 11;
+        const ptValue = Math.round(emValue * h4FontSize);
+        return `${property}: ${ptValue}`;
+    });
+};
+
+
 const AnnouncementPDF = ({ announcement }) => {
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
     const homepageUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://scholarship.ncuesa.org.tw';
@@ -231,7 +278,8 @@ const AnnouncementPDF = ({ announcement }) => {
         if (!html) return html;
         const sanitized = sanitizeHtmlForPdf(html);
         const broken = breakWordsInHtml(sanitized);
-        return broken;
+        const ptConverted = convertEmToPt(broken);
+        return ptConverted;
     };
 
     const finalSummary = processHtmlContent(announcement.summary);
@@ -240,6 +288,21 @@ const AnnouncementPDF = ({ announcement }) => {
     return (
         <Document title={announcement.title}>
             <Page size="A4" style={styles.page} wrap>
+                <Text style={styles.header} fixed>此文件下載於: {new Date().toLocaleString('zh-TW')}</Text>
+
+                <View style={styles.footer} fixed>
+                    <View style={styles.footerColumn}>
+                        <Text>聯繫 獎學金承辦人員: <Link src="mailto:act5718@gmail.com" style={styles.footerLink}>何淑芬 (act5718@gmail.com)</Link></Text>
+                        <Text>聯繫 系統開發者: <Link src="mailto:3526ming@gmail.com" style={styles.footerLink}>Tai Ming Chen (3526ming@gmail.com)</Link></Text>
+                    </View>
+                    <View style={styles.footerColumn}>
+                        <Link src={homepageUrl} style={styles.footerLink}>前往彰師校外獎學金資訊平台</Link>
+                        <Text>版權所有 © {new Date().getFullYear()} 彰師校外獎學金資訊平台</Text>
+                    </View>
+                </View>
+
+                <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
+
                 <View style={styles.watermarkContainer} fixed>
                     <Image
                         style={styles.watermarkImage}
@@ -250,8 +313,7 @@ const AnnouncementPDF = ({ announcement }) => {
                     </Text>
                 </View>
 
-                <Text style={styles.header} fixed>此文件下載於: {new Date().toLocaleString('zh-TW')}</Text>
-
+                {/* --- 渲染可自動換頁的主內容 --- */}
                 <Text style={styles.title}>{breakTextForAllChars(announcement.title || '公告詳情', 20)}</Text>
 
                 <View style={styles.mainContent}>
@@ -291,19 +353,6 @@ const AnnouncementPDF = ({ announcement }) => {
                             <Text style={styles.sectionTitle}>公告摘要</Text>
                             <Html stylesheet={htmlStyles}>{finalSummary || '<p>無詳細內容</p>'}</Html>
                         </View>
-                    </View>
-                </View>
-
-                <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
-
-                <View style={styles.footer} fixed>
-                    <View style={styles.footerColumn}>
-                        <Text>聯繫 獎學金承辦人員: <Link src="mailto:act5718@gmail.com" style={styles.footerLink}>何淑芬 (act5718@gmail.com)</Link></Text>
-                        <Text>聯繫 系統開發者: <Link src="mailto:3526ming@gmail.com" style={styles.footerLink}>Tai Ming Chen (3526ming@gmail.com)</Link></Text>
-                    </View>
-                    <View style={styles.footerColumn}>
-                        <Link src={homepageUrl} style={styles.footerLink}>平台連結</Link>
-                        <Text>版權所有 © {new Date().getFullYear()} 彰師校外獎學金資訊平台</Text>
                     </View>
                 </View>
             </Page>

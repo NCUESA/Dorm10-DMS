@@ -104,7 +104,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [filesToRemove, setFilesToRemove] = useState([]);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-    
+
     const [formData, setFormData] = useState({
         title: '',
         summary: '',
@@ -132,7 +132,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                     urls = [{ url: announcement.external_urls }];
                 }
             }
-            
+
             setFormData({
                 title: announcement.title || '',
                 summary: announcement.summary || '',
@@ -188,7 +188,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         setIsSaving(true);
         try {
             const finalUrls = formData.external_urls.filter(item => item.url.trim() !== '');
-            
+
             const { data: updated, error } = await supabase.from('announcements').update({
                 title: formData.title,
                 summary: formData.summary,
@@ -256,23 +256,27 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-5 border-b border-black/10 flex justify-between items-center flex-shrink-0">
-                                <h2 className="text-lg font-bold text-gray-800">更新公告</h2>
+                                <h2 className="text-lg font-bold text-gray-800">編輯公告</h2>
                                 <button onClick={onClose} disabled={isSaving} className="text-gray-400 hover:text-gray-600 p-2 rounded-full"><X size={20} /></button>
                             </div>
-                            
+
                             <div className="flex-grow p-6 overflow-y-auto">
                                 <div className="space-y-6">
                                     {isSaving && (<div className="absolute inset-0 bg-white/70 z-20 flex flex-col items-center justify-center rounded-lg"><Loader2 className="animate-spin h-8 w-8 text-indigo-600" /><p className="mt-4 text-indigo-700 font-semibold">儲存中...</p></div>)}
 
-                                    <div><label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-1.5">公告標題 (必填)</label><input type="text" id="title" name="title" className={inputStyles} value={formData.title} onChange={handleChange} /></div>
-                                    
+                                    <div>
+                                        <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            公告標題 <span className="text-red-500 ml-1">*</span>
+                                        </label>
+                                        <input type="text" id="title" name="title" className={inputStyles} value={formData.title} onChange={handleChange} />
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div><label htmlFor="is_active" className="block text-sm font-semibold text-gray-700 mb-1.5">公告狀態</label><select id="is_active" name="is_active" className={inputStyles} value={formData.is_active} onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}><option value={false}>下架</option><option value={true}>上架</option></select></div>
-                                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎助學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎助學金</option><option value="C">C：宗教及民間各項指定身分獎助學金</option><option value="D">D：非公家機關或其他無法歸類的獎助學金</option><option value="E">E：獎學金得獎名單公告</option></select></div>
+                                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎學金</option><option value="E">E：獎學金得獎名單公告</option></select></div>
                                         <div><label htmlFor="application_start_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請開始日期</label><input type="date" id="application_start_date" name="application_start_date" className={inputStyles} value={formData.application_start_date} onChange={handleChange} /></div>
                                         <div><label htmlFor="application_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請截止日期</label><input type="date" id="application_end_date" name="application_end_date" className={inputStyles} value={formData.application_end_date} onChange={handleChange} /></div>
                                         <div><label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-1.5">送件方式</label><input type="text" id="submission_method" name="submission_method" className={inputStyles} value={formData.submission_method} onChange={handleChange} /></div>
-                                        
+
                                         <div>
                                             <label htmlFor="application_limitations" className="block text-sm font-semibold text-gray-700 mb-1.5">申請限制</label>
                                             <select id="application_limitations" name="application_limitations" className={inputStyles} value={formData.application_limitations} onChange={handleChange}>
@@ -282,16 +286,18 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                                             </select>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex flex-col min-h-[250px]">
                                         <label htmlFor="target_audience" className="block text-sm font-semibold text-gray-700 mb-1.5">適用對象</label>
                                         <div className="relative flex-grow">
                                             <QuillEditor value={formData.target_audience} onChange={handleTargetAudienceChange} disabled={isSaving} />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex flex-col min-h-[400px]">
-                                        <label htmlFor="summary" className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">公告摘要 (必填)</label>
+                                        <label htmlFor="summary" className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">
+                                            公告摘要 <span className="text-red-500 ml-1">*</span>
+                                        </label>
                                         <div className="relative flex-grow">
                                             <QuillEditor value={formData.summary} onChange={handleSummaryChange} disabled={isSaving} />
                                         </div>

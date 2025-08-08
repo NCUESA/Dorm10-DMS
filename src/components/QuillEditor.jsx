@@ -32,8 +32,6 @@ const QuillEditor = ({ value, onChange, placeholder, disabled }) => {
             const Quill = (await import('quill')).default;
             await import('quill/dist/quill.snow.css');
             
-            console.log("QuillEditor 初始化，當前 value:", value);
-            
             // --- 僅在第一次渲染時初始化 Quill ---
             quillInstance.current = new Quill(quillRef.current, {
                 theme: 'snow',
@@ -52,11 +50,9 @@ const QuillEditor = ({ value, onChange, placeholder, disabled }) => {
 
             // 設置初始內容
             if (value) {
-                console.log("設置初始內容:", value);
                 quillInstance.current.clipboard.dangerouslyPasteHTML(value);
             }
 
-            // 監聽內容變更事件
             quillInstance.current.on('text-change', onTextChange);
         };
 
@@ -85,16 +81,6 @@ const QuillEditor = ({ value, onChange, placeholder, disabled }) => {
             const normalizedEditorHTML = editorHTML === '<p><br></p>' ? '' : editorHTML.trim();
             const normalizedValue = (value || '').trim();
             
-            console.log("QuillEditor value 更新:", { 
-                newValue: normalizedValue, 
-                currentEditorHTML: normalizedEditorHTML,
-                rawEditorHTML: editorHTML,
-                shouldUpdate: normalizedValue !== normalizedEditorHTML,
-                valueType: typeof value,
-                hasValue: !!value,
-                valueLength: value ? value.length : 0
-            });
-            
             // 只有當外部傳入的 value 與編輯器內的內容不同時，才更新編輯器
             if (normalizedValue !== normalizedEditorHTML) {
                 try {
@@ -117,7 +103,7 @@ const QuillEditor = ({ value, onChange, placeholder, disabled }) => {
                         quillInstance.current.root.innerHTML = normalizedValue || '<p><br></p>';
                         console.log("使用備用方法更新 QuillEditor 內容");
                     } catch (fallbackError) {
-                        console.error("QuillEditor 備用方法也失敗:", fallbackError);
+                        console.error("QuillEditor 備用方法失敗:", fallbackError);
                     }
                 }
             }

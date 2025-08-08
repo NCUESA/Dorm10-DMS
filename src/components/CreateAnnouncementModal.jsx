@@ -243,7 +243,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 
             const promptText = `
 # 角色 (Persona)
-你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的任務是將一篇關於獎學金的公告，轉換成一段重點突出、視覺清晰的 HTML 公告，並提取結構化資料。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
+你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的風格是專業、精確且以學生為中心。你的任務是將一篇關於獎學金的公告，轉換成一段重點突出、視覺清晰的 HTML 公告，並提取結構化資料。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
 
 # 核心任務 (Core Task)
 你的任務是根據下方提供的「公告全文」，執行以下兩項任務，並將結果合併在一個**單一的 JSON 物件**中回傳。
@@ -269,8 +269,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 根據你分析的內容，生成一份專業、條理分明的 HTML 格式重點摘要。
 
 ### 內容與結構指導
-- **摘要必須包含**：申請資格、獎助金額、申請期限、應繳文件、其他注意事項。
-- **表格優先**：當資訊具有「項目-內容」的對應或比較關係時，**優先使用 \`<table>\`**。
+- **摘要必須包含**：申請期限、申請資格、獎助金額、應繳文件、其他注意事項。
+- **表格優先**：當資訊具有「項目-內容」的對應關係資訊時，**優先使用 \`<table>\`** 以提升閱讀性。
 
 ### 視覺化與樣式指導 (適用於 summary 和 target_audience)
 - **多色彩重點標記**：
@@ -283,8 +283,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 - **A**: 各縣市政府獎助學金
 - **B**: 縣市政府以外之各級公家機關及公營單位獎助學金
 - **C**: 宗親會及民間各項指定身分獎助學金 (指定姓名、籍貫、學系等)
-- **D**: 各民間單位：因經濟不利、學業優良或其他無法歸類之獎助學金
-- **E**: 純粹的獎學金「得獎名單」公告
+- **D**: 非公家機關或其他無法歸類的獎助學金
+- **E**: 獎學金得獎名單公告
 
 # 最終輸出規則
 - **你的回覆必須是、也只能是一個 JSON 物件**，不含任何 Markdown 標記。
@@ -293,15 +293,15 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 # 輸出格式與範例 (Output Format & Example)
 \`\`\`json
 {
-  "title": "國際蘭馨交流協會『讓夢想起飛』助學方案",
+  "title": "國際蘭馨交流協會『讓夢想起飛』獎學金",
   "category": "C",
   "application_start_date": null,
   "application_end_date": "2025-07-23",
   "target_audience": "<ul><li>國內各大學日間部、進修學士班之<span style=\\"color: #F79420; font-weight: bold;\\">在學女學生</span>。</li><li>歷年學業平均成績達 <span style=\\"color: #F79420; font-weight: bold;\\">70分</span>。</li></ul>",
   "application_limitations": "N",
-  "submission_method": "送件至生輔組或 Email 寄送 PDF 檔",
+  "submission_method": "送件至生輔組或將申請資料寄送至承辦人員信箱: act5718@gmail.com",
   "external_urls": [{ "url": "https://example.com/scholarship-info" }],
-  "summary": \"<h4 style=\\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\\">申請資格</h4><ul><li>國內各大學日間部、進修學士班之<span style=\\\"color: #F79420; font-weight: bold;\\\">在學女學生</span>。</li><li>歷年學業平均成績達 <span style=\\\"color: #F79420; font-weight: bold;\\\">70分</span> 且未受記過處分。</li><li>全戶人均所得未逾當年度最低基本工資。</li><li>全戶存款本金未逾 <span style=\\\"color: #D6334C; font-weight: bold;\\\">10萬元</span>。</li></ul><h4 style=\\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\\">補助金額</h4><p>通過審查者，補助每學期學費至畢業為止。</p><h4 style=\\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\\">申請應繳文件</h4><ol><li>申請書（需黏貼照片並簽名）。</li><li>歷年成績單（新生附高三成績單）。</li><li>全戶含記事戶籍謄本。</li><li>全戶113年所得及財產清單。</li><li>其他佐證資料（如重大傷病卡、身障手冊等）。</li></ol><h4 style=\\\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\\\">申請期限</h4><p>即日起至 <span style=\\\"color: #D6334C; font-weight: bold;\\\">2025年7月23日</span> 前，將文件送至生輔組或 Email 寄送。</p>\"
+  "summary": "<h4 style=\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\">申請期限與方式</h4><p>親送或寄送郵件至生輔組承辦人員，由學校代為辦理，截止日期為 <span style=\"color: #D6334C; font-weight: bold;\">2025年7月23日</span>。</p><h4 style=\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\">申請資格</h4><ul><li>家境清寒且就讀<span style=\"color: #F79420; font-weight: bold;\">國立大學</span>之<span style=\"color: #F79420; font-weight: bold;\">績優女學生</span>（不限年級）。</li><li>在校學業平均成績達 <span style=\"color: #F79420; font-weight: bold;\">70分</span> 以上，且未受小過以上處分。</li></ul><h4 style=\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\">獎助金額</h4><p>依申請年級不同，提供相對應的學費補助，詳情如下：</p><table style=\"width: 100%; border-collapse: collapse; margin-top: 0.5em;\"><thead><tr style=\"background-color: #f2f2f2;\"><th style=\"padding: 8px; border: 1px solid #ddd; text-align: left;\">適用對象</th><th style=\"padding: 8px; border: 1px solid #ddd; text-align: left;\">補助內容</th></tr></thead><tbody><tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><span style=\"color: #F79420; font-weight: bold;\">大一新生及大三學生</span></td><td style=\"padding: 8px; border: 1px solid #ddd;\">通過審查後，補助<span style=\"color: #D6334C; font-weight: bold;\">兩年</span>學雜費</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><span style=\"color: #F79420; font-weight: bold;\">大二女學生</span></td><td style=\"padding: 8px; border: 1px solid #ddd;\">通過審查後，補助<span style=\"color: #D6334C; font-weight: bold;\">一年</span>學雜費</td></tr></tbody></table><p style=\"margin-top: 0.5em;\">註：已受補助學生可持續獲得補助至其大四學年，但須符合每階段資格審查標準。</p><h4 style=\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\">申請應繳文件</h4><table style=\"width: 100%; border-collapse: collapse; margin-top: 0.5em;\"><thead><tr style=\"background-color: #f2f2f2;\"><th style=\"padding: 8px; border: 1px solid #ddd; text-align: left;\">文件項目</th><th style=\"padding: 8px; border: 1px solid #ddd; text-align: left;\">備註</th></tr></thead><tbody><tr><td style=\"padding: 8px; border: 1px solid #ddd;\">1. 全家人口戶籍謄本</td><td style=\"padding: 8px; border: 1px solid #ddd;\">-</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\">2. 全家人口所得及財產資料</td><td style=\"padding: 8px; border: 1px solid #ddd;\">請向國稅局申請</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\">3. 最近學期成績單</td><td style=\"padding: 8px; border: 1px solid #ddd;\">-</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\">4. 大學完整學業成績單與操行紀錄</td><td style=\"padding: 8px; border: 1px solid #ddd;\">適用於<span style=\"color: #F79420; font-weight: bold;\">大三以上</span>學生</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\">5. 相關證明文件</td><td style=\"padding: 8px; border: 1px solid #ddd;\">如身心障礙手冊、重大傷病卡等 (無則免附)</td></tr></tbody></table><h4 style=\"color: #008DD5; margin-top: 1.5em; margin-bottom: 0.75em;\">其他注意事項</h4><p>申請人家庭若有以下任一情況，則<span style=\"color: #D6334C; font-weight: bold;\">不符合</span>清寒補助資格：</p><ul><li>全戶存款本金合計超過 <span style=\"color: #D6334C; font-weight: bold;\">10萬元</span>。</li><li>全戶土地及房屋公告現值合計超過 <span style=\"color: #D6334C; font-weight: bold;\">100萬元</span>（自用住宅不在此限）。</li><li>其他情況如休學、畢業或家庭經濟狀況已顯著改善者。</li></ul>"
 }
 \`\`\`
 
@@ -452,25 +452,45 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
         if (currentStep === 2) {
             return (
                 <div className="space-y-6 max-w-4xl mx-auto">
-                    <div><label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-1.5">公告標題 (必填)</label><input type="text" id="title" name="title" className={inputStyles} value={formData.title} onChange={handleChange} /></div>
+                    <div>
+                        <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                            公告標題 <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <input type="text" id="title" name="title" className={inputStyles} value={formData.title} onChange={handleChange} />
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div><label htmlFor="is_active" className="block text-sm font-semibold text-gray-700 mb-1.5">公告狀態</label><select id="is_active" name="is_active" className={inputStyles} value={formData.is_active} onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}><option value={true}>上架</option><option value={false}>下架</option></select></div>
-                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府</option><option value="B">B：公家機關</option><option value="C">C：宗教及民間指定身分</option><option value="D">D：其他民間單位</option><option value="E">E：得獎名單公告</option></select></div>
+                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎助學金</option><option value="E">E：獎學金得獎名單公告</option></select></div>
                         <div><label htmlFor="application_start_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請開始日期</label><input type="date" id="application_start_date" name="application_start_date" className={inputStyles} value={formData.application_start_date} onChange={handleChange} /></div>
                         <div><label htmlFor="application_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">公告結束日期</label><input type="date" id="application_end_date" name="application_end_date" className={inputStyles} value={formData.application_end_date} onChange={handleChange} /></div>
                         <div><label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-1.5">送件方式</label><input type="text" id="submission_method" name="submission_method" className={inputStyles} value={formData.submission_method} onChange={handleChange} /></div>
-                        <div><label htmlFor="application_limitations" className="block text-sm font-semibold text-gray-700 mb-1.5">申請限制</label><input type="text" id="application_limitations" name="application_limitations" className={inputStyles} value={formData.application_limitations} onChange={handleChange} /></div>
+                        <div>
+                            <label htmlFor="application_limitations" className="block text-sm font-semibold text-gray-700 mb-1.5">兼領限制</label>
+                            <select
+                                id="application_limitations"
+                                name="application_limitations"
+                                className={inputStyles}
+                                value={formData.application_limitations}
+                                onChange={handleChange}
+                            >
+                                <option value="">請選擇</option>
+                                <option value="Y">Y (不可兼領)</option>
+                                <option value="N">N (可兼領)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="flex flex-col min-h-[250px]">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">適用對象 (HTML)</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">適用對象</label>
                         <div className="relative flex-grow">
                             <QuillEditor value={formData.target_audience} onChange={handleTargetAudienceChange} disabled={isLoading} />
                         </div>
                     </div>
 
                     <div className="flex flex-col min-h-[400px]">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">公告摘要 (必填)</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">
+                            公告摘要 <span className="text-red-500 ml-1">*</span>
+                        </label>
                         <div className="relative flex-grow">
                             <QuillEditor value={formData.summary} onChange={handleSummaryChange} disabled={isLoading} />
                         </div>
@@ -522,7 +542,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-5 border-b border-black/10 flex justify-between items-center flex-shrink-0">
-                                <h2 className="text-lg font-bold text-gray-800">建立新公告</h2>
+                                <h2 className="text-lg font-bold text-gray-800">新增公告</h2>
                                 <button onClick={onClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 p-2 rounded-full"><X size={20} /></button>
                             </div>
 
