@@ -32,7 +32,7 @@ const DownloadPDFButton = ({ announcement, className }) => {
             onClick={openPdfInNewTab}
             className={`${className} whitespace-nowrap`}
         >
-            下載
+            下載公告
         </button>
     );
 };

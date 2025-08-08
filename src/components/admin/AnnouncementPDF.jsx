@@ -258,7 +258,7 @@ const AnnouncementPDF = ({ announcement }) => {
                             <Text style={styles.sectionTitle}>公告資訊</Text>
                             <Text style={styles.infoTextLabel}>公告資料庫 ID</Text>
                             <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.id, 20)}</Text>
-                            <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>公告最近更新日期</Text>
+                            <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>最近編輯日期</Text>
                             <Text style={styles.infoTextValue}>{new Date(announcement.updated_at).toLocaleString('zh-TW')}</Text>
                         </View>
                         <View style={styles.section} wrap={false}>
@@ -273,7 +273,7 @@ const AnnouncementPDF = ({ announcement }) => {
                             <Text style={styles.infoTextLabel}>申請限制</Text>
                             <Text style={styles.infoTextValue}>{announcement.application_limitations || '未指定'}</Text>
                             <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>送件方式</Text>
-                            <Text style={styles.infoTextValue}>{announcement.submission_method || '未指定'}</Text>
+                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.submission_method || '未指定', 14)}</Text>
                         </View>
                         <View style={styles.section} wrap={false}>
                             {qrCodeDataUrl && <Image style={styles.qrCodeImage} src={qrCodeDataUrl} />}

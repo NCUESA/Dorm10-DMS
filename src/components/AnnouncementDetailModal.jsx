@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Paperclip, Link as LinkIcon, Calendar, Users, Send as SendIcon } from 'lucide-react';
+import { X, Paperclip, Link as LinkIcon, Calendar, Users, Send as SendIcon, Download } from 'lucide-react';
+import DownloadPDFButton from '@/components/admin/DownloadPDFButton';
 
 // --- Helper Functions & Constants ---
 const categoryStyles = {
@@ -17,10 +18,8 @@ const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
 
 const getPublicAttachmentUrl = (filePath) => {
     if (!filePath) return '#';
-
     const parts = filePath.split('/');
     const fileName = parts[parts.length - 1];
-
     return `/api/attachments/${fileName}`;
 };
 
@@ -94,7 +93,14 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                 </span>
                                 <h2 className="text-lg md:text-xl font-bold text-gray-800">{announcement.title}</h2>
                             </div>
-                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors flex-shrink-0"><X size={20} /></button>
+
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <DownloadPDFButton
+                                    announcement={announcement}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold border border-violet-300 bg-transparent text-violet-700 rounded-lg transition-all duration-300 ease-in-out transform hover:bg-violet-100 hover:text-violet-800 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-violet-500/30"
+                                />
+                                <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors"><X size={20} /></button>
+                            </div>
                         </div>
 
                         <div className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto">
