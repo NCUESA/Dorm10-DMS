@@ -4,208 +4,15 @@ import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, lo
 
 const LINE_BROADCAST_URL = 'https://api.line.me/v2/bot/message/broadcast';
 
-// --- Helper Functions (Copied EXACTLY from the latest LinePreview.jsx) ---
-
+// --- Helper Function (Copied EXACTLY from the latest LinePreview.jsx) ---
 const htmlToPlainText = (html) => {
     if (!html) return '';
-    return html.replace(/<[^>]*>?/gm, ' ').replace(/(\r\n|\n|\r)/gm, "").replace(/\s+/g, ' ').trim();
-};
-
-const htmlToFlexSpans = (html) => {
-    if (!html) return [{ type: 'span', text: '' }];
-
-    const spans = [];
-    const spanRegex = /<span[^>]*style="[^"]*color:\s*([^;"]+)[^"]*"[^>]*>(.*?)<\/span>/gs;
-    let lastIndex = 0;
-    let match;
-
-    while ((match = spanRegex.exec(html)) !== null) {
-        if (match.index > lastIndex) {
-            const text = htmlToPlainText(html.substring(lastIndex, match.index));
-            if (text) spans.push({ type: 'span', text: text });
-        }
-        
-        const color = match[1].trim();
-        const content = htmlToPlainText(match[2]);
-        if (content) {
-            spans.push({
-                type: 'span',
-                text: content,
-                color: color,
-                weight: 'bold',
-            });
-        }
-        
-        lastIndex = match.index + match[0].length;
-    }
-
-    if (lastIndex < html.length) {
-        const text = htmlToPlainText(html.substring(lastIndex));
-        if (text) spans.push({ type: 'span', text: text });
-    }
-
-    return spans.length > 0 ? spans : [{ type: 'span', text: htmlToPlainText(html) }];
-};
-
-const htmlToFlexComponents = (html) => {
-    if (!html) return [];
-
-    const components = [];
-    const elementRegex = /<(h4|p|ul|ol|table)[\s\S]*?>(.*?)<\/\1>/gs;
-    let lastIndex = 0;
-    let match;
-
-    while ((match = elementRegex.exec(html)) !== null) {
-        if (match.index > lastIndex) {
-            const textContent = html.substring(lastIndex, match.index);
-            if (htmlToPlainText(textContent)) {
-                components.push({ type: 'text', contents: htmlToFlexSpans(textContent), wrap: true, size: 'sm', margin: 'md' });
-            }
-        }
-        
-        const [fullMatch, tagName, innerHtml] = match;
-        const plainText = (text) => text.replace(/<[^>]*>?/gm, '').trim();
-
-        switch (tagName) {
-            case 'h4':
-                components.push({ type: 'text', text: plainText(innerHtml), weight: 'bold', size: 'md', margin: 'lg', color: '#6D28D9' });
-                break;
-            case 'p':
-                components.push({ type: 'text', contents: htmlToFlexSpans(innerHtml), wrap: true, size: 'sm', margin: 'md' });
-                break;
-            case 'ul':
-            case 'ol':
-                const items = innerHtml.match(/<li.*?>(.*?)<\/li>/gs) || [];
-                items.forEach(item => {
-                    components.push({
-                        type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs',
-                        contents: [
-                            { type: 'text', text: '•', flex: 0, color: '#9ca3af', margin: 'xs' },
-                            { type: 'text', contents: htmlToFlexSpans(item), wrap: true, size: 'sm', flex: 1 }
-                        ]
-                    });
-                });
-                break;
-            case 'table':
-                const rows = innerHtml.match(/<tr.*?>(.*?)<\/tr>/gs) || [];
-                rows.forEach(row => {
-                    const cells = row.match(/<td.*?>(.*?)<\/td>/gs) || [];
-                    if (cells.length > 0) {
-                        components.push({
-                            type: 'box', layout: 'horizontal', margin: 'sm', spacing: 'md',
-                            contents: cells.map(cell => ({
-                                type: 'text', 
-                                contents: htmlToFlexSpans(cell), 
-                                wrap: true, 
-                                size: 'sm', 
-                                flex: 1, 
-                                margin: 'xs'
-                            }))
-                        });
-                    }
-                });
-                break;
-            default: break;
-        }
-        lastIndex = match.index + fullMatch.length;
-    }
-
-    if (lastIndex < html.length) {
-        const textContent = html.substring(lastIndex);
-        if (htmlToPlainText(textContent)) {
-            components.push({ type: 'text', contents: htmlToFlexSpans(textContent), wrap: true, size: 'sm', margin: 'md' });
-        }
-    }
-
-    return components;
-};
-
-// **MODIFIED**: The builder function now uses the correct parser for target_audience.
-const buildFlexMessage = (announcement, platformUrl) => {
-    const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
-    const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
-    const dateString = startDate ? `${startDate} ~ ${endDate}` : endDate;
-    const categoryText = `分類 ${announcement.category || '未分類'}`;
-    
-    const summaryComponents = htmlToFlexComponents(announcement.summary);
-    // **CRITICAL FIX**: Use the block-level component parser for target_audience as well.
-    const audienceComponents = htmlToFlexComponents(announcement.target_audience);
-
-    return {
-        type: 'flex',
-        altText: `獎學金新公告：${announcement.title}`,
-        contents: {
-            type: 'bubble',
-            header: {
-                type: 'box',
-                layout: 'vertical',
-                paddingAll: '20px',
-                backgroundColor: '#A78BFA',
-                spacing: 'md',
-                contents: [
-                    { type: 'text', text: categoryText, color: '#EDE9FE', size: 'sm' },
-                    { type: 'text', text: announcement.title || '無標題', color: '#FFFFFF', size: 'lg', weight: 'bold', wrap: true },
-                ],
-            },
-            body: {
-                type: 'box',
-                layout: 'vertical',
-                paddingAll: '20px',
-                spacing: 'xl',
-                contents: [
-                    ...summaryComponents,
-                    { type: 'separator', margin: 'xl' },
-                    {
-                        type: 'box',
-                        layout: 'vertical',
-                        margin: 'lg',
-                        spacing: 'md',
-                        contents: [
-                            {
-                                type: 'box',
-                                layout: 'baseline',
-                                spacing: 'sm',
-                                contents: [
-                                    { type: 'text', text: '申請期間', size: 'sm', color: '#94a3b8', flex: 0, weight: 'bold' },
-                                    { type: 'text', text: dateString, size: 'sm', color: '#334155', align: 'end', wrap: true },
-                                ],
-                            },
-                            {
-                                type: 'box',
-                                layout: 'vertical', // Changed to vertical for better alignment of multi-line content
-                                spacing: 'sm',
-                                contents: [
-                                    { type: 'text', text: '適用對象', size: 'sm', color: '#94a3b8', weight: 'bold' },
-                                    // **CRITICAL FIX**: The content is now a box containing the parsed components.
-                                    { 
-                                        type: 'box', 
-                                        layout: 'vertical',
-                                        spacing: 'xs',
-                                        contents: audienceComponents,
-                                        margin: 'sm',
-                                    },
-                                ],
-                            },
-                        ],
-                    },
-                ],
-            },
-            footer: {
-                type: 'box',
-                layout: 'vertical',
-                paddingAll: '20px',
-                backgroundColor: '#f8fafc',
-                contents: [
-                    {
-                        type: 'button',
-                        style: 'primary',
-                        color: '#8B5CF6',
-                        action: { type: 'uri', label: '查看更多資訊', uri: platformUrl },
-                    },
-                ],
-            },
-        }
-    };
+    let text = html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<li.*?>/gi, '\n✅ ') // Using the same emoji
+        .replace(/<[^>]*>?/gm, '');
+    return text.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
 };
 
 // --- CORS Handling ---
@@ -238,38 +45,60 @@ export async function OPTIONS(request) {
 // --- Main POST Handler ---
 export async function POST(request) {
     try {
+        // Middleware checks
         const rateLimitCheck = checkRateLimit(request, 'broadcast-line-announcement', 5, 60000);
         if (!rateLimitCheck.success) return newCorsResponse(rateLimitCheck.error, 429);
 
         const authCheck = await verifyUserAuth(request, { requireAuth: true, requireAdmin: true, endpoint: '/api/broadcast-line-announcement' });
         if (!authCheck.success) return authCheck.error;
 
+        // Data validation
         const body = await request.json();
         const dataValidation = validateRequestData(body, ['announcementId'], []);
         if (!dataValidation.success) return newCorsResponse(dataValidation.error, 400);
         const { announcementId } = dataValidation.data;
 
+        // Fetch announcement from Supabase
         const { data: announcement, error: annError } = await supabaseServer
             .from('announcements')
-            .select('title, summary, category, application_start_date, application_end_date, target_audience')
+            .select('title, category, application_start_date, application_end_date, submission_method, target_audience')
             .eq('id', announcementId)
             .single();
+            
         if (annError || !announcement) {
             console.error('Supabase fetch error:', annError);
             return newCorsResponse({ error: '找不到指定的公告' }, 404);
         }
 
+        // **MODIFIED**: Build the plain text message exactly like in the preview component.
+        const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
+        const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
+        const dateString = startDate ? `${startDate} ~ ${endDate}` : endDate;
+        
+        const titleLine = `🎓【分類 ${announcement.category || '未分類'}】 ${announcement.title || '無標題'}`;
+        const periodLine = `\n\n⚠️ 申請期間：\n${dateString}`;
+        const submissionLine = `\n\n📦 送件方式：\n${announcement.submission_method || '未指定'}`;
+        const audienceLine = `\n\n🎯 適用對象：\n${htmlToPlainText(announcement.target_audience) || '所有學生'}`;
         const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        if (!process.env.NEXT_PUBLIC_APP_URL) {
-            console.warn(`[WARNING] NEXT_PUBLIC_APP_URL environment variable is not set. Using fallback "${siteUrl}".`);
-        }
         const platformUrl = `${siteUrl}/?announcement_id=${announcementId}`;
-        
-        const flexMessage = buildFlexMessage(announcement, platformUrl);
-        const lineMessages = [flexMessage];
-        
-        console.log(`[LINE Broadcast] Built Flex Message for announcement ${announcementId}`);
+        const linkLine = `\n\n🔗 查看詳情：\n${platformUrl}`;
 
+        const plainTextMessage = [
+            titleLine,
+            periodLine,
+            submissionLine,
+            audienceLine,
+            linkLine
+        ].join('');
+
+        const lineMessages = [{
+            type: 'text',
+            text: plainTextMessage
+        }];
+        
+        console.log(`[LINE Broadcast] Built Plain Text Message for announcement ${announcementId}`);
+
+        // Call LINE API
         const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
         if (!channelAccessToken) throw new Error('伺服器設定不完整：缺少 LINE Channel Access Token');
 
@@ -286,10 +115,11 @@ export async function POST(request) {
             throw new Error(`LINE API 錯誤: ${errorData.message} (詳情: ${details})`);
         }
 
+        // Log success
         logSuccessAction('LINE_BROADCAST_SENT', '/api/broadcast-line-announcement', {
             adminId: authCheck.user.id,
             announcementId,
-            messageType: 'flex',
+            messageType: 'text',
         });
 
         return newCorsResponse({ success: true, message: '公告已成功透過 LINE 廣播' }, 200);
