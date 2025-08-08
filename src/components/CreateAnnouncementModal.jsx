@@ -227,23 +227,79 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     };
 
     const handleAiAnalyze = async () => {
+        // 1. 基本驗證：確保有輸入源
         if (selectedFiles.length === 0 && urls.length === 0) {
-            showToast("請至少上傳一個檔案或提供一個網址", "warning"); return;
+            showToast("請至少上傳一個檔案或提供一個網址", "warning");
+            return;
         }
+        // 2. 驗證 AI 模型是否已準備就緒
         if (!modelRef.current) {
-            showToast("AI 模型尚未初始化或初始化失敗", "error"); return;
+            showToast("AI 模型尚未初始化或初始化失敗", "error");
+            return;
         }
 
+        // 3. 進入載入狀態，更新 UI
         setIsLoading(true);
         setCurrentStep(1);
 
         try {
             setLoadingText("正在準備分析資料...");
             const parts = [];
+            const sourceUrlsForAI = []; // 存放無法爬取、需要 AI 自行分析的網址
+            const scrapedContentsForAI = []; // 存放成功爬取到的文字內容
+
+            if (urls.length > 0) {
+                setLoadingText(`正在分析 ${urls.length} 個網址...`);
+
+                // 為每個 URL 建立一個爬取請求的 Promise
+                const scrapingPromises = urls.map(async (url) => {
+                    try {
+                        const response = await fetch('/api/scrape', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url }),
+                        });
+
+                        // 如果後端 API 回應錯誤 (例如 500)
+                        if (!response.ok) {
+                            console.warn(`爬取網址失敗 (API 狀態碼: ${response.status}): ${url}`);
+                            return { url, success: false };
+                        }
+
+                        const result = await response.json();
+
+                        // 如果後端回報錯誤，或沒有抓到任何文字
+                        if (result.error || !result.scrapedText) {
+                            console.warn(`無法從網址提取內容: ${url}. ${result.message || ''}`);
+                            return { url, success: false };
+                        }
+
+                        // 成功抓到內容
+                        return { url, text: result.scrapedText, success: true };
+
+                    } catch (error) {
+                        // fetch 本身失敗 (如網路中斷)
+                        console.error(`爬取網址時發生前端錯誤: ${url}`, error);
+                        return { url, success: false };
+                    }
+                });
+
+                const results = await Promise.all(scrapingPromises);
+
+                results.forEach(({ url, text, success }) => {
+                    if (success) {
+                        // 將成功爬取的內容格式化後加入陣列
+                        scrapedContentsForAI.push(`--- 網址內容 (${url}) ---\n${text}`);
+                    } else {
+                        // 將失敗的原始網址加入另一個陣列，讓 AI 稍後自行嘗試
+                        sourceUrlsForAI.push(url);
+                    }
+                });
+            }
 
             const promptText = `
 # 角色 (Persona)
-你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的風格是專業、精確且以學生為中心。你的任務是將一篇關於獎學金的公告，轉換成一段重點突出、視覺清晰的 HTML 公告，並提取結構化資料。你只須關注與「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
+你是一位頂尖的「彰化師範大學獎學金公告分析專家」。你的風格是專業、精確且以學生為中心。你的任務是將一篇關於獎學金的公告，轉換成一段重點突出、視覺清晰的 HTML 公告，並提取結構化資料。你只須關注與彰師大「大學部」及「碩士班」學生相關的資訊，並嚴格遵循所有規則。
 
 # 核心任務 (Core Task)
 你的任務是根據下方提供的「公告全文」，執行以下兩項任務，並將結果合併在一個**單一的 JSON 物件**中回傳。
@@ -308,45 +364,54 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 # 公告全文 (Source Text)
 ---
 請分析以下資訊：
-${urls.length > 0 ? `\n# 網址資料來源:\n${urls.join('\n')}` : ''}
+${scrapedContentsForAI.length > 0 ? `\n# 已爬取的網址內容:\n${scrapedContentsForAI.join('\n\n')}` : ''}
+${sourceUrlsForAI.length > 0 ? `\n# 以下網址無法爬取，請直接分析:\n${sourceUrlsForAI.join('\n')}` : ''}
 ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
 `;
             parts.push({ text: promptText });
 
             if (selectedFiles.length > 0) {
-                const fileForAnalysis = selectedFiles[0];
-                parts.push(await fileToGenerativePart(fileForAnalysis));
-                showToast(`使用檔案 "${fileForAnalysis.name}" 進行 AI 分析`, "success");
+                const filePromises = selectedFiles.map(file => fileToGenerativePart(file));
+                const fileParts = await Promise.all(filePromises);
+                parts.push(...fileParts);
+                showToast(`已附加 ${selectedFiles.length} 個檔案進行 AI 分析`, "info");
             }
 
             setLoadingText("AI 分析中，請稍候...");
 
+            // 6. 呼叫 Google Gemini AI
             const result = await modelRef.current.generateContent({ contents: [{ parts }] });
             const response = result.response;
 
             let aiResponse;
             try {
+                // 解析 AI 回傳的 JSON 字串
                 aiResponse = JSON.parse(response.text());
             } catch (e) {
-                console.error("AI Response Text:", response.text());
-                throw new Error(`JSON 解析失敗: ${e.message}`);
+                console.error("AI 回應的原始文字:", response.text());
+                throw new Error(`AI 回應的 JSON 格式解析失敗: ${e.message}`);
             }
 
+            // 7. 驗證 AI 回應的內容是否完整
             if (!aiResponse.title || !aiResponse.summary) {
-                throw new Error("AI 回應中缺少 title 或 summary 欄位。");
+                console.error("AI 回應不完整:", aiResponse);
+                throw new Error("AI 回應中缺少必要的 `title` 或 `summary` 欄位。");
             }
 
+            // 8. 將 AI 生成的內容填入表單
             setFormData(prev => ({
                 ...prev,
                 ...aiResponse,
                 is_active: true,
-                external_urls: Array.isArray(aiResponse.external_urls) && aiResponse.external_urls.length > 0 ? aiResponse.external_urls : [{ url: '' }],
+                external_urls: Array.isArray(aiResponse.external_urls) && aiResponse.external_urls.length > 0
+                    ? aiResponse.external_urls
+                    : [{ url: '' }],
             }));
 
             setCurrentStep(2);
 
         } catch (error) {
-            console.error("AI 分析失敗:", error);
+            console.error("AI 分析流程失敗:", error);
             showToast(`分析失敗: ${error.message}`, "error");
             setCurrentStep(0);
         } finally {
