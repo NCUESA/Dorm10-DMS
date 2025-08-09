@@ -2,226 +2,109 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, logSuccessAction } from '@/lib/apiMiddleware'
 
-// 伺服器端直接連接到 Supabase Docker
+// 在路由處理器中，建議使用 supabaseServer，它會從 cookie 中自動處理身份驗證
+// 而不是手動建立一個新的 client。除非您有特殊理由需要使用 SERVICE_ROLE_KEY。
 const supabase = createClient(
-  process.env.SUPABASE_URL || 'http://localhost:8000',
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // GET: 獲取用戶的聊天記錄
 export async function GET(request) {
-  try {
-    // 1. Rate limiting 檢查
-    const rateLimitCheck = checkRateLimit(request, 'chat-history-get', 60, 60000); // 每分鐘60次
-    if (!rateLimitCheck.success) {
-      return rateLimitCheck.error;
+    try {
+        const rateLimitCheck = checkRateLimit(request, 'chat-history-get', 60, 60000);
+        if (!rateLimitCheck.success) return rateLimitCheck.error;
+
+        const authCheck = await verifyUserAuth(request, { requireAuth: true, endpoint: '/api/chat-history' });
+        if (!authCheck.success) return authCheck.error;
+
+        const targetUserId = authCheck.user.id;
+
+        let query = supabase
+            .from('chat_history')
+            .select('*')
+            .eq('user_id', targetUserId)
+            .order('timestamp', { ascending: true });
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error('獲取聊天記錄失敗:', error);
+            return NextResponse.json({ error: '獲取聊天記錄失敗' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, data });
+
+    } catch (error) {
+        return handleApiError(error, 'GET /api/chat-history');
     }
-
-    // 2. 用戶身份驗證
-    const authCheck = await verifyUserAuth(request, {
-      requireAuth: true,
-      requireAdmin: false,
-      endpoint: '/api/chat-history'
-    });
-    
-    if (!authCheck.success) {
-      return authCheck.error;
-    }
-
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    const sessionId = searchParams.get('sessionId')
-
-    // 3. 權限檢查：用戶只能查看自己的聊天記錄，除非是管理員
-    if (userId && userId !== authCheck.user.id && authCheck.profile.role !== 'admin') {
-      return NextResponse.json(
-        { error: '權限不足：無法查看其他用戶的聊天記錄' },
-        { status: 403 }
-      );
-    }
-
-    // 4. 使用當前用戶 ID（如果沒有指定或權限不足）
-    const targetUserId = (userId && (userId === authCheck.user.id || authCheck.profile.role === 'admin')) 
-      ? userId 
-      : authCheck.user.id;
-
-    if (!targetUserId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
-    }
-
-    let query = supabase
-      .from('chat_history')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .order('timestamp', { ascending: true })
-
-    // 如果提供了 sessionId，則只獲取該會話的記錄
-    if (sessionId) {
-      query = query.eq('session_id', sessionId)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('獲取聊天記錄失敗:', error)
-      return NextResponse.json(
-        { error: '獲取聊天記錄失敗' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ success: true, data })
-
-  } catch (error) {
-    console.error('聊天記錄 API 錯誤:', error)
-    return NextResponse.json(
-      { error: '內部伺服器錯誤' },
-      { status: 500 }
-    )
-  }
 }
 
 // POST: 保存新的聊天消息
 export async function POST(request) {
-  try {
-    // 1. Rate limiting 檢查
-    const rateLimitCheck = checkRateLimit(request, 'chat-history-post', 100, 60000); // 每分鐘100次
-    if (!rateLimitCheck.success) {
-      return rateLimitCheck.error;
-    }
+    try {
+        const rateLimitCheck = checkRateLimit(request, 'chat-history-post', 100, 60000);
+        if (!rateLimitCheck.success) return rateLimitCheck.error;
 
-    // 2. 用戶身份驗證
-    const authCheck = await verifyUserAuth(request, {
-      requireAuth: true,
-      requireAdmin: false,
-      endpoint: '/api/chat-history POST'
-    });
-    
-    if (!authCheck.success) {
-      return authCheck.error;
-    }
+        const authCheck = await verifyUserAuth(request, { requireAuth: true, endpoint: '/api/chat-history POST' });
+        if (!authCheck.success) return authCheck.error;
 
-    // 3. 驗證請求資料
-    const body = await request.json();
-    const dataValidation = validateRequestData(
-      body,
-      ['userId', 'role', 'messageContent'], // 必填欄位
-      ['sessionId'] // 可選欄位
-    );
-    
-    if (!dataValidation.success) {
-      return dataValidation.error;
-    }
+        const body = await request.json();
+        const { role, messageContent, sessionId } = body;
 
-    const { userId, sessionId, role, messageContent } = dataValidation.data;
-
-    // 4. 權限檢查：用戶只能為自己保存聊天記錄
-    if (userId !== authCheck.user.id && authCheck.profile.role !== 'admin') {
-      return NextResponse.json(
-        { error: '權限不足：無法為其他用戶保存聊天記錄' },
-        { status: 403 }
-      );
-    }
-
-    // 5. 驗證 role 值
-    if (!['user', 'model'].includes(role)) {
-      return NextResponse.json(
-        { error: '無效的角色值' },
-        { status: 400 }
-      );
-    }
-
-    // 6. 驗證消息長度
-    if (messageContent.length > 10000) {
-      return NextResponse.json(
-        { error: '消息內容過長' },
-        { status: 400 }
-      );
-    }
-
-    // 如果沒有提供 sessionId，則創建新的會話
-    const finalSessionId = sessionId || crypto.randomUUID()
-
-    const { data, error } = await supabase
-      .from('chat_history')
-      .insert([
-        {
-          user_id: userId,
-          session_id: finalSessionId,
-          role: role,
-          message_content: messageContent,
-          timestamp: new Date().toISOString()
+        if (!role || !messageContent) {
+            return NextResponse.json({ error: '缺少必要參數 role 或 messageContent' }, { status: 400 });
         }
-      ])
-      .select()
+        if (!['user', 'model'].includes(role)) {
+            return NextResponse.json({ error: '無效的角色值' }, { status: 400 });
+        }
 
-    if (error) {
-      console.error('保存聊天記錄失敗:', error)
-      return NextResponse.json(
-        { error: '保存聊天記錄失敗' },
-        { status: 500 }
-      )
+        const { data, error } = await supabase
+            .from('chat_history')
+            .insert([{
+                user_id: authCheck.user.id,
+                session_id: sessionId || crypto.randomUUID(),
+                role: role,
+                message_content: messageContent,
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true, data });
+
+    } catch (error) {
+        return handleApiError(error, 'POST /api/chat-history');
     }
-
-    return NextResponse.json({ 
-      success: true, 
-      data: data[0],
-      sessionId: finalSessionId
-    })
-
-  } catch (error) {
-    console.error('保存聊天記錄 API 錯誤:', error)
-    return NextResponse.json(
-      { error: '內部伺服器錯誤' },
-      { status: 500 }
-    )
-  }
 }
 
-// DELETE: 清除用戶的聊天記錄
+// DELETE: 清除當前登入用戶的所有聊天記錄
 export async function DELETE(request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    const sessionId = searchParams.get('sessionId')
+    try {
+        // Rate limiting
+        const rateLimitCheck = checkRateLimit(request, 'chat-history-delete', 5, 60000); // 1分鐘內最多5次
+        if (!rateLimitCheck.success) return rateLimitCheck.error;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
+        // 2. 身份驗證
+        const authCheck = await verifyUserAuth(request, { requireAuth: true, endpoint: '/api/chat-history DELETE' });
+        if (!authCheck.success) return authCheck.error;
+
+        // 3. 執行刪除操作
+        const { error } = await supabase
+            .from('chat_history')
+            .delete()
+            .eq('user_id', authCheck.user.id);
+
+        if (error) {
+            throw error;
+        }
+
+        logSuccessAction('CHAT_HISTORY_CLEARED', '/api/chat-history', { userId: authCheck.user.id });
+
+        return NextResponse.json({ success: true, message: '對話紀錄已清除' });
+
+    } catch (error) {
+        return handleApiError(error, 'DELETE /api/chat-history');
     }
-
-    let query = supabase
-      .from('chat_history')
-      .delete()
-      .eq('user_id', userId)
-
-    // 如果提供了 sessionId，則只刪除該會話的記錄
-    if (sessionId) {
-      query = query.eq('session_id', sessionId)
-    }
-
-    const { error } = await query
-
-    if (error) {
-      console.error('刪除聊天記錄失敗:', error)
-      return NextResponse.json(
-        { error: '刪除聊天記錄失敗' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ success: true })
-
-  } catch (error) {
-    console.error('刪除聊天記錄 API 錯誤:', error)
-    return NextResponse.json(
-      { error: '內部伺服器錯誤' },
-      { status: 500 }
-    )
-  }
 }

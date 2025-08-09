@@ -1,11 +1,11 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
-import ChatInterface from '@/components/ChatInterface'
+import ChatInterface from '@/components/ai-assistant/ChatInterface'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-export default function ChatPage() {
+export default function AiAssistantPage() {
     const { isAuthenticated, loading } = useAuth()
     const router = useRouter()
 
@@ -30,5 +30,10 @@ export default function ChatPage() {
         return null
     }
 
-    return <ChatInterface />
+    return (
+        // 容器高度 = 視窗高度(100vh) - Header 高度
+        <div className="flex flex-col" style={{ height: 'calc(100vh - var(--header-height, 80px))' }} >
+            <ChatInterface />
+        </div>
+    );
 }

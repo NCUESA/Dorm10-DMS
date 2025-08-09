@@ -69,7 +69,7 @@ body {
 	width: 75%;
 }
 
-/* 當手機版選單展開時，Header 本身將變為完全透明，並移除自身的模糊效果。此時，毛玻璃效果將完全由下方的選單容器接管，從而解決衝突。*/
+/* 當手機版選單展開時，Header 本身將變為完全透明，並移除自身的模糊效果。*/
 .header-fixed.menu-open {
 	background: transparent;
 	backdrop-filter: none;
@@ -315,7 +315,6 @@ body {
 }
 
 /* 登入頁面動畫樣式 */
-
 @keyframes move-particle {
 	0% {
 		transform: translate(0, 0) scale(1);
@@ -570,4 +569,86 @@ body {
 .rich-text-content tr:nth-of-type(even) {
 	background-color: #f9fafb;
 	/* bg-gray-50 */
+}
+
+/* 輸入框 focus 柔光效果 */
+@layer utilities {
+	.input-focus-glow:focus {
+		border-color: transparent;
+		box-shadow: 0 0 12px 5px rgba(83, 100, 255, 0.607);
+	}
+}
+
+@layer utilities {
+	.chat-scroll-fade {
+		-webkit-mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+		mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+	}
+}
+
+@keyframes spin-pulse {
+	0% {
+		transform: rotate(0deg);
+		opacity: 0.9;
+	}
+
+	50% {
+		transform: rotate(200deg);
+		opacity: 1;
+	}
+
+	100% {
+		transform: rotate(360deg);
+		opacity: 0.9;
+	}
+}
+
+@layer utilities {
+	.gemini-avatar-glow {
+		position: relative;
+		overflow: visible;
+	}
+}
+
+@keyframes fast-spin {
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@layer utilities {
+	.gemini-avatar-glow {
+		position: relative;
+		overflow: visible;
+	}
+
+	.gemini-avatar-glow::before {
+		content: '';
+		position: absolute;
+		left: -2px;
+		top: -2px;
+		width: calc(100% + 4px);
+		height: calc(100% + 4px);
+		border-radius: 9999px;
+		background: conic-gradient(from 180deg at 50% 50%,
+			#1a73e8,
+			#e84235,
+			#fbbc05,
+			#34a853,
+			#1a73e8
+		);
+		animation: fast-spin 1.2s linear infinite;
+		filter: blur(6px);
+		opacity: 0.9;
+		z-index: -1;
+	}
+
+	.gemini-avatar-glow>* {
+		position: relative;
+		z-index: 1;
+	}
 }

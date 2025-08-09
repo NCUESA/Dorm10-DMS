@@ -1,21 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from 'next/navigation'; // 導入 Next.js 的 usePathname hook
 import { School, HelpCircle, Mail, MessageSquare } from 'lucide-react';
 
 export default function Footer() {
-    const pathname = usePathname(); // 獲取當前的頁面路徑
-    
-    const isPrivacyPage = pathname === '/terms-and-privacy';
-
     return (
-        // 動態添加 class：如果不是隱私權政策頁面，就加上 mt-24 (margin-top)
-        <footer className={`bg-[#1E2129] text-white py-16 ${!isPrivacyPage ? 'mt-24' : ''}`}>
+        <footer className={`bg-[#1E2129] text-white py-16`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
 
-                    {/* 關於平台 */}
                     <div className="text-center sm:text-left">
                         <div className="inline-block mb-6">
                             <h3 className="text-lg font-bold text-white">
@@ -31,7 +24,6 @@ export default function Footer() {
                         </p>
                     </div>
 
-                    {/* 相關資源 */}
                     <div className="text-center sm:text-left">
                         <div className="inline-block mb-6">
                             <h3 className="text-lg font-bold text-white">
@@ -47,7 +39,7 @@ export default function Footer() {
                                 rel="noopener noreferrer"
                             >
                                 <School className="w-5 h-5 flex-shrink-0" />
-                                <span className="footer-link-underline">彰師大 生輔組首頁</span>
+                                <span className="footer-link-underline">彰師 生輔組首頁</span>
                             </Link>
                             <Link
                                 href="https://www.facebook.com/ncuestuser"
@@ -65,7 +57,7 @@ export default function Footer() {
                                     <title>Facebook</title>
                                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                                 </svg>
-                                <span className="footer-link-underline">彰師大 生輔組 FB</span>
+                                <span className="footer-link-underline">彰師 生輔組 FB</span>
                             </Link>
                             <Link
                                 href="mailto:act5718@gmail.com"
@@ -79,7 +71,6 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* 平台開發 */}
                     <div className="text-center sm:text-left">
                         <div className="inline-block mb-6">
                             <h3 className="text-lg font-bold text-white">
@@ -114,7 +105,6 @@ export default function Footer() {
                     </div>
                 </div>
 
-                {/* 版權資訊 */}
                 <div className="border-t border-gray-700 mt-12 pt-8 text-center text-sm">
                     <p className="text-gray-400">
                         © 2025 彰師校外獎學金資訊平台. All Rights Reserved.
