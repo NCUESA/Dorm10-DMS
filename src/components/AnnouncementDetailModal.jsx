@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Paperclip, Link as LinkIcon, Calendar, Users, Send as SendIcon, Download } from 'lucide-react';
+import { X, Paperclip, Link as LinkIcon, Calendar, Users, Send as SendIcon, Download, Info, ExternalLink } from 'lucide-react';
 import DownloadPDFButton from '@/components/admin/DownloadPDFButton';
 
 // --- Helper Functions & Constants ---
@@ -52,19 +52,30 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
         return [];
     }, [announcement]);
 
+    const dateInfo = useMemo(() => {
+        if (!announcement) return { displayString: '未指定', isOpen: false };
+
+        const now = new Date();
+        const startDate = announcement.application_start_date ? new Date(announcement.application_start_date) : null;
+        const endDate = announcement.application_end_date ? new Date(announcement.application_end_date) : null;
+
+        if (endDate) {
+            endDate.setHours(23, 59, 59, 999);
+        }
+
+        const isOpen = startDate && endDate ? (now >= startDate && now <= endDate) : false;
+
+        const formattedStartDate = startDate ? startDate.toLocaleDateString('en-CA') : null;
+        const formattedEndDate = endDate ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
+
+        const displayString = formattedStartDate
+            ? `${formattedStartDate} ~ ${formattedEndDate}`
+            : formattedEndDate || '未指定';
+
+        return { displayString, isOpen };
+    }, [announcement]);
+
     if (!isOpen || !announcement) return null;
-
-    const formatDate = (dateString) => {
-        if (!dateString) return null;
-        return new Date(dateString).toLocaleDateString('en-CA');
-    };
-
-    const startDate = formatDate(announcement.application_start_date);
-    const endDate = formatDate(announcement.announcement_end_date);
-
-    const dateDisplayString = startDate
-        ? `${startDate} ~ ${endDate || '無期限'}`
-        : endDate || '未指定';
 
     const finalContent = announcement.summary || '無詳細內容';
 
@@ -104,17 +115,28 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                         </div>
 
                         <div className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                                <div className="flex items-start gap-3">
-                                    <Calendar className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                        <p className="font-semibold text-gray-500">{startDate ? '申請期間' : '公告結束/申請截止'}</p>
-                                        <p className="font-bold text-lg text-gray-900">
-                                            {dateDisplayString}
-                                        </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-10 gap-x-8 gap-y-6 text-sm">
+                                <div className="sm:col-span-3 flex flex-col gap-y-6">
+                                    <div className="flex items-start gap-3">
+                                        <Calendar className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-gray-500">申請期間</p>
+                                            <p className={`font-bold text-sm ${dateInfo.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                                                {dateInfo.displayString}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <SendIcon className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="font-semibold text-gray-500">送件方式</p>
+                                            <p className="text-gray-800">{announcement.submission_method || '未指定'}</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-3">
+
+                                {/* 第二欄：適用對象 */}
+                                <div className="sm:col-span-7 flex items-start gap-3">
                                     <Users className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
                                     <div>
                                         <p className="font-semibold text-gray-500">適用對象</p>
@@ -122,13 +144,6 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                             className="text-gray-800 rich-text-content"
                                             dangerouslySetInnerHTML={{ __html: announcement.target_audience || '未指定' }}
                                         />
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <SendIcon className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                        <p className="font-semibold text-gray-500">送件方式</p>
-                                        <p className="text-gray-800">{announcement.submission_method || '未指定'}</p>
                                     </div>
                                 </div>
                             </div>

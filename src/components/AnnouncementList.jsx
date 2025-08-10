@@ -30,10 +30,10 @@ const calculateSemester = (endDateStr) => {
 };
 
 const ApplicationLimitations = ({ limitations }) => {
-    if (limitations === 'N') {
-        return <span className="text-green-600">N</span>;
+    if (limitations === 'Y') {
+        return <span className="text-green-600">可兼領</span>;
     }
-    return <span className="text-red-600">Y</span>;
+    return <span className="text-red-600">不可兼領</span>;
 };
 
 const DateDisplay = ({ item, className }) => {

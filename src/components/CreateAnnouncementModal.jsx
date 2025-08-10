@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import QuillEditor from './QuillEditor';
+import TinyMCE from './TinyMCE';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import { authFetch } from '@/lib/authFetch';
@@ -316,7 +316,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     3.  \`application_start_date\` (string | null): **申請開始日期**。
     4.  \`application_end_date\` (string | null): **申請結止日期**，格式必須是 'YYYY-MM-DD' 。若只提及月份，以該月最後一天為準。若為區間，以**結束日期**為準，備註: 民國年 + 1911 即為西元年。
     5.  \`target_audience\` (string | null): **目標對象**。**此欄位必須是 HTML 格式**，並遵循下方的「視覺化與樣式指導」為關鍵字上色。
-    6.  \`application_limitations\` (string | null): **兼領限制**。若明確提及**不行**兼領，回傳 'Y'，否則一律回傳 'N'。
+    6.  \`application_limitations\` (string | null): **兼領限制**。若明確提及**不行**兼領，回傳 'N'，否則一律回傳 'Y'。
     7.  \`submission_method\` (string | null): **送件方式**。簡要說明最終的送件管道。
     8.  \`external_urls\` (array of objects | []): **所有相關網址**。將所有找到的 URL 整理成一個物件陣列，格式為 \`[{ "url": "https://..." }]\`。若無則回傳空陣列 \`[]\`。
     9.  \`summary\` (string | null): **公告摘要**。**此欄位必須是 HTML 格式**，並遵循下方的「視覺化與樣式指導」為關鍵字上色。
@@ -539,8 +539,8 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                                 onChange={handleChange}
                             >
                                 <option value="">請選擇</option>
-                                <option value="Y">Y (不可兼領)</option>
-                                <option value="N">N (可兼領)</option>
+                                <option value="Y">可兼領</option>
+                                <option value="N">不可兼領</option>
                             </select>
                         </div>
                     </div>
@@ -548,7 +548,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                     <div className="flex flex-col min-h-[250px]">
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">適用對象</label>
                         <div className="relative flex-grow">
-                            <QuillEditor value={formData.target_audience} onChange={handleTargetAudienceChange} disabled={isLoading} />
+                            <TinyMCE value={formData.target_audience} onChange={handleTargetAudienceChange} disabled={isLoading} />
                         </div>
                     </div>
 
@@ -557,7 +557,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                             公告摘要 <span className="text-red-500 ml-1">*</span>
                         </label>
                         <div className="relative flex-grow">
-                            <QuillEditor value={formData.summary} onChange={handleSummaryChange} disabled={isLoading} />
+                            <TinyMCE value={formData.summary} onChange={handleSummaryChange} disabled={isLoading} />
                         </div>
                     </div>
 

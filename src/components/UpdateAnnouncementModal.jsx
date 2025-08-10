@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import QuillEditor from './QuillEditor';
+import TinyMCE from './TinyMCE';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import { authFetch } from '@/lib/authFetch';
@@ -281,8 +281,8 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                                             <label htmlFor="application_limitations" className="block text-sm font-semibold text-gray-700 mb-1.5">申請限制</label>
                                             <select id="application_limitations" name="application_limitations" className={inputStyles} value={formData.application_limitations} onChange={handleChange}>
                                                 <option value="">未指定</option>
-                                                <option value="Y">Y (可兼領)</option>
-                                                <option value="N">N (不可兼領)</option>
+                                                <option value="Y">可兼領</option>
+                                                <option value="N">不可兼領</option>
                                             </select>
                                         </div>
                                     </div>
@@ -290,7 +290,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                                     <div className="flex flex-col min-h-[250px]">
                                         <label htmlFor="target_audience" className="block text-sm font-semibold text-gray-700 mb-1.5">適用對象</label>
                                         <div className="relative flex-grow">
-                                            <QuillEditor value={formData.target_audience} onChange={handleTargetAudienceChange} disabled={isSaving} />
+                                            <TinyMCE value={formData.target_audience} onChange={handleTargetAudienceChange} disabled={isSaving} />
                                         </div>
                                     </div>
 
@@ -299,7 +299,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                                             公告摘要 <span className="text-red-500 ml-1">*</span>
                                         </label>
                                         <div className="relative flex-grow">
-                                            <QuillEditor value={formData.summary} onChange={handleSummaryChange} disabled={isSaving} />
+                                            <TinyMCE value={formData.summary} onChange={handleSummaryChange} disabled={isSaving} />
                                         </div>
                                     </div>
 
