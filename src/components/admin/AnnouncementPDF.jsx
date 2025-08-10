@@ -296,8 +296,8 @@ const AnnouncementPDF = ({ announcement }) => {
                         <Text>聯繫 系統開發者: <Link src="mailto:3526ming@gmail.com" style={styles.footerLink}>Tai Ming Chen (3526ming@gmail.com)</Link></Text>
                     </View>
                     <View style={styles.footerColumn}>
-                        <Link src={homepageUrl} style={styles.footerLink}>前往彰師校外獎學金資訊平台</Link>
-                        <Text>版權所有 © {new Date().getFullYear()} 彰師校外獎學金資訊平台</Text>
+                        <Link src={homepageUrl} style={styles.footerLink}>前往彰師生輔組獎學金資訊平台</Link>
+                        <Text>版權所有 © {new Date().getFullYear()} 彰師生輔組獎學金資訊平台</Text>
                     </View>
                 </View>
 
@@ -309,7 +309,7 @@ const AnnouncementPDF = ({ announcement }) => {
                         src={'/logo.png'}
                     />
                     <Text style={styles.watermarkText}>
-                        彰師校外獎學金資訊平台
+                        彰師生輔組獎學金資訊平台
                     </Text>
                 </View>
 

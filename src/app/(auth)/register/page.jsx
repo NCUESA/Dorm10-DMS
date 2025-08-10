@@ -206,7 +206,7 @@ export default function Register() {
 									Complexity,<br />Simplified.<br /> Potential,<br />Amplified.
 								</h2>
 								<p className="mt-6 text-lg text-slate-200">
-									新版彰師大校外獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為流暢的數位體驗，助您事半功倍 !
+									新版彰師生輔組獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為流暢的數位體驗，助您事半功倍 !
 								</p>
 							</div>
 						</div>

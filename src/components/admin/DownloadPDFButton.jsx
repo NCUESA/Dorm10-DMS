@@ -11,7 +11,7 @@ const DownloadPDFButton = ({ announcement, className }) => {
         const newWindow = window.open('', '_blank');
         if (newWindow) {
             newWindow.document.write('<!DOCTYPE html><html><head><title>正在生成 PDF...</title><style>body { margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; background-color: #f0f0f0; } .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></head><body><div class="loader"></div></body></html>');
-            newWindow.document.title = `彰師校外獎學金公告-${announcement.title}`;
+            newWindow.document.title = `彰師生輔組獎學金公告-${announcement.title}`;
 
             const container = newWindow.document.body;
             container.innerHTML = '';

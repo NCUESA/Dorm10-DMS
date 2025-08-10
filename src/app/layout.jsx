@@ -12,7 +12,7 @@ const notoSans = Noto_Sans_TC({
 })
 
 export const metadata = {
-	title: '彰師校外獎學金資訊平台',
+	title: '彰師生輔組獎學金資訊平台',
 	description: '提供彰師學生校外獎學金的 AI 資訊平台',
 	icons: {
 		icon: [

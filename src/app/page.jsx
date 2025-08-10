@@ -22,7 +22,7 @@ export default function Home() {
             <main className="flex flex-col gap-8 items-center sm:items-start max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="text-center sm:text-left">
                     <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--primary)' }}>
-                        歡迎來到 彰師校外獎學金資訊平台
+                        歡迎來到 彰師生輔組獎學金資訊平台
                     </h2>
                     <p className="text-lg mb-8" style={{ color: 'var(--text-muted)' }}>
                         您可以在這裡獲取所有相關資訊，並且使用 AI 問答助理解答您的問題。

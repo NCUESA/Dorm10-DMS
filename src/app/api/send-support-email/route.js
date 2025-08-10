@@ -72,7 +72,7 @@ const generateSupportEmailHtml = (user, messages) => {
     // --- 主郵件模板 ---
     return `
     <!DOCTYPE html>
-    <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>彰師校外獎學金資訊平台</title>
+    <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>彰師生輔組獎學金資訊平台</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
         body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; }
@@ -92,7 +92,7 @@ const generateSupportEmailHtml = (user, messages) => {
     </style></head><body>
     <table class="wrapper" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center" style="padding: 24px;">
     <table class="container" border="0" cellpadding="0" cellspacing="0" width="100%">
-        <tr><td class="header"><h1>彰師校外獎學金資訊平台</h1></td></tr>
+        <tr><td class="header"><h1>彰師生輔組獎學金資訊平台</h1></td></tr>
         <tr><td class="content">
             <h2>使用者資訊</h2>
             <table class="details-table">
@@ -109,7 +109,7 @@ const generateSupportEmailHtml = (user, messages) => {
             </table>
         </td></tr>
         <tr><td class="footer">
-            <p style="margin: 0 0 12px;">此請求由 <a href="${platformUrl}" target="_blank">彰師校外獎學金資訊平台</a> 發出</p>
+            <p style="margin: 0 0 12px;">此請求由 <a href="${platformUrl}" target="_blank">彰師生輔組獎學金資訊平台</a> 發出</p>
             <p style="margin: 0 0 5px;">© ${currentYear} All Rights Reserved.</p>
             <p style="margin: 0;">此為系統自動發送之信件，請直接回覆此信件以聯繫使用者。</p>
         </td></tr>
@@ -150,7 +150,7 @@ export async function POST(request) {
         const htmlContent = generateSupportEmailHtml(user, messages);
 
         const mailOptions = {
-            from: `"彰師校外獎學金資訊平台" <noreply@ncuesa.org.tw>`,
+            from: `"彰師生輔組獎學金資訊平台" <noreply@ncuesa.org.tw>`,
             to: '3526ming@gmail.com',
             replyTo: user.email,
             subject: `使用者 ${user.user_metadata?.name || user.email} 請求協助`,
