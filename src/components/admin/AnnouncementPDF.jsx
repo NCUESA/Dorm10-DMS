@@ -11,7 +11,6 @@ Font.register({
     ],
 });
 
-// --- 全局樣式定義 ---
 const colors = {
     primary: '#1E40AF',
     text: '#1F2937',
@@ -45,16 +44,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         zIndex: -1,
     },
-
     watermarkImage: {
         width: 400,
         height: 400,
         opacity: 0.08,
     },
-
     watermarkText: {
         marginTop: 30,
-        fontSize: 50,
+        fontSize: 45,
         fontWeight: 'bold',
         color: colors.muted,
         opacity: 0.08,
@@ -104,33 +101,25 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         color: colors.text,
-        marginTop: 10,
         marginBottom: 20,
         textAlign: 'center',
         lineHeight: 1.2,
     },
-    mainContent: {
+    topInfoContainer: {
         display: 'flex',
         flexDirection: 'row',
-        gap: 25,
-    },
-    leftColumn: {
-        width: '32%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 18,
-    },
-    rightColumn: {
-        width: '68%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-    },
-    section: {
-        padding: 12,
+        marginBottom: 20,
         borderWidth: 1,
         borderColor: '#E5E7EB',
         borderRadius: 6,
+    },
+    infoColumn: {
+        flex: 1,
+        padding: 12,
+    },
+    infoColumnDivider: {
+        borderRightWidth: 1,
+        borderRightColor: '#E5E7EB',
     },
     sectionTitle: {
         fontSize: 11,
@@ -149,8 +138,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     qrCodeImage: {
-        width: 100,
-        height: 100,
+        width: 80,
+        height: 80,
         alignSelf: 'center',
     },
     urlText: {
@@ -165,6 +154,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E5E7EB',
         borderRadius: 6,
+        marginBottom: 20,
     },
 });
 
@@ -181,36 +171,29 @@ const htmlStyles = StyleSheet.create({
     span: {},
     table: {
         width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        marginTop: 10,
-        marginBottom: 10,
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderCollapse: 'collapse',
     },
-    thead: {
-        backgroundColor: '#F3F4F6',
-        fontWeight: 'bold',
-    },
+    thead: {},
     tbody: {},
-    tr: {
-        display: 'flex',
-        flexDirection: 'row',
-    },
+    tr: {},
     th: {
-        flex: 1,
         padding: 6,
         fontSize: 10,
         fontWeight: 'bold',
         borderStyle: 'solid',
         borderWidth: 1,
-        borderColor: colors.text,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#F9FAFB',
     },
     td: {
-        flex: 1,
         padding: 6,
         fontSize: 10,
         borderStyle: 'solid',
         borderWidth: 1,
-        borderColor: colors.text,
+        borderColor: '#E5E7EB',
     },
 });
 
@@ -289,7 +272,6 @@ const AnnouncementPDF = ({ announcement }) => {
         <Document title={announcement.title}>
             <Page size="A4" style={styles.page} wrap>
                 <Text style={styles.header} fixed>此文件下載於: {new Date().toLocaleString('zh-TW')}</Text>
-
                 <View style={styles.footer} fixed>
                     <View style={styles.footerColumn}>
                         <Text>聯繫 獎學金承辦人員: <Link src="mailto:act5718@gmail.com" style={styles.footerLink}>何淑芬 (act5718@gmail.com)</Link></Text>
@@ -300,9 +282,7 @@ const AnnouncementPDF = ({ announcement }) => {
                         <Text>版權所有 © {new Date().getFullYear()} 彰師生輔組獎學金資訊平台</Text>
                     </View>
                 </View>
-
                 <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
-
                 <View style={styles.watermarkContainer} fixed>
                     <Image
                         style={styles.watermarkImage}
@@ -313,46 +293,44 @@ const AnnouncementPDF = ({ announcement }) => {
                     </Text>
                 </View>
 
-                {/* --- 渲染可自動換頁的主內容 --- */}
                 <Text style={styles.title}>{breakTextForAllChars(announcement.title || '公告詳情', 20)}</Text>
 
-                <View style={styles.mainContent}>
-                    <View style={styles.leftColumn}>
-                        <View style={styles.section} wrap={false}>
-                            <Text style={styles.sectionTitle}>公告資訊</Text>
-                            <Text style={styles.infoTextLabel}>公告資料庫 ID</Text>
-                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.id, 23)}</Text>
-                            <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>最近編輯日期</Text>
-                            <Text style={styles.infoTextValue}>{new Date(announcement.updated_at).toLocaleString('zh-TW')}</Text>
-                        </View>
-                        <View style={styles.section} wrap={false}>
-                            <Text style={styles.sectionTitle}>公告日程</Text>
-                            <Text style={styles.infoTextLabel}>申請開始日</Text>
-                            <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_start_date)}</Text>
-                            <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>申請截止日</Text>
-                            <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_end_date)}</Text>
-                        </View>
-                        <View style={styles.section} wrap={false}>
-                            <Text style={styles.sectionTitle}>申請辦法</Text>
-                            <Text style={styles.infoTextLabel}>申請限制</Text>
-                            <Text style={styles.infoTextValue}>{announcement.application_limitations || '未指定'}</Text>
-                            <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>送件方式</Text>
-                            <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.submission_method || '未指定', 13)}</Text>
-                        </View>
-                        <View style={styles.section} wrap={false}>
-                            {qrCodeDataUrl && <Image style={styles.qrCodeImage} src={qrCodeDataUrl} />}
-                            <Link src={announcementUrl} style={styles.urlText}>掃描或點擊以查看線上公告</Link>
-                        </View>
+                <View style={styles.topInfoContainer} wrap={false}>
+                    <View style={[styles.infoColumn, styles.infoColumnDivider]}>
+                        <Text style={styles.sectionTitle}>公告資訊</Text>
+                        <Text style={styles.infoTextLabel}>公告 ID</Text>
+                        <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.id, 18)}</Text>
+                        <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>最近編輯</Text>
+                        <Text style={styles.infoTextValue}>{new Date(announcement.updated_at).toLocaleDateString('zh-TW')}</Text>
                     </View>
-                    <View style={styles.rightColumn}>
-                        <View style={styles.quillWrapper}>
-                            <Text style={styles.sectionTitle}>適用對象</Text>
-                            <Html stylesheet={htmlStyles}>{finalTargetAudience || '<p>未指定</p>'}</Html>
-                        </View>
-                        <View style={styles.quillWrapper}>
-                            <Text style={styles.sectionTitle}>公告摘要</Text>
-                            <Html stylesheet={htmlStyles}>{finalSummary || '<p>無詳細內容</p>'}</Html>
-                        </View>
+                    <View style={[styles.infoColumn, styles.infoColumnDivider]}>
+                        <Text style={styles.sectionTitle}>公告日程</Text>
+                        <Text style={styles.infoTextLabel}>申請開始</Text>
+                        <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_start_date)}</Text>
+                        <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>申請截止</Text>
+                        <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_end_date)}</Text>
+                    </View>
+                    <View style={[styles.infoColumn, styles.infoColumnDivider]}>
+                        <Text style={styles.sectionTitle}>申請辦法</Text>
+                        <Text style={styles.infoTextLabel}>申請限制</Text>
+                        <Text style={styles.infoTextValue}>{announcement.application_limitations || '未指定'}</Text>
+                        <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>送件方式</Text>
+                        <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.submission_method || '未指定', 10)}</Text>
+                    </View>
+                    <View style={styles.infoColumn}>
+                        {qrCodeDataUrl && <Image style={styles.qrCodeImage} src={qrCodeDataUrl} />}
+                        <Link src={announcementUrl} style={styles.urlText}>掃描或點擊查看線上公告</Link>
+                    </View>
+                </View>
+
+                <View>
+                    <View style={styles.quillWrapper}>
+                        <Text style={styles.sectionTitle}>適用對象</Text>
+                        <Html stylesheet={htmlStyles}>{finalTargetAudience || '<p>未指定</p>'}</Html>
+                    </View>
+                    <View style={styles.quillWrapper}>
+                        <Text style={styles.sectionTitle}>公告摘要</Text>
+                        <Html stylesheet={htmlStyles}>{finalSummary || '<p>無詳細內容</p>'}</Html>
                     </View>
                 </View>
             </Page>
