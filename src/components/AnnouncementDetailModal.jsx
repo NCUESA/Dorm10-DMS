@@ -8,8 +8,8 @@ import DownloadPDFButton from '@/components/admin/DownloadPDFButton';
 const categoryStyles = {
     A: { bg: 'bg-red-100', text: 'text-red-800' },
     B: { bg: 'bg-orange-100', text: 'text-orange-800' },
-    C: { bg: 'bg-blue-100', text: 'text-blue-800' },
-    D: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
+    C: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
+    D: { bg: 'bg-blue-100', text: 'text-blue-800' },
     E: { bg: 'bg-violet-100', text: 'text-violet-800' },
     default: { bg: 'bg-gray-100', text: 'text-gray-800' },
 };
