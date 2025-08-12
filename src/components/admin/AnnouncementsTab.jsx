@@ -113,7 +113,7 @@ export default function AnnouncementsTab() {
         setPreview({
             open: true,
             type: type,
-            announcement: ann, // Just pass the whole announcement object
+            announcement: ann,
             id: ann.id
         });
     };
@@ -173,8 +173,8 @@ export default function AnnouncementsTab() {
                                     <div className="flex items-center">申請截止日 {renderSortIcon('application_end_date')}</div>
                                 </th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 w-28">狀態</th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('created_at')}>
-                                    <div className="flex items-center">最後更新 {renderSortIcon('created_at')}</div>
+                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('updated_at')}>
+                                    <div className="flex items-center">最後更新 {renderSortIcon('updated_at')}</div>
                                 </th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 text-center w-48">操作</th>
                             </tr>
@@ -193,7 +193,7 @@ export default function AnnouncementsTab() {
                                         <td className="p-4 px-6">
                                             <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span>
                                         </td>
-                                        <td className="p-4 px-6 text-gray-600">{new Date(ann.created_at).toLocaleDateString()}</td>
+                                        <td className="p-4 px-6 text-gray-600">{new Date(ann.updated_at).toLocaleDateString()}</td>
                                         <td className="p-4 px-6">
                                             <div className="flex items-center justify-center gap-1.5">
                                                 <button onClick={() => setEditing(ann)} className={`${buttonStyles.edit} whitespace-nowrap`}>編輯</button>
@@ -210,7 +210,7 @@ export default function AnnouncementsTab() {
                         </tbody>
                     </table>
                 </div>
-                {/* --- MOBILE VIEW (NEW ACCORDION CARD DESIGN) --- */}
+                {/* --- MOBILE VIEW --- */}
                 <div className="md:hidden px-2 py-4 flex flex-col gap-3">
                     {loading ? (
                         <div className="text-center p-8 text-gray-500">載入中...</div>
@@ -221,12 +221,10 @@ export default function AnnouncementsTab() {
                             const isExpanded = expandedId === ann.id;
                             return (
                                 <div key={ann.id}
-                                    className={`
-                        bg-white rounded-lg transition-all duration-300
-                        ${isExpanded ? 'shadow-lg ring-2 ring-indigo-500 ring-offset-2' : 'shadow-md border border-gray-200/80'}
-                    `}
+                                    className={`bg-white rounded-lg transition-all duration-300
+                                        ${isExpanded ? 'shadow-lg ring-2 ring-indigo-500 ring-offset-2' : 'shadow-md border border-gray-200/80'}
+                                    `}
                                 >
-                                    {/* --- Card Header (Always Visible Trigger) --- */}
                                     <button
                                         onClick={() => setExpandedId(isExpanded ? null : ann.id)}
                                         className="w-full flex items-center justify-between text-left p-4"
@@ -263,7 +261,7 @@ export default function AnnouncementsTab() {
                                                         <div className="text-gray-700">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</div>
 
                                                         <div className="font-semibold text-gray-500">最後更新</div>
-                                                        <div className="text-gray-700">{new Date(ann.created_at).toLocaleDateString()}</div>
+                                                        <div className="text-gray-700">{new Date(ann.updated_at).toLocaleDateString()}</div>
                                                     </div>
 
                                                     {/* Action Buttons */}
@@ -321,7 +319,7 @@ export default function AnnouncementsTab() {
             <AnnouncementPreviewModal
                 isOpen={preview.open}
                 type={preview.type}
-                announcement={preview.announcement} // Pass the announcement object
+                announcement={preview.announcement}
                 onConfirm={handlePreviewConfirm}
                 onClose={() => setPreview(prev => ({ ...prev, open: false }))}
             />

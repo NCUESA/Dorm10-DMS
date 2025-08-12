@@ -5,13 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Paperclip, Link as LinkIcon, Calendar, Users, Send as SendIcon, Download, Info, ExternalLink } from 'lucide-react';
 import DownloadPDFButton from '@/components/admin/DownloadPDFButton';
 
-// --- Helper Functions & Constants ---
 const categoryStyles = {
     A: { bg: 'bg-red-100', text: 'text-red-800' },
     B: { bg: 'bg-orange-100', text: 'text-orange-800' },
     C: { bg: 'bg-blue-100', text: 'text-blue-800' },
     D: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
-    E: { bg: 'bg-green-100', text: 'text-green-800' },
+    E: { bg: 'bg-violet-100', text: 'text-violet-800' },
     default: { bg: 'bg-gray-100', text: 'text-gray-800' },
 };
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
@@ -23,17 +22,16 @@ const getPublicAttachmentUrl = (filePath) => {
     return `/api/attachments/${fileName}`;
 };
 
-// --- Main Component ---
 export default function AnnouncementDetailModal({ isOpen, onClose, announcement }) {
 
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
         } else {
-            document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-open');
         }
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-open');
         };
     }, [isOpen]);
 
@@ -75,9 +73,19 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
         return { displayString, isOpen };
     }, [announcement]);
 
+    const finalContent = useMemo(() => {
+        if (!announcement) return '無詳細內容';
+        return announcement.summary || '無詳細內容';
+    }, [announcement]);
+
     if (!isOpen || !announcement) return null;
 
-    const finalContent = announcement.summary || '無詳細內容';
+    const downloadButton = (
+        <DownloadPDFButton
+            announcement={announcement}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold border border-violet-300 bg-white/80 backdrop-blur-sm text-violet-700 rounded-lg transition-all duration-300 ease-in-out transform hover:bg-violet-100 hover:text-violet-800 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-violet-500/30"
+        />
+    );
 
     return (
         <AnimatePresence>
@@ -86,35 +94,58 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-start p-4 pt-16 sm:pt-20 overflow-y-auto"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-0 sm:p-4"
                     onClick={onClose}
                 >
+                    <style>{`
+                        /* This rule hides the site header and prevents background scroll when the modal is open */
+                        body.modal-open {
+                            overflow: hidden;
+                        }
+                        body.modal-open .header-fixed {
+                            display: none;
+                        }
+                        .rich-text-content table {
+                            display: block;
+                            max-width: 100%;
+                            overflow-x: auto;
+                            white-space: nowrap;
+                        }
+                        .rich-text-content img {
+                            max-width: 100%;
+                            height: auto;
+                        }
+                        /* Hide scrollbar */
+                        .hide-scrollbar::-webkit-scrollbar {
+                            display: none;
+                        }
+                        .hide-scrollbar {
+                            -ms-overflow-style: none;
+                            scrollbar-width: none;
+                        }
+                    `}</style>
                     <motion.div
                         initial={{ scale: 0.95, y: -20, opacity: 0 }}
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.95, y: 20, opacity: 0 }}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="bg-white/85 backdrop-blur-lg rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[calc(100vh-100px)] overflow-hidden border border-white/20"
+                        className="bg-white/85 backdrop-blur-lg w-full h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] sm:w-full sm:max-w-4xl sm:rounded-2xl sm:shadow-2xl flex flex-col relative"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-5 border-b border-black/10 flex justify-between items-start gap-4 flex-shrink-0">
-                            <div className="flex items-start gap-3">
-                                <span className={`flex-shrink-0 mt-1 inline-flex items-center justify-center h-8 w-8 rounded-lg text-sm font-bold ${getCategoryStyle(announcement.category).bg} ${getCategoryStyle(announcement.category).text}`}>
+                        <div className="p-5 border-b border-black/10 flex justify-between items-center gap-4 flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                                <span className={`flex-shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-lg text-sm font-bold ${getCategoryStyle(announcement.category).bg} ${getCategoryStyle(announcement.category).text}`}>
                                     {announcement.category}
                                 </span>
-                                <h2 className="text-lg md:text-xl font-bold text-gray-800">{announcement.title}</h2>
+                                <h2 className="text-base md:text-xl font-bold text-gray-800">{announcement.title}</h2>
                             </div>
 
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <DownloadPDFButton
-                                    announcement={announcement}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold border border-violet-300 bg-transparent text-violet-700 rounded-lg transition-all duration-300 ease-in-out transform hover:bg-violet-100 hover:text-violet-800 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-violet-500/30"
-                                />
                                 <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors"><X size={20} /></button>
                             </div>
                         </div>
 
-                        <div className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto">
+                        <div className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto hide-scrollbar pb-24">
                             <div className="grid grid-cols-1 sm:grid-cols-10 gap-x-8 gap-y-6 text-sm">
                                 <div className="sm:col-span-3 flex flex-col gap-y-6">
                                     <div className="flex items-start gap-3">
@@ -135,7 +166,6 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                     </div>
                                 </div>
 
-                                {/* 第二欄：適用對象 */}
                                 <div className="sm:col-span-7 flex items-start gap-3">
                                     <Users className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
                                     <div>
@@ -190,7 +220,15 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
                                 </div>
                             )}
                         </div>
+
+                        <div className="hidden sm:block absolute bottom-6 right-6 z-10">
+                            {downloadButton}
+                        </div>
                     </motion.div>
+
+                    <div className="sm:hidden fixed bottom-6 right-6 z-50">
+                        {downloadButton}
+                    </div>
                 </motion.div>
             )}
         </AnimatePresence>

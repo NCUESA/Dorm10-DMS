@@ -1,12 +1,22 @@
 'use client';
 
-import React from 'react';
-import { PDFViewer } from '@react-pdf/renderer';
+import React, { useState, useEffect } from 'react';
+import { PDFViewer, pdf } from '@react-pdf/renderer';
 import AnnouncementPDF from './AnnouncementPDF';
 import { createRoot } from 'react-dom/client';
 
 const DownloadPDFButton = ({ announcement, className }) => {
-    
+    const [isMobile, setIsMobile] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        // 判斷是否為行動裝置
+        const userAgent = typeof window.navigator === "undefined" ? "" : navigator.userAgent;
+        const mobile = Boolean(/Android|iP(ad|hone|od)|IEMobile|BlackBerry|Opera Mini/i.test(userAgent));
+        setIsMobile(mobile);
+    }, []);
+
+    // 電腦版：在新分頁中預覽 PDF
     const openPdfInNewTab = () => {
         const newWindow = window.open('', '_blank');
         if (newWindow) {
@@ -27,12 +37,45 @@ const DownloadPDFButton = ({ announcement, className }) => {
         }
     };
 
+    // 手機版：直接下載 PDF
+    const generateAndDownloadPdf = async () => {
+        if (!announcement) {
+            console.error("公告資料不存在。");
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const blob = await pdf(<AnnouncementPDF announcement={announcement} />).toBlob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `彰師生輔組獎學金公告-${announcement.title}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("PDF 生成失敗:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleClick = () => {
+        if (isMobile) {
+            generateAndDownloadPdf();
+        } else {
+            openPdfInNewTab();
+        }
+    };
+
     return (
         <button
-            onClick={openPdfInNewTab}
+            onClick={handleClick}
             className={`${className} whitespace-nowrap`}
+            disabled={isLoading}
         >
-            下載
+            {isLoading ? '生成中...' : '下載'}
         </button>
     );
 };

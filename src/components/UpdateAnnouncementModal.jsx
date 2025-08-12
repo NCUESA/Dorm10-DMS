@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import TinyMCE from './TinyMCE';
@@ -75,7 +76,7 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, filesToRemov
     return (
         <div className="space-y-4">
             <div className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'border-gray-300 hover:border-indigo-400 bg-transparent cursor-pointer' : 'bg-gray-100/50 cursor-not-allowed'}`}
-                onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => !disabled && fileInputRef.current?.click()}>
+                 onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => !disabled && fileInputRef.current?.click()}>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp" disabled={disabled} multiple />
                 <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-600">拖曳檔案到此，或 <span className="font-medium text-indigo-600">點擊上傳</span></p>
@@ -167,8 +168,14 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         } catch (error) { showToast('載入附件失敗', 'error'); }
     };
 
-    const showToast = (message, type = 'success') => setToast({ show: true, message, type });
     const hideToast = () => setToast(prev => ({ ...prev, show: false }));
+
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+        setTimeout(() => {
+            hideToast();
+        }, 3000); // Hide after 3 seconds
+    };
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleSummaryChange = useCallback((content) => setFormData(prev => ({ ...prev, summary: content })), []);
@@ -199,7 +206,8 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                 target_audience: formData.target_audience,
                 application_limitations: formData.application_limitations,
                 submission_method: formData.submission_method,
-                external_urls: JSON.stringify(finalUrls)
+                external_urls: JSON.stringify(finalUrls),
+                updated_at: new Date().toISOString(), // Update the timestamp
             }).eq('id', announcement.id).select().single();
             if (error) throw error;
 
@@ -226,9 +234,10 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                 if (insErr) throw insErr;
             }
 
-            showToast('公告已成功更新', 'success');
             if (refreshAnnouncements) refreshAnnouncements();
             onClose();
+            // Show toast *after* initiating the close action
+            showToast('公告已成功更新', 'success');
         } catch (err) {
             showToast(`更新失敗: ${err.message}`, 'error');
         } finally {
@@ -236,11 +245,13 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         }
     };
 
-    if (!isOpen) return null;
-
     return (
         <>
-            <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
+            {/* Use a Portal to render the Toast outside the modal's DOM tree */}
+            {createPortal(
+                <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />,
+                document.body
+            )}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

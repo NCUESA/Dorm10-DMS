@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Page, Text, View, Document, StyleSheet, Font, Image, Link } from '@react-pdf/renderer';
 import Html from 'react-pdf-html';
 import QRCode from 'qrcode';
@@ -19,6 +19,8 @@ const colors = {
     background: 'transparent',
     white: '#FFFFFF',
     footer: '#111827',
+    success: '#16A34A',
+    danger: '#DC2626',
 };
 
 const styles = StyleSheet.create({
@@ -268,6 +270,13 @@ const AnnouncementPDF = ({ announcement }) => {
     const finalSummary = processHtmlContent(announcement.summary);
     const finalTargetAudience = processHtmlContent(announcement.target_audience);
 
+    const applicationLimit = useMemo(() => {
+        if (announcement.application_limitations === 'Y') {
+            return { text: '可兼領', color: colors.success };
+        }
+        return { text: '不可兼領', color: colors.danger };
+    }, [announcement.application_limitations]);
+
     return (
         <Document title={announcement.title}>
             <Page size="A4" style={styles.page} wrap>
@@ -313,7 +322,7 @@ const AnnouncementPDF = ({ announcement }) => {
                     <View style={[styles.infoColumn, styles.infoColumnDivider]}>
                         <Text style={styles.sectionTitle}>申請辦法</Text>
                         <Text style={styles.infoTextLabel}>申請限制</Text>
-                        <Text style={styles.infoTextValue}>{announcement.application_limitations || '未指定'}</Text>
+                        <Text style={{ ...styles.infoTextValue, color: applicationLimit.color }}>{applicationLimit.text}</Text>
                         <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>送件方式</Text>
                         <Text style={styles.infoTextValue}>{breakTextForAllChars(announcement.submission_method || '未指定', 10)}</Text>
                     </View>
