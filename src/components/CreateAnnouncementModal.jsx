@@ -538,7 +538,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                                 value={formData.application_limitations}
                                 onChange={handleChange}
                             >
-                                <option value="">請選擇</option>
+                                <option value="">未指定</option>
                                 <option value="Y">可兼領</option>
                                 <option value="N">不可兼領</option>
                             </select>

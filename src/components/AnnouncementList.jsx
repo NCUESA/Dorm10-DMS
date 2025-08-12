@@ -30,6 +30,9 @@ const calculateSemester = (endDateStr) => {
 };
 
 const ApplicationLimitations = ({ limitations }) => {
+    if (!limitations) {
+        return <span className="text-gray-500">未指定</span>;
+    }
     if (limitations === 'Y') {
         return <span className="text-green-600">可兼領</span>;
     }
