@@ -34,7 +34,18 @@ const generateEmailHtml = (subject, htmlBody) => {
     const currentYear = new Date().getFullYear();
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    const processedHtmlBody = htmlBody.replace(/\n/g, '<br />');
+    let processedHtmlBody = htmlBody;
+    processedHtmlBody = processedHtmlBody.replace(/(href|src)\s*=\s*["']([^"']*)["']/g, (match, attr, path) => {
+        const trimmedPath = path.trim();
+        if (/^(https?:|mailto:|tel:|#)/i.test(trimmedPath)) {
+            return match;
+        }
+        if (trimmedPath.startsWith('//')) {
+            return `${attr}="https:${trimmedPath}"`;
+        }
+        const absolutePath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+        return `${attr}="${platformUrl}${absolutePath}"`;
+    });
 
     return `
     <!DOCTYPE html>
@@ -67,7 +78,7 @@ const generateEmailHtml = (subject, htmlBody) => {
             
             .footer { padding: 24px 40px; font-size: 12px; text-align: center; color: #9ca3af; background-color: #f9fafb; border-top: 1px solid #e5e7eb; }
             .footer a { color: #6b7280; text-decoration: none; }
-            
+
             @media screen and (max-width: 600px) {
                 .wrapper { padding: 16px 0 !important; }
                 .container { width: 92% !important; }
@@ -82,7 +93,7 @@ const generateEmailHtml = (subject, htmlBody) => {
             <tr>
                 <td align="center">
                     <table class="container" border="0" cellpadding="0" cellspacing="0">
-                        <tr><td class="header"><h1>彰師生輔組校外獎學金資訊平台</h1></td></tr>
+                        <tr><td class="header"><h1>彰師生輔組獎學金資訊平台</h1></td></tr>
                         <tr><td class="content">
                             <h2>${subject}</h2>
                             <div class="html-body">${processedHtmlBody}</div>
@@ -100,19 +111,15 @@ const generateEmailHtml = (subject, htmlBody) => {
     </html>`;
 };
 
-
 // 創建郵件傳輸器
 const transporter = nodemailer.createTransport({
-    host: process.env.NCUE_SMTP_HOST || 'ncuesanas.ncue.edu.tw',
-    port: parseInt(process.env.NCUE_SMTP_PORT || '587', 10),
-    secure: process.env.NCUE_SMTP_SECURE === 'true',
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT, 10),
+    secure: process.env.SMTP_PORT === '465',
     auth: {
-        user: process.env.NCUE_SMTP_USER || 'ncuesu',
-        pass: process.env.NCUE_SMTP_PASSWORD || 'Ncuesa23!'
+        user: process.env.SMTP_USERNAME,
+        pass: process.env.SMTP_PASSWORD
     },
-    tls: {
-        rejectUnauthorized: false
-    }
 });
 
 export async function POST(request) {
@@ -138,7 +145,7 @@ export async function POST(request) {
         const plainTextVersion = htmlBody.replace(/<[^>]*>?/gm, '');
 
         const mailOptions = {
-            from: '"生輔組校外獎學金資訊平台" <noreply@ncuesa.org.tw>',
+            from: `"${process.env.SENDER_NAME}"`,
             to: email,
             subject: `${subject}`,
             html: finalHtmlContent,
