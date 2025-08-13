@@ -2,13 +2,13 @@
 const nextConfig = {
     // 允許開發時外部網域存取
     allowedDevOrigins: [
-        '10.21.44.243', 
-        'localhost', 
+        '10.21.44.243',
+        'localhost',
         '127.0.0.1',
         'scholarship.ncuesa.org.tw',
         'www.scholarship.ncuesa.org.tw'
     ],
-    
+
     // 設置 CORS headers
     async headers() {
         return [

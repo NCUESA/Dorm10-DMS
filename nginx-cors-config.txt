@@ -1,8 +1,8 @@
-# 在你的 nginx 配置文件中 (通常是 /etc/nginx/sites-available/scholarship-api)
+# 在 nginx 配置文件中 (/etc/nginx/sites-available/scholarship-api)
 # 在 location /supabase/ 區塊中添加以下 CORS 配置：
 
 location /supabase/ {
-    # 你現有的代理配置
+    # 現有的代理配置
     proxy_pass http://localhost:8000/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

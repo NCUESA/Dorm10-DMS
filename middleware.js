@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request) {
-	// 改善的 CORS 處理
+	// CORS 處理
 	const origin = request.headers.get('origin');
 	const allowedOrigins = [
 		'http://localhost:3000',
@@ -11,9 +11,9 @@ export async function middleware(request) {
 		'https://scholarship.ncuesa.org.tw',
 		'https://ncuesa.org.tw'
 	];
-	
+
 	const isAllowedOrigin = !origin || allowedOrigins.includes(origin);
-	
+
 	// 處理 preflight OPTIONS 請求
 	if (request.method === 'OPTIONS') {
 		const response = new NextResponse(null, { status: 200 });
@@ -24,9 +24,9 @@ export async function middleware(request) {
 		response.headers.set('Access-Control-Max-Age', '86400');
 		return response;
 	}
-	
+
 	const res = NextResponse.next();
-	
+
 	// 設置 CORS headers
 	if (origin && isAllowedOrigin) {
 		res.headers.set('Access-Control-Allow-Origin', origin);
@@ -34,10 +34,10 @@ export async function middleware(request) {
 		res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, apikey, x-supabase-api-version, prefer, x-client-info');
 		res.headers.set('Access-Control-Allow-Credentials', 'true');
 	}
-	
+
 	try {
 		const supabase = createServerClient(
-			process.env.NEXT_PUBLIC_SUPABASE_URL, // 這會使用 http://localhost:3000/api/proxy (本地) 或生產環境代理
+			process.env.NEXT_PUBLIC_SUPABASE_URL, // 使用 http://localhost:3000/api/proxy (本地) 或生產環境代理
 			process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 			{
 				cookies: {
@@ -77,7 +77,7 @@ export async function middleware(request) {
 		}
 
 		return res;
-		
+
 	} catch (error) {
 		console.error('Middleware error:', error);
 		return res;

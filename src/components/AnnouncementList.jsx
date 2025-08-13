@@ -229,7 +229,7 @@ function AnnouncementListContent() {
                     <p><strong className="font-semibold text-green-600">C：</strong>宗教及民間各項指定身分獎助學金</p>
                     <p><strong className="font-semibold text-blue-600">D：</strong>非公家機關或其他無法歸類的獎助學金</p>
                     <p><strong className="font-semibold text-violet-600">E：</strong>校外獎學金得獎公告</p>
-                    <p><strong class="font-semibold text-teal-600">F：</strong>校內獎學金得獎公告</p>
+                    <p><strong className="font-semibold text-teal-600">F：</strong>校內獎學金得獎公告</p>
                 </div>
             </div>
 
