@@ -28,20 +28,50 @@ const InputModeSelector = ({ inputMode, setInputMode, disabled }) => (
 
 const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }) => {
     const fileInputRef = useRef(null);
-    const maxFiles = 5;
-    const supportedTypes = { 'application/pdf': 'PDF', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX', 'application/msword': 'DOC', 'image/jpeg': '圖片', 'image/jpg': '圖片', 'image/png': '圖片', 'image/gif': '圖片', 'image/webp': '圖片' };
+    const maxFiles = 8;
+    const maxFileSize = 15 * 1024 * 1024; // 15MB
+    const displayMaxSize = `${maxFileSize / 1024 / 1024} MB`;
+
+    const supportedTypes = {
+        // PDF
+        'application/pdf': ['pdf'],
+        // Images
+        'image/jpeg': ['jpeg', 'jpg'],
+        'image/png': ['png'],
+        'image/webp': ['webp'],
+        // Word
+        'application/msword': ['doc'],
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
+        'application/vnd.oasis.opendocument.text': ['odt'],
+        // Excel
+        'application/vnd.ms-excel': ['xls'],
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
+        'application/vnd.oasis.opendocument.spreadsheet': ['ods'],
+        // PowerPoint
+        'application/vnd.ms-powerpoint': ['ppt'],
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
+        'application/vnd.oasis.opendocument.presentation': ['odp'],
+    };
+
+    const acceptString = Object.values(supportedTypes).flat().map(ext => `.${ext}`).join(',');
 
     const handleFiles = (files) => {
         let newFiles = [];
         for (const file of files) {
+            const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+            const isTypeSupported = Object.keys(supportedTypes).includes(file.type) || Object.values(supportedTypes).flat().includes(fileExtension);
+
+            if (!isTypeSupported) { showToast(`不支援的檔案類型: ${file.name}`, 'warning'); continue; }
             if (selectedFiles.some(f => f.name === file.name)) { showToast(`檔案 "${file.name}" 已存在`, 'warning'); continue; }
-            if (!supportedTypes[file.type]) { showToast(`不支援的檔案類型: ${file.name}`, 'warning'); continue; }
-            if (file.size > 10 * 1024 * 1024) { showToast(`檔案過大: ${file.name}`, 'warning'); continue; }
+            if (file.size > maxFileSize) { showToast(`檔案大小超過 ${displayMaxSize} 限制: ${file.name}`, 'warning'); continue; }
             if (selectedFiles.length + newFiles.length >= maxFiles) { showToast(`最多只能選擇 ${maxFiles} 個檔案`, 'warning'); break; }
+
             file.isNewFile = true;
             newFiles.push(file);
         }
-        setSelectedFiles(prev => [...prev, ...newFiles]);
+        if (newFiles.length > 0) {
+            setSelectedFiles(prev => [...prev, ...newFiles]);
+        }
     };
 
     const handleFileChange = (e) => { handleFiles(Array.from(e.target.files)); e.target.value = ''; };
@@ -60,14 +90,19 @@ const FileUploadArea = ({ selectedFiles, setSelectedFiles, disabled, showToast }
             <div
                 className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'border-gray-300 hover:border-indigo-400 bg-transparent cursor-pointer' : 'bg-gray-100/50 cursor-not-allowed'}`}
                 onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => !disabled && fileInputRef.current?.click()}>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp" disabled={disabled} multiple />
+
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept={acceptString} disabled={disabled} multiple />
+
                 <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-600">拖曳檔案到此，或 <span className="font-medium text-indigo-600">點擊上傳</span></p>
                 <p className="mt-1 text-xs text-gray-500">已選擇 {selectedFiles.length} / {maxFiles} 個檔案</p>
+                <p className="mt-1 text-xs text-gray-400">
+                    支援文件 (Word, Excel, PPT, PDF, ODT, ODS, ODP) 及圖片格式，單一檔案大小上限為 {displayMaxSize}
+                </p>
             </div>
             {selectedFiles.length > 0 && (
                 <div className="space-y-2">
-                    <div className="max-h-32 overflow-y-auto space-y-2 rounded-lg p-2 bg-transparent">
+                    <div className="space-y-2 rounded-lg p-2 bg-transparent">
                         {selectedFiles.map((file, index) => (
                             <div key={file.name + index} className="relative flex items-center justify-between p-3 rounded-lg bg-white border">
                                 <div className="flex items-center space-x-3 overflow-hidden">
@@ -227,26 +262,38 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     };
 
     const handleAiAnalyze = async () => {
-        // 1. 基本驗證：確保有輸入源
+        // 確保有輸入源
         if (selectedFiles.length === 0 && urls.length === 0) {
             showToast("請至少上傳一個檔案或提供一個網址", "warning");
             return;
         }
-        // 2. 驗證 AI 模型是否已準備就緒
+        // 驗證 AI 模型是否已準備就緒
         if (!modelRef.current) {
             showToast("AI 模型尚未初始化或初始化失敗", "error");
             return;
         }
 
-        // 3. 進入載入狀態，更新 UI
+        // 進入載入狀態，更新 UI
         setIsLoading(true);
         setCurrentStep(1);
 
         try {
             setLoadingText("正在準備分析資料...");
+
+            // ---  篩選出 AI 可分析的檔案 ---
+            const aiSupportedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            const filesForAI = selectedFiles.filter(file => aiSupportedTypes.includes(file.type));
+
+            if (filesForAI.length > 0) {
+                console.log(`找到 ${filesForAI.length} 個可供 AI 分析的檔案:`, filesForAI.map(f => f.name));
+            }
+            if (filesForAI.length < selectedFiles.length) {
+                console.log(`有 ${selectedFiles.length - filesForAI.length} 個檔案將作為一般附件，不參與 AI 分析。`);
+            }
+
             const parts = [];
-            const sourceUrlsForAI = []; // 存放無法爬取、需要 AI 自行分析的網址
-            const scrapedContentsForAI = []; // 存放成功爬取到的文字內容
+            const sourceUrlsForAI = [];
+            const scrapedContentsForAI = [];
 
             if (urls.length > 0) {
                 setLoadingText(`正在分析 ${urls.length} 個網址...`);
@@ -278,7 +325,6 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                         return { url, text: result.scrapedText, success: true };
 
                     } catch (error) {
-                        // fetch 本身失敗 (如網路中斷)
                         console.error(`爬取網址時發生前端錯誤: ${url}`, error);
                         return { url, success: false };
                     }
@@ -291,7 +337,7 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
                         // 將成功爬取的內容格式化後加入陣列
                         scrapedContentsForAI.push(`--- 網址內容 (${url}) ---\n${text}`);
                     } else {
-                        // 將失敗的原始網址加入另一個陣列，讓 AI 稍後自行嘗試
+                        // 將失敗的原始網址加入陣列，讓 AI 稍後自行嘗試
                         sourceUrlsForAI.push(url);
                     }
                 });
@@ -369,17 +415,17 @@ ${sourceUrlsForAI.length > 0 ? `\n# 以下網址無法爬取，請直接分析:\
 ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
 `;
             parts.push({ text: promptText });
-
-            if (selectedFiles.length > 0) {
-                const filePromises = selectedFiles.map(file => fileToGenerativePart(file));
+            // 確保只處理和附加 AI 支援的檔案
+            if (filesForAI.length > 0) {
+                const filePromises = filesForAI.map(file => fileToGenerativePart(file));
                 const fileParts = await Promise.all(filePromises);
                 parts.push(...fileParts);
-                showToast(`已附加 ${selectedFiles.length} 個檔案進行 AI 分析`, "info");
+                showToast(`已附加 ${filesForAI.length} 個檔案進行 AI 分析`, "info");
             }
 
             setLoadingText("AI 分析中，請稍候...");
 
-            // 6. 呼叫 Google Gemini AI
+            // 6. 叫 Google Gemini AI
             const result = await modelRef.current.generateContent({ contents: [{ parts }] });
             const response = result.response;
 
@@ -427,16 +473,43 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
         setIsLoading(true);
         setLoadingText("儲存中...");
         try {
-            const uploadPromises = selectedFiles.filter(f => f.isNewFile).map(file => {
+            let uploadedFilesData = [];
+
+            const filesToUpload = selectedFiles.filter(f => f.isNewFile);
+
+            if (filesToUpload.length > 0) {
+                setLoadingText(`正在上傳 ${filesToUpload.length} 個檔案...`);
                 const uploadFormData = new FormData();
-                uploadFormData.append('file', file);
-                return authFetch('/api/upload-files', { method: 'POST', body: uploadFormData });
-            });
-            const uploadResponses = await Promise.all(uploadPromises);
-            const uploadedFilesData = await Promise.all(uploadResponses.map(res => {
-                if (!res.ok) throw new Error('一個或多個檔案上傳失敗');
-                return res.json();
-            }));
+
+                for (const file of filesToUpload) {
+                    uploadFormData.append('files', file);
+                }
+
+                // 發送單一的 API 請求
+                const response = await authFetch('/api/upload-files', {
+                    method: 'POST',
+                    body: uploadFormData,
+                });
+
+                if (!response.ok) {
+                    // 整個請求失敗
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`檔案上傳失敗: ${errorData.error || response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                // 部分檔案處理失敗
+                if (result.data.errors && result.data.errors.length > 0) {
+                    const failedFileNames = result.data.errors.map(e => e.fileName).join(', ');
+                    showToast(`部分檔案處理失敗: ${failedFileNames}`, 'warning');
+                }
+
+                // 只使用成功上傳的檔案資訊
+                uploadedFilesData = result.data.uploaded || [];
+            }
+
+            setLoadingText("正在寫入資料庫...");
 
             const finalUrls = formData.external_urls.filter(item => item.url && item.url.trim() !== '');
 
@@ -460,12 +533,12 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
             if (announcementError) throw announcementError;
 
             if (uploadedFilesData.length > 0) {
-                const attachments = uploadedFilesData.map(result => ({
+                const attachments = uploadedFilesData.map(fileInfo => ({
                     announcement_id: announcement.id,
-                    file_name: result.data.originalName,
-                    stored_file_path: result.data.path,
-                    file_size: result.data.size,
-                    mime_type: result.data.mimeType,
+                    file_name: fileInfo.originalName,
+                    stored_file_path: fileInfo.path,
+                    file_size: fileInfo.size,
+                    mime_type: fileInfo.mimeType,
                 }));
                 const { error: attachmentError } = await supabase.from('attachments').insert(attachments);
                 if (attachmentError) throw attachmentError;
@@ -492,7 +565,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                     <hr className="my-6 border-gray-200" />
                     {inputMode === 'ai' ? (
                         <div className="space-y-6">
-                            <h3 className="text-lg font-semibold text-gray-800">1. 上傳檔案或提供網址</h3>
+                            <h3 className="text-lg font-semibold text-gray-800">上傳檔案或提供網址</h3>
                             <FileUploadArea selectedFiles={selectedFiles} setSelectedFiles={setSelectedFiles} disabled={isLoading} showToast={showToast} />
                             <UrlInputArea urls={urls} setUrls={setUrls} disabled={isLoading} showToast={showToast} />
                         </div>
@@ -525,7 +598,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div><label htmlFor="is_active" className="block text-sm font-semibold text-gray-700 mb-1.5">公告狀態</label><select id="is_active" name="is_active" className={inputStyles} value={formData.is_active} onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}><option value={true}>上架</option><option value={false}>下架</option></select></div>
-                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎助學金</option><option value="E">E：獎學金得獎名單公告</option></select></div>
+                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎助學金</option><option value="E">E：校外獎學金得獎公告</option><option value="F">F：校內獎學金得獎公告(臨時性)</option></select></div>
                         <div><label htmlFor="application_start_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請開始日期</label><input type="date" id="application_start_date" name="application_start_date" className={inputStyles} value={formData.application_start_date} onChange={handleChange} /></div>
                         <div><label htmlFor="application_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">公告結束日期</label><input type="date" id="application_end_date" name="application_end_date" className={inputStyles} value={formData.application_end_date} onChange={handleChange} /></div>
                         <div><label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-1.5">送件方式</label><input type="text" id="submission_method" name="submission_method" className={inputStyles} value={formData.submission_method} onChange={handleChange} /></div>
@@ -595,8 +668,7 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-16"
-                        onClick={onClose}>
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-16">
                         <motion.div
                             initial={{ scale: 0.95, y: 50, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -608,7 +680,17 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                         >
                             <div className="p-5 border-b border-black/10 flex justify-between items-center flex-shrink-0">
                                 <h2 className="text-lg font-bold text-gray-800">新增公告</h2>
-                                <button onClick={onClose} disabled={isLoading} className="text-gray-400 hover:text-gray-600 p-2 rounded-full"><X size={20} /></button>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('確認關閉公告編輯模組嗎？如尚未儲存將丟失此編輯紀錄！')) {
+                                            onClose();
+                                        }
+                                    }}
+                                    disabled={isLoading}
+                                    className="text-gray-400 hover:text-gray-600 p-2 rounded-full"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
 
                             <div className="flex-grow p-6 overflow-y-auto">
@@ -622,8 +704,6 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                                     )}
                                 </div>
                                 <div className="flex justify-end space-x-3">
-                                    <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>取消</Button>
-
                                     {currentStep === 0 && (
                                         <Button type="button" variant="primary" onClick={handleNextStep} disabled={isLoading || (inputMode === 'ai' && selectedFiles.length === 0 && urls.length === 0)}>
                                             {inputMode === 'ai' ? '開始 AI 分析' : '下一步'}

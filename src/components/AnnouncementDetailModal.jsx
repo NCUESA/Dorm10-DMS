@@ -11,6 +11,7 @@ const categoryStyles = {
     C: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
     D: { bg: 'bg-blue-100', text: 'text-blue-800' },
     E: { bg: 'bg-violet-100', text: 'text-violet-800' },
+    F: { bg: 'bg-teal-100', text: 'text-teal-800'},
     default: { bg: 'bg-gray-100', text: 'text-gray-800' },
 };
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;

@@ -15,6 +15,7 @@ const categoryStyles = {
     C: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
     D: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
     E: { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-300' },
+    F: { bg: 'bg-teal-100', text: 'text-teal-800', border: 'border-teal-300' },
     default: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' },
 };
 const getCategoryStyle = (cat) => categoryStyles[cat] || categoryStyles.default;
@@ -65,6 +66,7 @@ function AnnouncementListContent() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
     const [sort, setSort] = useState({ column: 'application_end_date', ascending: true });
+    const [categoryFilter, setCategoryFilter] = useState('all');
 
     const [expandedId, setExpandedId] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -73,6 +75,15 @@ function AnnouncementListContent() {
     const isInitialLoad = useRef(true);
 
     const [readIds, setReadIds] = useState(new Set());
+
+    const handleCategoryChange = (newCategory) => {
+        setCategoryFilter(newCategory);
+        setPage(1); // 重設頁碼
+        // 如果選擇的是得獎公告 (E 或 F)，則強制將日期篩選設為「全部公告」
+        if (newCategory === 'E' || newCategory === 'F') {
+            setFilter('all');
+        }
+    };
 
     const fetchAnnouncementsList = useCallback(async () => {
         setSortLoading(true);
@@ -90,6 +101,10 @@ function AnnouncementListContent() {
             query = query.lt('application_end_date', today);
         }
 
+        if (categoryFilter !== 'all') {
+            query = query.eq('category', categoryFilter);
+        }
+
         const orderColumn = sort.column === 'semester' ? 'application_end_date' : sort.column;
         const sortOptions = { ascending: sort.ascending, nullsFirst: false };
         query = query.order(orderColumn, sortOptions);
@@ -100,9 +115,9 @@ function AnnouncementListContent() {
 
         const { data, error, count } = await query;
         if (!error) {
-            const dataWithSemester = (data || []).map(item => ({ 
-                ...item, 
-                semester: calculateSemester(item?.application_end_date) 
+            const dataWithSemester = (data || []).map(item => ({
+                ...item,
+                semester: calculateSemester(item?.application_end_date)
             }));
             setAnnouncements(dataWithSemester);
             setTotalCount(count || 0);
@@ -113,7 +128,7 @@ function AnnouncementListContent() {
         }
 
         setSortLoading(false);
-    }, [search, filter, page, rowsPerPage, sort]);
+    }, [search, filter, page, rowsPerPage, sort, categoryFilter]);
 
     useEffect(() => {
         if (isInitialLoad.current) return;
@@ -206,14 +221,15 @@ function AnnouncementListContent() {
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="bg-white/80 backdrop-blur-lg border border-slate-200/80 rounded-2xl p-6 mb-8 shadow-sm">
                 <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Award size={22} className="text-indigo-500" />獎助學金代碼定義
+                    <Award size={22} className="text-indigo-500" />獎助學金分類代碼定義
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-slate-600">
                     <p><strong className="font-semibold text-red-600">A：</strong>各縣市政府獎助學金</p>
                     <p><strong className="font-semibold text-orange-600">B：</strong>縣市政府以外之各級公家機關及公營單位獎助學金</p>
                     <p><strong className="font-semibold text-green-600">C：</strong>宗教及民間各項指定身分獎助學金</p>
                     <p><strong className="font-semibold text-blue-600">D：</strong>非公家機關或其他無法歸類的獎助學金</p>
-                    <p><strong className="font-semibold text-violet-600">E：</strong>獎學金得獎名單公告</p>
+                    <p><strong className="font-semibold text-violet-600">E：</strong>校外獎學金得獎公告</p>
+                    <p><strong class="font-semibold text-teal-600">F：</strong>校內獎學金得獎公告</p>
                 </div>
             </div>
 
@@ -222,13 +238,39 @@ function AnnouncementListContent() {
                     <Search className="h-5 w-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input type="text" placeholder="搜尋公告標題、摘要、適用對象..." value={search} onChange={e => setSearch(e.target.value)}
                         className="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-300
-                                    focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
+                            focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30"
                     />
                 </div>
-                <div className="grid grid-cols-3 md:flex items-center gap-1 bg-slate-100 p-1 rounded-lg w-full md:w-auto">
-                    <Button variant={filter === 'open' ? 'primary' : 'ghost'} onClick={() => { setFilter('open'); setPage(1); }} className="w-full whitespace-nowrap">未逾期</Button>
-                    <Button variant={filter === 'all' ? 'primary' : 'ghost'} onClick={() => { setFilter('all'); setPage(1); }} className="w-full whitespace-nowrap">全部公告</Button>
-                    <Button variant={filter === 'expired' ? 'primary' : 'ghost'} onClick={() => { setFilter('expired'); setPage(1); }} className="w-full whitespace-nowrap">已逾期</Button>
+
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                    {/* 分類篩選下拉選單 */}
+                    <div className="relative">
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => handleCategoryChange(e.target.value)}
+                            className="appearance-none w-full bg-slate-100 border border-transparent rounded-lg py-2 pl-4 pr-10 text-sm font-medium text-slate-700 shadow-sm transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/30"
+                        >
+                            <option value="all">全部分類</option>
+                            {['A', 'B', 'C', 'D', 'E', 'F'].map(cat => (
+                                <option key={cat} value={cat}>分類 {cat}</option>
+                            ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                            <ChevronsUpDown className="h-4 w-4" />
+                        </div>
+                    </div>
+
+                    {categoryFilter === 'E' || categoryFilter === 'F' ? (
+                        <div className="flex items-center h-full px-3">
+                            <p className="text-xs text-gray-500">得獎公告不支援效期篩選</p>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                            <Button variant={filter === 'open' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('open'); setPage(1); }}>未逾期</Button>
+                            <Button variant={filter === 'all' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('all'); setPage(1); }}>全部公告</Button>
+                            <Button variant={filter === 'expired' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('expired'); setPage(1); }}>已逾期</Button>
+                        </div>
+                    )}
                 </div>
             </div>
 

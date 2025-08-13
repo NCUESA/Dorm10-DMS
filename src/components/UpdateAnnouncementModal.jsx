@@ -42,15 +42,36 @@ const FileItem = ({ file, onRemove, onUndelete, isMarkedForDeletion }) => {
 
 const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, filesToRemove, setFilesToRemove, disabled, showToast }) => {
     const fileInputRef = useRef(null);
-    const maxFiles = 5;
-    const supportedTypes = { 'application/pdf': 'PDF', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX', 'application/msword': 'DOC', 'image/jpeg': '圖片', 'image/jpg': '圖片', 'image/png': '圖片', 'image/gif': '圖片', 'image/webp': '圖片' };
+    const maxFiles = 8;
+    const maxFileSize = 15 * 1024 * 1024; // 15MB
+    const displayMaxSize = `${maxFileSize / 1024 / 1024} MB`;
+    const supportedTypes = {
+        'application/pdf': ['pdf'],
+        'image/jpeg': ['jpeg', 'jpg'], 'image/png': ['png'], 'image/webp': ['webp'],
+        'application/msword': ['doc'],
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
+        'application/vnd.oasis.opendocument.text': ['odt'],
+        'application/vnd.ms-excel': ['xls'],
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
+        'application/vnd.oasis.opendocument.spreadsheet': ['ods'],
+        'application/vnd.ms-powerpoint': ['ppt'],
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
+        'application/vnd.oasis.opendocument.presentation': ['odp'],
+    };
+
+    const acceptString = Object.values(supportedTypes).flat().map(ext => `.${ext}`).join(',');
 
     const handleFiles = (files) => {
         let newFiles = [];
         for (const file of files) {
-            if (!supportedTypes[file.type]) { showToast(`不支援的檔案類型: ${file.name}`, 'warning'); continue; }
-            if (file.size > 10 * 1024 * 1024) { showToast(`檔案過大: ${file.name}`, 'warning'); continue; }
+            const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+            const isTypeSupported = Object.keys(supportedTypes).includes(file.type) || Object.values(supportedTypes).flat().includes(fileExtension);
+
+            if (!isTypeSupported) { showToast(`不支援的檔案類型: ${file.name}`, 'warning'); continue; }
+            if (selectedFiles.some(f => f.name === file.name)) { showToast(`檔案 "${file.name}" 已存在`, 'warning'); continue; }
+            if (file.size > maxFileSize) { showToast(`檔案大小超過 ${displayMaxSize} 限制: ${file.name}`, 'warning'); continue; }
             if (selectedFiles.length + newFiles.length >= maxFiles) { showToast(`最多只能選擇 ${maxFiles} 個檔案`, 'warning'); break; }
+
             newFiles.push(file);
         }
         setSelectedFiles(prev => [...prev, ...newFiles]);
@@ -76,15 +97,18 @@ const MultipleFilesUploadArea = ({ selectedFiles, setSelectedFiles, filesToRemov
     return (
         <div className="space-y-4">
             <div className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-300 ${!disabled ? 'border-gray-300 hover:border-indigo-400 bg-transparent cursor-pointer' : 'bg-gray-100/50 cursor-not-allowed'}`}
-                 onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => !disabled && fileInputRef.current?.click()}>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp" disabled={disabled} multiple />
+                onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => !disabled && fileInputRef.current?.click()}>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept={acceptString} disabled={disabled} multiple />
                 <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-600">拖曳檔案到此，或 <span className="font-medium text-indigo-600">點擊上傳</span></p>
                 <p className="mt-1 text-xs text-gray-500">已選擇 {selectedFiles.length} / {maxFiles} 個檔案</p>
+                <p className="mt-1 text-xs text-gray-400">
+                    支援文件 (Word, Excel, PPT, PDF, ODT, ODS, ODP) 及圖片格式，單一檔案大小上限為 {displayMaxSize}
+                </p>
             </div>
             {selectedFiles.length > 0 && (
                 <div className="space-y-2">
-                    <div className="max-h-32 overflow-y-auto space-y-2 rounded-lg p-2 bg-transparent">
+                    <div className="space-y-2 rounded-lg p-2 bg-transparent">
                         {selectedFiles.map((file, index) => (
                             <FileItem key={file.id || `new-${index}`} file={file}
                                 onRemove={() => handleRemoveFile(index)}
@@ -107,16 +131,10 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
     const [formData, setFormData] = useState({
-        title: '',
-        summary: '',
-        is_active: false,
-        category: '',
-        application_start_date: '',
-        application_end_date: '',
-        target_audience: '',
-        application_limitations: '',
-        submission_method: '',
-        external_urls: [{ url: '' }]
+        title: '', summary: '', is_active: false, category: '',
+        application_start_date: '', application_end_date: '',
+        target_audience: '', application_limitations: '',
+        submission_method: '', external_urls: [{ url: '' }]
     });
 
     const inputStyles = "w-full px-3 py-2 bg-white/70 border border-gray-300 rounded-md shadow-sm transition-all duration-300 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30";
@@ -174,7 +192,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
         setToast({ show: true, message, type });
         setTimeout(() => {
             hideToast();
-        }, 3000); // Hide after 3 seconds
+        }, 3000);
     };
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -207,7 +225,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                 application_limitations: formData.application_limitations,
                 submission_method: formData.submission_method,
                 external_urls: JSON.stringify(finalUrls),
-                updated_at: new Date().toISOString(), // Update the timestamp
+                updated_at: new Date().toISOString(),
             }).eq('id', announcement.id).select().single();
             if (error) throw error;
 
@@ -236,7 +254,6 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
 
             if (refreshAnnouncements) refreshAnnouncements();
             onClose();
-            // Show toast *after* initiating the close action
             showToast('公告已成功更新', 'success');
         } catch (err) {
             showToast(`更新失敗: ${err.message}`, 'error');
@@ -247,7 +264,6 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
 
     return (
         <>
-            {/* Use a Portal to render the Toast outside the modal's DOM tree */}
             {createPortal(
                 <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />,
                 document.body
@@ -255,8 +271,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
             <AnimatePresence>
                 {isOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-16"
-                        onClick={onClose}>
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-16">
                         <motion.div
                             initial={{ scale: 0.95, y: 50, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -268,7 +283,17 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                         >
                             <div className="p-5 border-b border-black/10 flex justify-between items-center flex-shrink-0">
                                 <h2 className="text-lg font-bold text-gray-800">編輯公告</h2>
-                                <button onClick={onClose} disabled={isSaving} className="text-gray-400 hover:text-gray-600 p-2 rounded-full"><X size={20} /></button>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('確認關閉公告編輯模組嗎？如尚未儲存將丟失此編輯紀錄！')) {
+                                            onClose();
+                                        }
+                                    }}
+                                    disabled={isSaving}
+                                    className="text-gray-400 hover:text-gray-600 p-2 rounded-full"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
 
                             <div className="flex-grow p-6 overflow-y-auto">
@@ -283,7 +308,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div><label htmlFor="is_active" className="block text-sm font-semibold text-gray-700 mb-1.5">公告狀態</label><select id="is_active" name="is_active" className={inputStyles} value={formData.is_active} onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}><option value={false}>下架</option><option value={true}>上架</option></select></div>
-                                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎學金</option><option value="E">E：獎學金得獎名單公告</option></select></div>
+                                        <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎學金</option><option value="E">E：校外獎學金得獎公告</option><option value="F">F：校內獎學金得獎公告(臨時性)</option></select></div>
                                         <div><label htmlFor="application_start_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請開始日期</label><input type="date" id="application_start_date" name="application_start_date" className={inputStyles} value={formData.application_start_date} onChange={handleChange} /></div>
                                         <div><label htmlFor="application_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請截止日期</label><input type="date" id="application_end_date" name="application_end_date" className={inputStyles} value={formData.application_end_date} onChange={handleChange} /></div>
                                         <div><label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-1.5">送件方式</label><input type="text" id="submission_method" name="submission_method" className={inputStyles} value={formData.submission_method} onChange={handleChange} /></div>
@@ -332,7 +357,6 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                             </div>
 
                             <div className="p-4 bg-black/5 flex justify-end space-x-3 flex-shrink-0">
-                                <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>取消</Button>
                                 <Button type="button" variant="primary" onClick={handleSave} loading={isSaving} leftIcon={<Save size={16} />}>儲存變更</Button>
                             </div>
                         </motion.div>
