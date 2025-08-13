@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '@/components/ui/Button';
+import TinyMCE from '../TinyMCE';
 import { X, Send, Loader2 } from 'lucide-react';
 
 export default function SendNotificationModal({ isOpen, onClose, user, onConfirm, isSending }) {
@@ -11,8 +12,8 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
     useEffect(() => {
         if (isOpen && user) {
             setEmailData({
-                subject: `[重要通知] 彰師生輔組獎學金平台`,
-                body: `親愛的 ${user.name || 'User'} 同學，您好：\n\n此為來自「彰師生輔組獎學金資訊平台」的通知。\n\n...\n\n若有任何疑問，歡迎隨時與我們聯繫。\n彰師大 學務處生輔組 敬上\n`
+                subject: `[重要通知] 生輔組校外獎學金資訊平台`,
+                body: `<p>親愛的 ${user.name || 'User'} 同學，您好：</p><p>此為來自「彰師生輔組校外獎學金資訊平台」的通知。</p><p>...</p><p>若有任何疑問，歡迎隨時與我們聯繫。<br>彰師大 學務處生輔組 敬上</p>`
             });
         }
     }, [isOpen, user]);
@@ -21,6 +22,10 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
         const { name, value } = e.target;
         setEmailData(prev => ({ ...prev, [name]: value }));
     };
+    
+    const handleBodyChange = useCallback((content) => {
+        setEmailData(prev => ({ ...prev, body: content }));
+    }, []);
 
     const handleConfirmClick = () => {
         onConfirm({
@@ -42,16 +47,17 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
         .header h1 { margin: 0; font-size: 26px; font-weight: 700; }
         .content { padding: 32px 40px; color: #374151; }
         .content h2 { color: #1f2937; margin-top: 0; margin-bottom: 24px; font-size: 22px; font-weight: 700; text-align: left; }
-        .plain-text-body { font-size: 16px; line-height: 1.7; color: #374151; white-space: pre-wrap; word-break: break-word; }
+        .html-body { font-size: 16px; line-height: 1.7; color: #374151; word-break: break-word; }
+        .html-body * { max-width: 100%; }
         .footer { padding: 24px 40px; font-size: 12px; text-align: center; color: #9ca3af; background-color: #f9fafb; border-top: 1px solid #e5e7eb; }
         .footer a { color: #6b7280; text-decoration: none; }
     </style></head><body>
     <table class="wrapper" border="0" cellpadding="0" cellspacing="0"><tr><td>
     <table class="container" border="0" cellpadding="0" cellspacing="0">
-        <tr><td class="header"><h1>彰師生輔組獎學金資訊平台</h1></td></tr>
+        <tr><td class="header"><h1>彰師生輔組校外獎學金資訊平台</h1></td></tr>
         <tr><td class="content">
             <h2>${emailData.subject || '(預覽標題)'}</h2>
-            <div class="plain-text-body">${emailData.body.replace(/\n/g, '<br />') || '(預覽內文)'}</div>
+            <div class="html-body">${emailData.body || '(預覽內文)'}</div>
         </td></tr>
         <tr><td class="footer">
             <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" target="_blank">生輔組獎學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
@@ -67,8 +73,7 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4"
-                    onClick={onClose}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4 pt-16"
                 >
                     <motion.div
                         initial={{ scale: 0.95, y: -20, opacity: 0 }}
@@ -83,19 +88,29 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors"><X size={20} /></button>
                         </div>
 
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 overflow-y-auto">
-                            <div className="flex flex-col space-y-6 h-full">
+                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 overflow-y-auto min-h-0">
+                            <div className="flex flex-col space-y-6 h-full min-h-0">
                                 <div>
                                     <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-1.5">標題</label>
                                     <input id="subject" type="text" name="subject" value={emailData.subject} onChange={handleChange}
                                         className="w-full px-4 py-2 bg-white/70 border border-gray-300 rounded-lg shadow-sm transition-all duration-300
                                                     focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30" />
                                 </div>
-                                <div className="flex flex-col flex-1">
+                                <div className="flex flex-col flex-1 min-h-0">
                                     <label htmlFor="body" className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">郵件內文</label>
-                                    <textarea id="body" name="body" value={emailData.body} onChange={handleChange}
-                                        className="w-full flex-1 px-4 py-3 bg-white/70 border border-gray-300 rounded-lg shadow-sm font-mono text-sm leading-relaxed transition-all duration-300
-                                                    focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 resize-none"></textarea>
+                                    <div className="relative flex-grow h-full">
+                                        <TinyMCE
+                                            value={emailData.body}
+                                            onChange={handleBodyChange}
+                                            disabled={isSending}
+                                            init={{
+                                                height: "100%",
+                                                menubar: true,
+                                                plugins: 'lists link image table code help wordcount',
+                                                toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code',
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -109,7 +124,6 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                         </div>
 
                         <div className="p-4 bg-black/5 flex justify-end space-x-3 rounded-b-2xl flex-shrink-0">
-                            <Button type="button" variant="secondary" onClick={onClose} disabled={isSending}>取消</Button>
                             <Button
                                 type="button"
                                 onClick={handleConfirmClick}
