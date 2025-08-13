@@ -29,7 +29,7 @@ export async function OPTIONS(request) {
     });
 }
 
-// --- 郵件範本產生器 (RWD & HTML 強化版) ---
+// --- 郵件範本產生器 ---
 const generateEmailHtml = (subject, htmlBody) => {
     const currentYear = new Date().getFullYear();
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -93,7 +93,7 @@ const generateEmailHtml = (subject, htmlBody) => {
             <tr>
                 <td align="center">
                     <table class="container" border="0" cellpadding="0" cellspacing="0">
-                        <tr><td class="header"><h1>彰師生輔組獎學金資訊平台</h1></td></tr>
+                        <tr><td class="header"><h1>彰師生輔組校外獎學金資訊平台</h1></td></tr>
                         <tr><td class="content">
                             <h2>${subject}</h2>
                             <div class="html-body">${processedHtmlBody}</div>
@@ -111,7 +111,8 @@ const generateEmailHtml = (subject, htmlBody) => {
     </html>`;
 };
 
-// 創建郵件傳輸器
+
+// --- 郵件傳輸器設定 ---
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT, 10),
@@ -145,7 +146,7 @@ export async function POST(request) {
         const plainTextVersion = htmlBody.replace(/<[^>]*>?/gm, '');
 
         const mailOptions = {
-            from: `"${process.env.SENDER_NAME}"`,
+            from: `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`,
             to: email,
             subject: `${subject}`,
             html: finalHtmlContent,
