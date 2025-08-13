@@ -47,19 +47,24 @@ export async function POST(request) {
 
         const allowedTypes = [
             'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/msword', // .doc
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
             'image/jpeg',
             'image/png',
             'image/gif',
-            'image/webp'
+            'image/webp',
+            'application/vnd.ms-excel', // .xls
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-powerpoint', // .ppt
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' // .pptx
         ];
         const maxFileSize = 10 * 1024 * 1024; // 10MB
 
         // 檔案驗證
         if (!allowedTypes.includes(file.type)) {
+            // <<< 修改點 2: 更新錯誤訊息 >>>
             return NextResponse.json({ 
-                error: '不支援的檔案格式。請上傳 PDF、DOCX、DOC 或圖片檔案。' 
+                error: '不支援的檔案格式。請上傳 PDF、Word、Excel、PowerPoint 或圖片檔案。' 
             }, { status: 400 });
         }
 
