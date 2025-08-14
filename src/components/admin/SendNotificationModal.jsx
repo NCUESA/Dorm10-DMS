@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '@/components/ui/Button';
 import TinyMCE from '../TinyMCE';
 import { X, Send, Loader2 } from 'lucide-react';
+
+const sendButtonStyle = "flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg border border-sky-400 bg-transparent text-sky-600 transition-all duration-300 ease-in-out transform whitespace-nowrap hover:bg-sky-100 hover:text-sky-700 hover:border-sky-400 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed";
 
 export default function SendNotificationModal({ isOpen, onClose, user, onConfirm, isSending }) {
     const [emailData, setEmailData] = useState({ subject: '', body: '' });
@@ -22,7 +23,7 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
         const { name, value } = e.target;
         setEmailData(prev => ({ ...prev, [name]: value }));
     };
-    
+
     const handleBodyChange = useCallback((content) => {
         setEmailData(prev => ({ ...prev, body: content }));
     }, []);
@@ -88,14 +89,19 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors"><X size={20} /></button>
                         </div>
 
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 overflow-y-auto min-h-0">
-                            <div className="flex flex-col space-y-6 h-full min-h-0">
-                                <div>
-                                    <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-1.5">標題</label>
-                                    <input id="subject" type="text" name="subject" value={emailData.subject} onChange={handleChange}
-                                        className="w-full px-4 py-2 bg-white/70 border border-gray-300 rounded-lg shadow-sm transition-all duration-300
-                                                    focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30" />
-                                </div>
+                        {/* --- Start of the block to replace --- */}
+                        <div className="p-6 flex flex-col gap-6 flex-1 overflow-y-auto min-h-0">
+                            {/* 【修改】將「標題」欄位移到格線佈局之外，使其獨立一行 */}
+                            <div>
+                                <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-1.5">標題</label>
+                                <input id="subject" type="text" name="subject" value={emailData.subject} onChange={handleChange}
+                                    className="w-full px-4 py-2 bg-white/70 border border-gray-300 rounded-lg shadow-sm transition-all duration-300
+                       focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30" />
+                            </div>
+
+                            {/* 【修改】這個 grid 現在只包含編輯器和預覽框，讓它們可以等高展開 */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
+                                {/* --- 左側：郵件內文編輯器 --- */}
                                 <div className="flex flex-col flex-1 min-h-0">
                                     <label htmlFor="body" className="block text-sm font-semibold text-gray-700 mb-1.5 flex-shrink-0">郵件內文</label>
                                     <div className="relative flex-grow h-full">
@@ -112,27 +118,34 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="bg-slate-500/10 rounded-lg p-1 lg:p-2 border border-black/10 overflow-y-auto h-full">
-                                <iframe 
-                                    srcDoc={emailPreviewHtml}
-                                    className="w-full h-full border-0 rounded-md"
-                                    title="Email Preview"
-                                />
+                                {/* --- 右側：Email 預覽 --- */}
+                                {/* 【修改】移除背景色與邊框，讓預覽區透明 */}
+                                <div className="rounded-lg overflow-y-auto h-full">
+                                    <iframe
+                                        srcDoc={emailPreviewHtml}
+                                        className="w-full h-full border-0 rounded-md"
+                                        title="Email Preview"
+                                    />
+                                </div>
                             </div>
                         </div>
+                        {/* --- End of the block to replace --- */}
 
                         <div className="p-4 bg-black/5 flex justify-end space-x-3 rounded-b-2xl flex-shrink-0">
-                            <Button
+                            <button
                                 type="button"
                                 onClick={handleConfirmClick}
                                 disabled={isSending}
-                                loading={isSending}
-                                className="transition-transform hover:-translate-y-0.5"
+                                className={sendButtonStyle}
                             >
-                                {isSending ? '寄送中...' : '確認寄送'}
-                            </Button>
+                                {isSending ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <Send size={16} />
+                                )}
+                                <span>{isSending ? '寄送中...' : '確認並發送 Email'}</span>
+                            </button>
                         </div>
                     </motion.div>
                 </motion.div>

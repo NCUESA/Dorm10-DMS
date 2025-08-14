@@ -10,6 +10,13 @@ import Toast from '@/components/ui/Toast';
 import { authFetch } from '@/lib/authFetch';
 import { X, Loader2, Save, Trash2, UploadCloud, Link as LinkIcon, PlusCircle, File as FileIcon } from 'lucide-react';
 
+// --- Button Styles ---
+const buttonStyles = {
+    primary: "flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg border border-indigo-400 bg-transparent text-indigo-600 transition-all duration-300 ease-in-out transform whitespace-nowrap hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-400 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed",
+    secondary: "flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg border border-stone-400 bg-transparent text-stone-700 transition-all duration-300 ease-in-out transform whitespace-nowrap hover:bg-stone-200 hover:text-stone-800 hover:border-stone-500 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-stone-500/20 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed",
+};
+
+
 const InputModeSelector = ({ inputMode, setInputMode, disabled }) => (
     <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">選擇輸入模式</h3>
@@ -154,13 +161,14 @@ const UrlInputArea = ({ urls, setUrls, disabled, showToast }) => {
                     placeholder="輸入網址進行 AI 分析" className={`${inputStyles} flex-grow`}
                     disabled={disabled}
                 />
-                <Button
+                <button
+                    type="button"
                     onClick={handleAddUrl}
                     disabled={disabled || !urlInput.trim()}
-                    className="whitespace-nowrap flex-shrink-0"
+                    className={buttonStyles.primary}
                 >
                     添加
-                </Button>
+                </button>
             </div>
             {urls.length > 0 && (
                 <div className="space-y-2 max-h-32 overflow-y-auto p-2">
@@ -700,18 +708,42 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                             <div className="p-4 bg-black/5 flex justify-between items-center flex-shrink-0 border-t border-black/10">
                                 <div>
                                     {currentStep === 2 && (
-                                        <Button type="button" variant="secondary" onClick={() => setCurrentStep(0)} disabled={isLoading}>返回上一步</Button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCurrentStep(0)}
+                                            disabled={isLoading}
+                                            className={buttonStyles.secondary}
+                                        >
+                                            返回上一步
+                                        </button>
                                     )}
                                 </div>
                                 <div className="flex justify-end space-x-3">
                                     {currentStep === 0 && (
-                                        <Button type="button" variant="primary" onClick={handleNextStep} disabled={isLoading || (inputMode === 'ai' && selectedFiles.length === 0 && urls.length === 0)}>
+                                        <button
+                                            type="button"
+                                            onClick={handleNextStep}
+                                            disabled={isLoading || (inputMode === 'ai' && selectedFiles.length === 0 && urls.length === 0)}
+                                            className={buttonStyles.primary}
+                                        >
                                             {inputMode === 'ai' ? '開始 AI 分析' : '下一步'}
-                                        </Button>
+                                        </button>
                                     )}
 
                                     {currentStep === 2 && (
-                                        <Button type="button" variant="primary" onClick={handleSave} loading={isLoading} disabled={!isFormValid} leftIcon={<Save size={16} />}>儲存並發布</Button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSave}
+                                            disabled={isLoading || !isFormValid}
+                                            className={buttonStyles.primary}
+                                        >
+                                            {isLoading ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                <Save size={16} />
+                                            )}
+                                            <span>儲存並發布</span>
+                                        </button>
                                     )}
                                 </div>
                             </div>

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '@/components/ui/Button';
 import { X, Send, Loader2 } from 'lucide-react';
 import EmailPreview from './previews/EmailPreview';
 import LinePreview from './previews/LinePreview';
+
+const buttonStyles = {
+    send: "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition-all duration-300 ease-in-out transform border-sky-400 bg-transparent text-sky-600 hover:bg-sky-100 hover:text-sky-700 hover:border-sky-400 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed",
+    line: "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition-all duration-300 ease-in-out transform border-green-400 bg-transparent text-green-600 hover:bg-green-100 hover:text-green-700 hover:border-green-400 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-green-500/20 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed",
+};
 
 export default function AnnouncementPreviewModal({ isOpen, type, announcement, onConfirm, onClose }) {
     const [isSending, setIsSending] = useState(false);
@@ -39,20 +43,27 @@ export default function AnnouncementPreviewModal({ isOpen, type, announcement, o
                             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors"><X size={20} /></button>
                         </div>
 
-                        <div className="p-6 bg-gray-100 flex-grow overflow-y-auto">
+                        <div className="p-6 bg-transparent flex-grow overflow-y-auto">
                             {type === 'email' && <EmailPreview announcement={announcement} />}
                             {type === 'line' && <LinePreview announcement={announcement} />}
                         </div>
 
-                        <div className="p-4 bg-white/60 border-t border-black/10 flex justify-end items-center rounded-b-2xl flex-shrink-0 space-x-3">
-                            <Button
+                        <div className="p-4 bg-white/60 border-t border-black/10 flex justify-end items-center rounded-b-2xl flex-shrink-0">
+                            <button
+                                type="button"
                                 onClick={handleConfirm}
                                 disabled={isSending}
-                                leftIcon={isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send size={16} />}
-                                className="transform transition-transform duration-300 hover:-translate-y-1"
+                                className={type === 'email' ? buttonStyles.send : buttonStyles.line}
                             >
-                                {isSending ? '發送中...' : `確認並發送 ${type === 'email' ? 'Email' : 'LINE'}`}
-                            </Button>
+                                {isSending ? (
+                                    <Loader2 className="animate-spin h-4 w-4" />
+                                ) : (
+                                    <Send size={16} />
+                                )}
+                                <span>
+                                    {isSending ? '發送中...' : `確認並發送 ${type === 'email' ? 'Email' : 'LINE'}`}
+                                </span>
+                            </button>
                         </div>
                     </motion.div>
                 </motion.div>

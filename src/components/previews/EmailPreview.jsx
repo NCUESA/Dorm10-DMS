@@ -56,7 +56,7 @@ const EmailPreview = ({ announcement }) => {
             @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
             body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
             table { border-collapse: collapse; }
-            .wrapper { background-color: #f4f4f7; width: 100%; }
+            .wrapper { background-color: transparent; width: 100%; }
             .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 32px; text-align: center; }
             .header h1 { margin: 0; font-size: 26px; font-weight: 700; }

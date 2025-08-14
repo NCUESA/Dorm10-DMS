@@ -3,17 +3,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import { AlertTriangle, X, Loader2 } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch'; // 確保您有一個可以發送認證請求的 fetch wrapper
+
+const deleteButtonStyle = "flex items-center justify-center gap-1.5 rounded-lg border transition-all duration-300 ease-in-out transform px-3 py-2 text-sm font-semibold border-rose-400 bg-transparent text-rose-600 hover:bg-rose-100 hover:text-rose-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-rose-500/20 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed";
 
 export default function DeleteAnnouncementModal({ isOpen, onClose, announcementId, refreshAnnouncements }) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
     useEffect(() => {
-        if (isOpen) { document.body.style.overflow = 'hidden'; } 
+        if (isOpen) { document.body.style.overflow = 'hidden'; }
         else { document.body.style.overflow = 'unset'; }
         return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
@@ -21,7 +22,6 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
     const showToast = (message, type = 'success') => setToast({ show: true, message, type });
     const hideToast = () => setToast(prev => ({ ...prev, show: false }));
 
-    // ** MODIFIED: Complete refactor of the delete logic for local file system **
     const handleDelete = async () => {
         if (!announcementId) {
             showToast('無效的公告 ID', 'error');
@@ -43,7 +43,7 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
             // 步驟 2: 如果有附件，呼叫後端 API 來刪除本地檔案
             if (attachments && attachments.length > 0) {
                 const filePaths = attachments.map(att => att.stored_file_path);
-                
+
                 const deleteFileRes = await authFetch('/api/delete-files', {
                     method: 'POST',
                     body: JSON.stringify({ filePaths }),
@@ -65,7 +65,7 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
             if (deleteError) {
                 throw deleteError;
             }
-            
+
             showToast('公告及其所有附件已成功刪除', 'success');
             if (refreshAnnouncements) {
                 refreshAnnouncements();
@@ -95,9 +95,20 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.95, y: 20, opacity: 0 }}
                             transition={{ duration: 0.3, ease: 'easeInOut' }}
-                            className="bg-white/85 backdrop-blur-lg rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-white/20"
+                            className="relative bg-white/85 backdrop-blur-lg rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-white/20"
                             onClick={(e) => e.stopPropagation()}
                         >
+                            <div className="absolute top-0 right-0 pt-4 pr-4">
+                                <button
+                                    type="button"
+                                    className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 transition-colors"
+                                    onClick={onClose}
+                                    disabled={isDeleting}
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
+
                             <div className="p-8 text-center">
                                 <div className="mx-auto flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                                     <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -108,17 +119,22 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
                                 </div>
                             </div>
 
-                            <div className="p-4 bg-black/5 flex justify-end space-x-3">
-                                <Button type="button" variant="secondary" onClick={onClose} disabled={isDeleting}
-                                    className="transition-transform hover:-translate-y-0.5"
+                            <div className="p-4 bg-black/5 flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={isDeleting}
+                                    className={deleteButtonStyle}
                                 >
-                                    取消
-                                </Button>
-                                <Button type="button" variant="danger" onClick={handleDelete} loading={isDeleting}
-                                    className="transition-transform hover:-translate-y-0.5"
-                                >
-                                    {isDeleting ? '刪除中...' : '確認刪除'}
-                                </Button>
+                                    {isDeleting ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            <span>刪除中...</span>
+                                        </>
+                                    ) : (
+                                        '確認刪除'
+                                    )}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>

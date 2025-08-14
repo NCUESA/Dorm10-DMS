@@ -357,7 +357,19 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                             </div>
 
                             <div className="p-4 bg-black/5 flex justify-end space-x-3 flex-shrink-0">
-                                <Button type="button" variant="primary" onClick={handleSave} loading={isSaving} leftIcon={<Save size={16} />}>儲存變更</Button>
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg border border-indigo-400 bg-transparent text-indigo-600 transition-all duration-300 ease-in-out transform hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-400 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:transform-none disabled:shadow-none"
+                                >
+                                    {isSaving ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <Save size={16} />
+                                    )}
+                                    <span>儲存變更</span>
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
