@@ -3,9 +3,7 @@ import nodemailer from 'nodemailer';
 import { verifyUserAuth, checkRateLimit, validateRequestData, logSuccessAction } from '@/lib/apiMiddleware';
 
 // --- CORS 處理 ---
-const allowedOrigin = process.env.NODE_ENV === 'production'
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : 'http://localhost:3000';
+const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL;
 
 const newCorsResponse = (body, status) => {
     return new NextResponse(JSON.stringify(body), {
@@ -32,7 +30,7 @@ export async function OPTIONS(request) {
 // --- 郵件範本產生器 ---
 const generateEmailHtml = (subject, htmlBody) => {
     const currentYear = new Date().getFullYear();
-    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL;
 
     let processedHtmlBody = htmlBody;
     processedHtmlBody = processedHtmlBody.replace(/(href|src)\s*=\s*["']([^"']*)["']/g, (match, attr, path) => {
@@ -53,7 +51,7 @@ const generateEmailHtml = (subject, htmlBody) => {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>彰師生輔組獎學金資訊平台</title>
+        <title>彰師生輔組校外獎學金資訊平台</title>
         
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
@@ -81,7 +79,7 @@ const generateEmailHtml = (subject, htmlBody) => {
 
             @media screen and (max-width: 600px) {
                 .wrapper { padding: 16px 0 !important; }
-                .container { width: 92% !important; }
+                .container { width: 100% !important; }
                 .content { padding: 24px 20px; }
                 .header h1 { font-size: 22px; }
                 .content h2 { font-size: 20px; }
@@ -100,7 +98,7 @@ const generateEmailHtml = (subject, htmlBody) => {
                         </td></tr>
                         <tr><td class="footer">
                             <p style="margin: 0 0 12px;"><a href="${platformUrl}" target="_blank">生輔組獎學金資訊平台</a>  •  <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
-                            <p style="margin: 0 0 5px;">© ${currentYear} 彰師生輔組獎學金資訊平台. All Rights Reserved.</p>
+                            <p style="margin: 0 0 5px;">© ${currentYear} 彰師生輔組校外獎學金資訊平台. All Rights Reserved.</p>
                             <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
                         </td></tr>
                     </table>
@@ -110,7 +108,6 @@ const generateEmailHtml = (subject, htmlBody) => {
     </body>
     </html>`;
 };
-
 
 // --- 郵件傳輸器設定 ---
 const transporter = nodemailer.createTransport({
@@ -161,8 +158,6 @@ export async function POST(request) {
             subject: subject,
             messageId: result.messageId
         });
-
-        console.log(`郵件成功發送至 ${email}:`, result.messageId);
 
         return newCorsResponse({
             success: true,

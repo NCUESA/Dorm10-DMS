@@ -113,7 +113,7 @@ const Header = forwardRef((props, ref) => {
 				className="font-bold text-base sm:text-lg whitespace-nowrap transition-colors duration-300"
 				style={{ color: isMenuOpen && isOverDark ? 'var(--primary-light)' : 'var(--primary)' }}
 			>
-				彰師生輔組獎學金資訊平台
+				彰師生輔組 校外獎學金資訊平台
 			</h1>
 		</Link>
 	);

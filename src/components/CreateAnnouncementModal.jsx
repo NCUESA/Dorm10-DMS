@@ -16,7 +16,7 @@ const InputModeSelector = ({ inputMode, setInputMode, disabled }) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${inputMode === 'ai' ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-300 hover:border-gray-400'}`} onClick={() => !disabled && setInputMode('ai')}>
                 <h4 className="font-bold text-gray-900">AI 智慧分析</h4>
-                <p className="text-sm text-gray-600 mt-1">上傳檔案或網址，由 AI 自動生成</p>
+                <p className="text-sm text-gray-600 mt-1">上傳檔案或網址，由 AI 自動生成摘要</p>
             </div>
             <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${inputMode === 'manual' ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-300 hover:border-gray-400'}`} onClick={() => !disabled && setInputMode('manual')}>
                 <h4 className="font-bold text-gray-900">手動輸入</h4>

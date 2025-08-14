@@ -37,10 +37,10 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
 
             if (fetchError) {
                 console.error("無法查詢關聯附件:", fetchError);
-                // 即使查詢失敗，我們仍然可以嘗試刪除主公告
+                // 查詢失敗，嘗試刪除主公告
             }
 
-            // 步驟 2: 如果有附件，呼叫我們的後端 API 來刪除本地檔案
+            // 步驟 2: 如果有附件，呼叫後端 API 來刪除本地檔案
             if (attachments && attachments.length > 0) {
                 const filePaths = attachments.map(att => att.stored_file_path);
                 
@@ -51,14 +51,12 @@ export default function DeleteAnnouncementModal({ isOpen, onClose, announcementI
 
                 if (!deleteFileRes.ok) {
                     const errorData = await deleteFileRes.json();
-                    // 警告使用者，但繼續執行後續的資料庫刪除
                     showToast(`部分附件檔案刪除失敗: ${errorData.error || ''}`, 'warning');
                     console.error("刪除本地檔案失敗:", errorData);
                 }
             }
 
             // 步驟 3: 刪除公告的資料庫紀錄
-            // Supabase 中的級聯刪除設定會自動刪除 attachments 表中的相關紀錄
             const { error: deleteError } = await supabase
                 .from('announcements')
                 .delete()

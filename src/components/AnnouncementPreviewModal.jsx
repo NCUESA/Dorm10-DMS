@@ -1,4 +1,3 @@
-// src/components/AnnouncementPreviewModal.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '@/components/ui/Button';
@@ -20,7 +19,6 @@ export default function AnnouncementPreviewModal({ isOpen, type, announcement, o
     return (
         <AnimatePresence>
             {isOpen && (
-                // ** MODIFIED: Background overlay style now matches other modals **
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -33,7 +31,6 @@ export default function AnnouncementPreviewModal({ isOpen, type, announcement, o
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.95, y: 20, opacity: 0 }}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        // ** MODIFIED: Card style now matches other modals **
                         className="bg-white/85 backdrop-blur-lg rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[calc(100vh-120px)] overflow-hidden border border-white/20"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -48,9 +45,6 @@ export default function AnnouncementPreviewModal({ isOpen, type, announcement, o
                         </div>
 
                         <div className="p-4 bg-white/60 border-t border-black/10 flex justify-end items-center rounded-b-2xl flex-shrink-0 space-x-3">
-                            <Button variant="ghost" onClick={onClose} disabled={isSending}>
-                                取消
-                            </Button>
                             <Button
                                 onClick={handleConfirm}
                                 disabled={isSending}
