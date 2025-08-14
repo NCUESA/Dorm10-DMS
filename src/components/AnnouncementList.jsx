@@ -79,10 +79,6 @@ function AnnouncementListContent() {
     const handleCategoryChange = (newCategory) => {
         setCategoryFilter(newCategory);
         setPage(1); // 重設頁碼
-        // 如果選擇的是得獎公告 (E 或 F)，則強制將日期篩選設為「全部公告」
-        if (newCategory === 'E' || newCategory === 'F') {
-            setFilter('all');
-        }
     };
 
     const fetchAnnouncementsList = useCallback(async () => {
@@ -228,8 +224,8 @@ function AnnouncementListContent() {
                     <p><strong className="font-semibold text-orange-600">B：</strong>縣市政府以外之各級公家機關及公營單位獎助學金</p>
                     <p><strong className="font-semibold text-green-600">C：</strong>宗教及民間各項指定身分獎助學金</p>
                     <p><strong className="font-semibold text-blue-600">D：</strong>非公家機關或其他無法歸類的獎助學金</p>
-                    <p><strong className="font-semibold text-violet-600">E：</strong>校外獎學金得獎公告</p>
-                    <p><strong className="font-semibold text-teal-600">F：</strong>校內獎學金得獎公告</p>
+                    <p><strong className="font-semibold text-violet-600">E：</strong>校外獎助學金得獎公告</p>
+                    <p><strong className="font-semibold text-teal-600">F：</strong>校內獎助學金</p>
                 </div>
             </div>
 
@@ -260,17 +256,11 @@ function AnnouncementListContent() {
                         </div>
                     </div>
 
-                    {categoryFilter === 'E' || categoryFilter === 'F' ? (
-                        <div className="flex items-center h-full px-3">
-                            <p className="text-xs text-gray-500">得獎公告不支援效期篩選</p>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
-                            <Button variant={filter === 'open' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('open'); setPage(1); }}>未逾期</Button>
-                            <Button variant={filter === 'all' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('all'); setPage(1); }}>全部公告</Button>
-                            <Button variant={filter === 'expired' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('expired'); setPage(1); }}>已逾期</Button>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                        <Button variant={filter === 'open' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('open'); setPage(1); }}>未逾期</Button>
+                        <Button variant={filter === 'all' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('all'); setPage(1); }}>全部公告</Button>
+                        <Button variant={filter === 'expired' ? 'primary' : 'ghost'} size="sm" onClick={() => { setFilter('expired'); setPage(1); }}>已逾期</Button>
+                    </div>
                 </div>
             </div>
 
