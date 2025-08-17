@@ -242,7 +242,7 @@ export default function Home() {
                         viewport={{ once: true, amount: 0.5 }}
                         transition={{ duration: 0.5 }}
                     >
-                        最新獎學金公告
+                        最新獎助學金公告
                     </motion.h2>
                     <AnnouncementList />
                 </div>

@@ -38,7 +38,7 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
     const currentYear = new Date().getFullYear();
     const emailPreviewHtml = `
     <!DOCTYPE html>
-    <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>彰師校外獎學金資訊平台</title>
+    <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>彰師校外獎助學金資訊平台</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
         body { margin: 0; padding: 0; background-color: transparent; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -55,14 +55,14 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
     </style></head><body>
     <table class="wrapper" border="0" cellpadding="0" cellspacing="0"><tr><td>
     <table class="container" border="0" cellpadding="0" cellspacing="0">
-        <tr><td class="header"><h1>彰師生輔組校外獎學金資訊平台</h1></td></tr>
+        <tr><td class="header"><h1>彰師生輔組校外獎助學金資訊平台</h1></td></tr>
         <tr><td class="content">
             <h2>${emailData.subject || '(預覽標題)'}</h2>
             <div class="html-body">${emailData.body || '(預覽內文)'}</div>
         </td></tr>
         <tr><td class="footer">
-            <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" target="_blank">生輔組獎學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
-            <p style="margin: 0 0 5px;">© ${currentYear} 彰師生輔組校外獎學金資訊平台. All Rights Reserved.</p>
+            <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" target="_blank">生輔組獎助學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+            <p style="margin: 0 0 5px;">© ${currentYear} 彰師生輔組校外獎助學金資訊平台. All Rights Reserved.</p>
             <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
         </td></tr>
     </table></td></tr></table></body></html>`;
@@ -89,17 +89,14 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full transition-colors"><X size={20} /></button>
                         </div>
 
-                        {/* --- Start of the block to replace --- */}
                         <div className="p-6 flex flex-col gap-6 flex-1 overflow-y-auto min-h-0">
-                            {/* 【修改】將「標題」欄位移到格線佈局之外，使其獨立一行 */}
                             <div>
                                 <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-1.5">標題</label>
                                 <input id="subject" type="text" name="subject" value={emailData.subject} onChange={handleChange}
                                     className="w-full px-4 py-2 bg-white/70 border border-gray-300 rounded-lg shadow-sm transition-all duration-300
-                       focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30" />
+                                        focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/30" />
                             </div>
 
-                            {/* 【修改】這個 grid 現在只包含編輯器和預覽框，讓它們可以等高展開 */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
                                 {/* --- 左側：郵件內文編輯器 --- */}
                                 <div className="flex flex-col flex-1 min-h-0">
@@ -120,7 +117,6 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                                 </div>
 
                                 {/* --- 右側：Email 預覽 --- */}
-                                {/* 【修改】移除背景色與邊框，讓預覽區透明 */}
                                 <div className="rounded-lg overflow-y-auto h-full">
                                     <iframe
                                         srcDoc={emailPreviewHtml}
@@ -130,7 +126,6 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
                                 </div>
                             </div>
                         </div>
-                        {/* --- End of the block to replace --- */}
 
                         <div className="p-4 bg-black/5 flex justify-end space-x-3 rounded-b-2xl flex-shrink-0">
                             <button

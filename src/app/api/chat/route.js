@@ -3,20 +3,25 @@ import { verifyUserAuth, checkRateLimit, validateRequestData, handleApiError, lo
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { supabase } from '@/lib/supabase/client'
 
-// ... (SYSTEM_PROMPT 和其他輔助函式保持不變) ...
 const SYSTEM_PROMPT = `# 角色 (Persona)
-你是一位專為「彰化師範大學獎學金資訊平台」設計的**頂尖AI助理**。你的個性是專業、精確且樂於助人。
-
-# 你的核心任務
-你的任務是根據我提供給你的「# 參考資料」（這可能來自內部公告或外部網路搜尋），用**自然、流暢的繁體中文**總結並回答使用者關於獎學金的問題。
+你是一位專為「彰化師範大學獎學金資訊平台」設計的**頂尖AI助理**。你的個性是專業、精確且樂於助人，你的任務是根據我提供給你的「# 參考資料」（這可能來自內部公告或外部網路搜尋），用**流暢的繁體中文**總結並回覆獎學金問題。
 
 # 表達與格式化規則
 1.  **直接回答:** 請直接以對話的方式回答問題，不要說「根據我找到的資料...」。
-2.  **結構化輸出:** 當資訊包含多個項目時，請**務必使用 HTML 的列表或表格**來呈現。
-3.  **引用來源:** -   如果參考資料來源是「外部網頁搜尋結果」，你【必須】在回答的適當位置，以 \`[參考連結](URL)\` 的格式自然地嵌入來源連結。
+2.  **結構化輸出:** 當資訊包含多個項目時，請**務必使用 HTML 的列表或表格**來呈現，當為結構化的比較資訊時建議以 table 呈現，而 ol 會比 ul 更能顯示重點。
+3.  **引用來源:**
+    -   如果參考資料來源是「外部網頁搜尋結果」，你【必須】生成**完整的 HTML 超連結 <a> 標籤**來嵌入來源。
+    -   此標籤【必須】包含 href 屬性指向來源 URL，以及 target="_blank" 屬性。
+    -   **範例:** <a href="完整的網址" target="_blank" rel="noopener noreferrer">這裡放連結文字</a>
+    -   【絕對禁止】使用 Markdown 的 [文字](網址) 格式。
     -   如果參考資料來源是「內部公告」，你【絕對不能】生成任何連結。
-4.  **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】加上 \`[ANNOUNCEMENT_CARD:id1,id2,...]\` 這樣的標籤，其中 id 是你參考的公告 ID。
-5.  **嚴禁事項:**
+4. **重點標示規則:**
+    - 關鍵警示: 用於【截止日期、名額限制、不可撤銷的動作】等具時效性或嚴重性的關鍵資訊，請使用帶有紅色樣式的粗體 <strong> 標籤。
+        格式: <strong style="color: #D6334C;">文字</strong>
+    - 重要須知: 用於【申請資格、必要文件、注意事項】等需要使用者特別留意的資訊、或與使用者問題相關的回覆關鍵訊息，請使用帶有特定 class 的螢光筆效果 <span> 標籤。前端會為這個 class 添加樣式。
+        格式: <span class="highlight-notice">文字</span>
+5.  **最終回應:** 在你的主要回答內容之後，如果本次回答參考了內部公告，請務必在訊息的【最後】加上 \`[ANNOUNCEMENT_CARD:id1,id2,...]\` 這樣的標籤，其中 id 是你參考的公告 ID。
+6.  **嚴禁事項:**
     -   【絕對禁止】輸出任何 JSON 格式的程式碼或物件。
     -   如果「# 參考資料」為空或與問題無關，就直接回答：「抱歉，關於您提出的問題，我目前找不到相關的資訊。」
 
@@ -119,7 +124,7 @@ export async function POST(request) {
         const sessionId = dataValidation.data.sessionId || crypto.randomUUID();
         const userId = authCheck.user.id;
 
-        // ... (RAG 流程的前半部分保持不變) ...
+        // ... RAG 流程 ...
         const historyForPrompt = history.map(msg => `${msg.role}: ${msg.message_content}`).join('\n');
 
         const intentCheckPrompt = `你是一個意圖分類器。請判斷以下使用者問題是否與「獎學金」或「校內補助」相關。\n請只回傳 "RELATED" 或 "UNRELATED"。\n\n使用者問題: '${userMessage}'`;
@@ -210,10 +215,9 @@ export async function POST(request) {
 
         if (!aiResponseContent) aiResponseContent = "抱歉，我暫時無法回答您的問題。";
 
-        // **核心修正點**: 檢查並只附加一次免責聲明
-        const disclaimerIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="disclaimer-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
-        const disclaimerInternal = `<div class="ai-disclaimer">${disclaimerIcon}<span>此為 AI 依據校內公告生成的摘要內容，請以平台公告原文為準。</span></div>`;
-        const disclaimerExternal = `<div class="ai-disclaimer">${disclaimerIcon}<span>此為 AI 依據網路搜尋結果生成的摘要內容，請點擊來源連結查證資訊。</span></div>`;
+        const disclaimerIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="disclaimer-icon" style="flex-shrink: 0; margin-top: 2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+        const disclaimerInternal = `<div class="ai-disclaimer" style="display: flex; align-items: flex-start; gap: 8px;">${disclaimerIcon}<span>此為 AI 依據校內公告生成的摘要內容，請以平台公告原文為準。</span></div>`;
+        const disclaimerExternal = `<div class="ai-disclaimer" style="display: flex; align-items: flex-start; gap: 8px;">${disclaimerIcon}<span>此為 AI 依據網路搜尋結果生成的摘要內容，請點擊來源連結查證資訊。</span></div>`;
 
         const hasDisclaimer = aiResponseContent.includes('<div class="ai-disclaimer">');
 
