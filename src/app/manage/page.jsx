@@ -14,7 +14,7 @@ import { useInView } from 'react-intersection-observer';
 const tabs = [
     { id: 'announcements', label: '公告管理', icon: FileText, component: <AnnouncementsTab /> },
     { id: 'users', label: '使用者管理', icon: Users, component: <UsersTab /> },
-    { id: 'usage', label: '使用說明', icon: Settings, component: <UsageTab /> },
+    { id: 'usage', label: '相關連結', icon: Settings, component: <UsageTab /> },
 ];
 
 const TabComponent = ({ activeTab, onTabClick, isOverDark = false }) => {
@@ -160,7 +160,7 @@ function ManagePageContent() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <header className="py-12 text-center">
                     <h1 className="text-4xl font-bold tracking-tight text-gray-900">管理後台</h1>
-                    <p className="mt-3 text-lg text-gray-500">在這裡你可以針對 彰師生輔組-校外獎學金平台的所有公告、使用者進行相關操作。</p>
+                    <p className="mt-3 text-lg text-gray-500">在這裡你可以針對 彰師生輔組 —— 校外獎助學金資訊平台的所有公告、使用者進行相關操作。</p>
                 </header>
 
                 <div ref={triggerRef} className="flex justify-center mb-10 w-full max-w-md mx-auto sm:max-w-none">
