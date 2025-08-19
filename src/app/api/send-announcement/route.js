@@ -101,7 +101,7 @@ const generateAnnouncementEmailHtml = (announcement) => {
     <body>
         <table class="wrapper" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding: 24px 0;">
         <table class="container" border="0" cellpadding="0" cellspacing="0">
-            <tr><td class="header"><h1>彰師生輔組校外獎助學金資訊平台</h1></td></tr>
+            <tr><td class="header"><h1>生輔組校外獎助學金資訊平台</h1></td></tr>
             <tr><td class="content">
                 <h2>${announcement.title}</h2>
                 <table class="details-table">

@@ -187,25 +187,14 @@ export default function ProfilePage() {
 					<main className="lg:col-span-2 flex flex-col gap-8 mt-8 lg:mt-0">
 						<div className="bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
 							<form onSubmit={handleProfileSubmit}>
-								<div className="p-8 border-b border-gray-100">
-									<div className="flex justify-between items-start">
-										<div>
-											<h2 className="text-xl font-bold text-gray-900 flex items-center gap-3"><FileText className="h-6 w-6 text-indigo-600" />個人資料</h2>
-											<p className="mt-1 text-sm text-gray-500">管理您的個人聯絡資訊。</p>
-										</div>
-										{!isEditing ? (
-											<button type="button" onClick={() => setIsEditing(true)} className={primaryGhostButton}><Edit3 className="h-4 w-4" />編輯</button>
-										) : (
-											<div className="flex gap-2">
-												<button type="button" onClick={() => setIsEditing(false)} className={`${ghostButtonClasses} border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100`}>取消</button>
-												<button type="submit" disabled={isSavingProfile} className={primaryGhostButton}>
-													{isSavingProfile ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}儲存變更
-												</button>
-											</div>
-										)}
+								<div className="p-8">
+									<div>
+										<h2 className="text-xl font-bold text-gray-900 flex items-center gap-3"><FileText className="h-6 w-6 text-indigo-600" />個人資料</h2>
+										<p className="mt-1 text-sm text-gray-500">請確保您提供的是正確的個人資料。</p>
 									</div>
 								</div>
-								<div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+								<div className="px-8 pb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
 									{isEditing
 										? renderInputField('姓名', 'name', formData.name, '請輸入您的姓名', handleProfileChange)
 										: <div className="flex flex-col"><dt className="text-sm font-medium text-gray-500">姓名</dt><dd className="text-base text-gray-900 mt-1">{formData.name || '未設定'}</dd></div>
@@ -215,6 +204,25 @@ export default function ProfilePage() {
 										: <div className="flex flex-col"><dt className="text-sm font-medium text-gray-500">學號</dt><dd className="text-base text-gray-900 mt-1">{formData.student_id || '未設定'}</dd></div>
 									}
 								</div>
+
+								<div className="bg-gray-50 px-8 py-4 rounded-b-xl flex justify-end">
+									{isEditing ? (
+										<div className="flex gap-2">
+											<button type="button" onClick={() => setIsEditing(false)} className={`${ghostButtonClasses} border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100`}>
+												取消
+											</button>
+											<button type="submit" disabled={isSavingProfile} className={primaryGhostButton}>
+												{isSavingProfile ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}
+												儲存
+											</button>
+										</div>
+									) : (
+										<button type="button" onClick={() => setIsEditing(true)} className={primaryGhostButton}>
+											<Edit3 className="h-4 w-4" />
+											編輯
+										</button>
+									)}
+								</div>
 							</form>
 						</div>
 
@@ -222,7 +230,7 @@ export default function ProfilePage() {
 							<form onSubmit={handlePasswordSubmit}>
 								<div className="p-8">
 									<h2 className="text-xl font-bold text-gray-900 flex items-center gap-3"><Lock className="h-6 w-6 text-indigo-600" />帳號安全</h2>
-									<p className="mt-1 text-sm text-gray-500">建議您定期更換密碼以保護您的帳號安全。</p>
+									<p className="mt-1 text-sm text-gray-500">建議您定期更換密碼以維持帳號安全。</p>
 									<div className="mt-6 border-t border-gray-100 pt-6 space-y-6">
 										<PasswordField id="password" name="password" placeholder="設定新密碼" value={passwordData.password} onChange={handlePasswordChange} error={errors.password} />
 										<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入新密碼" value={passwordData.confirmPassword} onChange={handlePasswordChange} error={errors.confirmPassword} isConfirmField={true} />

@@ -18,7 +18,6 @@ export default function Home() {
                     className="w-full h-auto"
                     onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/4000x862/e2e8f0/475569?text=Banner+Image'; }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-50 to-transparent" />
             </div>
 
             <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

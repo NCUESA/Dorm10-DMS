@@ -91,7 +91,7 @@ const generateEmailHtml = (subject, htmlBody) => {
             <tr>
                 <td align="center">
                     <table class="container" border="0" cellpadding="0" cellspacing="0">
-                        <tr><td class="header"><h1>彰師生輔組校外獎助學金資訊平台</h1></td></tr>
+                        <tr><td class="header"><h1>生輔組校外獎助學金資訊平台</h1></td></tr>
                         <tr><td class="content">
                             <h2>${subject}</h2>
                             <div class="html-body">${processedHtmlBody}</div>

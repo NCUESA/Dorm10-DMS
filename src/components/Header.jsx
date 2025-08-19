@@ -115,7 +115,7 @@ const Header = forwardRef((props, ref) => {
 				className="font-bold text-base sm:text-lg whitespace-nowrap transition-colors duration-300"
 				style={{ color: isMenuOpen && isOverDark ? 'var(--primary-light)' : 'var(--primary)' }}
 			>
-				彰師生輔組 校外獎助學金資訊平台
+				生輔組校外獎助學金資訊平台
 			</h1>
 		</Link>
 	);
@@ -129,7 +129,7 @@ const Header = forwardRef((props, ref) => {
 			>
 				<div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full flex items-center justify-between relative z-10">
 					<LogoTitle />
-					<nav className="hidden md:flex items-center space-x-1 lg:space-x-2" role="navigation">
+					<nav className="hidden lg:flex items-center space-x-1 lg:space-x-2" role="navigation">
 						{filteredNavLinks.map(link => (
 							<Link key={link.href} href={link.href} className={`nav-link underline-extend navbar-link ${pathname === link.href ? 'active' : ''}`}>
 								{link.label}
@@ -152,7 +152,7 @@ const Header = forwardRef((props, ref) => {
 							</div>
 						)}
 					</nav>
-					<div className="md:hidden">
+					<div className="lg:hidden">
 						<IconButton variant="ghost" className="text-muted z-20" aria-label="選單" onClick={toggleMenu}>
 							<div className="relative w-6 h-6">
 								<span className={`absolute left-0 w-6 h-0.5 bg-current transform transition-all duration-300 ease-in-out ${isMenuOpen ? 'rotate-45 top-1/2 -translate-y-1/2' : 'top-1'}`} />
@@ -166,10 +166,10 @@ const Header = forwardRef((props, ref) => {
 				{/* --- 手機版下拉選單 --- */}
 				<div
 					ref={mobileMenuRef}
-					className={`md:hidden absolute left-0 w-full 
+					className={`lg:hidden absolute left-0 w-full 
 						bg-surface/85 backdrop-blur-lg shadow-lg 
-						transition-all duration-300 ease-in-out overflow-hidden 
-						${isMenuOpen ? 'max-h-[500px] top-0' : 'max-h-0 top-full'}`
+						transition-all duration-300 ease-in-out overflow-y-auto 
+						${isMenuOpen ? 'max-h-[570px] top-0' : 'max-h-0 top-full'}`
 					}
 				>
 					<div style={{ height: 'var(--header-height)' }} />

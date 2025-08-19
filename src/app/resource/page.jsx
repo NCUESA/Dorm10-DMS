@@ -184,7 +184,7 @@ export default function RelatedLinksPage() {
                 <>
                     <p>「全戶」的定義與戶籍謄本相同。<strong>最重要的一點是：</strong><Highlight>每一位家庭成員都必須提供</Highlight>「各類所得資料清單」與「財產歸屬資料清單」，無論其年齡、有無收入或財產。</p>
                     <p><strong>線上申請（推薦）：</strong></p>
-                     <ul className="list-disc pl-5 space-y-2">
+                    <ul className="list-disc pl-5 space-y-2">
                         <li><strong>政府「MyData」平台：</strong>需備妥健保卡或自然人憑證，透過「<a href="https://mydata.nat.gov.tw/" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">MyData 平台</a>」申請。</li>
                         <li><strong>財政部「電子稅務文件入口網」：</strong>
                             <ol className="list-decimal pl-5 mt-1 space-y-1">
