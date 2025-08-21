@@ -121,6 +121,56 @@ export default function RelatedLinksPage() {
 
     const faqData = [
         {
+            q: "什麼是彰師揚鷹生？",
+            a: () => (
+                <>
+                    <p>彰師揚鷹生，簡稱<Highlight>揚鷹生</Highlight>。揚鷹生是申請本校金額高達1千萬元的各式<a href="https://sites.google.com/gm.ncue.edu.tw/ncueeagle/%E9%A6%96%E9%A0%81?authuser=0" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">高教深耕計畫揚鷹獎勵金</a>之基本資格，具有下列任一項資格即為揚鷹生：</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li>具政府證明的經濟不利身分：<Highlight>低收、中低收、特殊境遇家庭子女及孫子女</Highlight></li>
+                        <li><Highlight>弱勢1~6級</Highlight>(弱勢學生助學計畫)</li>
+                        <li>具下列學雜費減免資格：
+                            <ol className="list-decimal pl-6 mt-1 space-y-1">
+                                <li>身心障礙或身心障礙人士子女</li>
+                                <li>原住民學生</li>
+                            </ol>
+                        </li>
+                        <li>家庭突遭變故經本校<Highlight>王金平先生關懷揚鷹生急難扶助金</Highlight>審核通過者</li>
+                        <li>具中華民國國籍且<Highlight>懷孕或撫養未滿3歲子女</Highlight>者</li>
+                    </ul>
+                </>
+            )
+        },
+        {
+            q: "我的家庭經濟困難，可是沒有政府公文的經濟不利身分，有什麼辦法可以幫我嗎？",
+            a: () => (
+                <>
+                    <p>您可以申請高教端獨有之助學措施<Highlight>【弱勢助學計畫～弱勢學生助學金（本校簡稱弱勢1～6級）】</Highlight>：</p>
+                    <p><strong>一、適用對象：</strong><br />就讀大學跟研究所家境清寒、無學雜費減免資格的學生（含各學制新生）。</p>
+                    <p><strong>二、申請時間：</strong><br /><Highlight>每年9月20日起至10月20日止</Highlight>，請於時間內上線申請，並上傳3個月內之家庭應計人口含記事之戶籍謄本及前一學期學業成績達60分之成績單正本（新生及轉學生免交），逾期不受理。</p>
+                    <p><strong>三、補助金額：</strong><br />本弱勢助學計畫「助學金」，每學年受理申請1次，上學期申請，下學期撥款(於註冊單內扣減)，依學制及家庭年所得分級補助。大學部分2級，補助金額為<Highlight>15000~20000元</Highlight>；碩博班分1～5級，補助金額為<Highlight>5000~16500元</Highlight>。</p>
+                    <p><strong>四、可申請之獎助學金：</strong><br />經教育部審查通過者，即為<Highlight>『揚鷹生』</Highlight>，可申請各式<a href="https://sites.google.com/gm.ncue.edu.tw/ncueeagle/%E9%A6%96%E9%A0%81?authuser=0" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">高教深耕計畫揚鷹獎勵金</a>，及家境清寒類的校外獎助學金。</p>
+                </>
+            )
+        },
+        {
+            q: "我是新生，請問可以申請哪些獎助學金？",
+            a: () => (
+                <>
+                    <p><strong>一、校內代辦的新生獎助學金：</strong></p>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li><strong>大一新生：</strong>可申請<a href="https://stuaffweb.ncue.edu.tw/p/406-1039-29374,r31.php" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline"><Highlight>飛羚電機關懷揚鷹生獎助學金</Highlight></a>（保障10名大一新生）、「<a href="https://stuaffweb.ncue.edu.tw/var/file/39/1039/img/720/135993261.pdf" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline"><Highlight>培鷹‧翱翔助學金</Highlight></a>」及「高教深耕揚鷹計畫～<a href="https://sites.google.com/gm.ncue.edu.tw/ncueeagle" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline"><Highlight>新鮮人助學金</Highlight></a>」。</li>
+                        <li><strong>碩班新生：</strong>可申請「深耕揚鷹計畫～<Highlight>揚鷹生專題研究學習獎勵金</Highlight>」。</li>
+                    </ul>
+                    <p><strong>二、校外獎助學金：</strong></p>
+                    <p>申請期限、金額及資格，請詳閱校外獎助學金一覽表（請關鍵字搜尋新生）</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li><strong>本校獲配推薦名額類：</strong>如<Highlight>張榮發助學金、雄和、賴樹旺夫婦獎助學金</Highlight>（預計開學時於校外獎助學金一覽表刊登公告）</li>
+                        <li><strong>新生可申請，但錄取與否由各獎助學金單位決定類：</strong>如各縣市政府清寒學金、欣恩獎助學金、「蘭馨愛‧讓夢想起飛-國立大學清寒女學生助學方案」、普仁基金會「大手拉小手育成計畫」......等眾多校外獎助學金。</li>
+                    </ul>
+                </>
+            )
+        },
+        {
             q: "獎助學金公告的「不得兼領」是什麼意思？",
             a: () => (
                 <>
