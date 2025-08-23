@@ -107,7 +107,7 @@ export default function Footer() {
 
                 <div className="border-t border-gray-700 mt-12 pt-8 text-center text-sm">
                     <p className="text-gray-400">
-                        © 2025 彰師生輔組校外獎助學金資訊平台. All Rights Reserved.
+                        © 2025 彰師十宿資訊平台. All Rights Reserved.
                     </p>
                 </div>
             </div>
