@@ -38,7 +38,7 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
     const currentYear = new Date().getFullYear();
     const emailPreviewHtml = `
     <!DOCTYPE html>
-    <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>彰師校外獎助學金資訊平台</title>
+    <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>彰師十宿資訊平台</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
         body { margin: 0; padding: 0; background-color: transparent; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -55,14 +55,14 @@ export default function SendNotificationModal({ isOpen, onClose, user, onConfirm
     </style></head><body>
     <table class="wrapper" border="0" cellpadding="0" cellspacing="0"><tr><td>
     <table class="container" border="0" cellpadding="0" cellspacing="0">
-        <tr><td class="header"><h1>生輔組校外獎助學金資訊平台</h1></td></tr>
+        <tr><td class="header"><h1>彰師十宿資訊平台</h1></td></tr>
         <tr><td class="content">
             <h2>${emailData.subject || '(預覽標題)'}</h2>
             <div class="html-body">${emailData.body || '(預覽內文)'}</div>
         </td></tr>
         <tr><td class="footer">
-            <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" target="_blank">生輔組獎助學金資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
-            <p style="margin: 0 0 5px;">© ${currentYear} 彰師生輔組校外獎助學金資訊平台. All Rights Reserved.</p>
+            <p style="margin: 0 0 12px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" target="_blank">彰師十宿資訊平台</a> • <a href="https://stuaffweb.ncue.edu.tw/" target="_blank">生輔組首頁</a></p>
+            <p style="margin: 0 0 5px;">© ${currentYear} 彰師十宿資訊平台. All Rights Reserved.</p>
             <p style="margin: 0;">此為系統自動發送之信件，請勿直接回覆。</p>
         </td></tr>
     </table></td></tr></table></body></html>`;

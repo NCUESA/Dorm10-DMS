@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }) => {
                         id: currentUser.id,
                         username: currentUser.raw_user_meta_data.name,
                         student_id: currentUser.raw_user_meta_data.student_id,
+                        room: currentUser.raw_user_meta_data.room,
                         role: 'user',
                     });
 
@@ -129,8 +130,8 @@ export const AuthProvider = ({ children }) => {
 
     const updateProfile = async (profileData) => {
         setError(null);
-        const { name, student_id } = profileData;
-        const result = await authService.updateProfile({ name, student_id });
+        const { name, student_id, room } = profileData;
+        const result = await authService.updateProfile({ name, student_id, room });
         if (result.success) {
             const refreshed = await authService.getCurrentUser();
             if (refreshed.success) {
