@@ -19,6 +19,7 @@ export const authService = {
             // 在註冊階段將系所與年級寫入 raw_user_meta_data
             department: userData.department,
             year: userData.year,
+            room: userData.room,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
@@ -144,10 +145,10 @@ export const authService = {
       },
 
       // 更新使用者個人資料
-      async updateProfile({ name, student_id, department, year }) {
+      async updateProfile({ name, student_id, department, year, room }) {
         try {
           const { data, error } = await supabase.auth.updateUser({
-            data: { name, student_id, department, year }
+            data: { name, student_id, department, year, room }
           });
 
           if (error) throw error;
@@ -160,7 +161,8 @@ export const authService = {
               username: name,
               student_id,
               department,
-              year
+              year,
+              room
             })
             .eq('id', userId);
 

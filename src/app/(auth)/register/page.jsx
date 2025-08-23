@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Mail, GraduationCap, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, GraduationCap, Eye, EyeOff, Home } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
 
 // --- UI 元件: 輸入框 ---
@@ -70,7 +70,7 @@ const PasswordField = ({ id, name, placeholder, value, onChange, error, password
 export default function Register() {
 	const router = useRouter();
 	const { signUp, isAuthenticated, loading } = useAuth();
-	const [formData, setFormData] = useState({ username: "", email: "", student_id: "", password: "", confirmPassword: "" });
+        const [formData, setFormData] = useState({ username: "", email: "", student_id: "", room: "", password: "", confirmPassword: "" });
 	const [errors, setErrors] = useState({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -106,9 +106,10 @@ export default function Register() {
 	const validateForm = () => {
 		const newErrors = {};
 		if (!formData.username.trim()) newErrors.username = "請提供您的姓名";
-		if (!/^[A-Za-z]\d{7}$/.test(formData.student_id)) {
-			newErrors.student_id = "學號格式應為 1 位英文字母加上 7 位數字";
-		}
+                if (!/^[A-Za-z]\d{7}$/.test(formData.student_id)) {
+                        newErrors.student_id = "學號格式應為 1 位英文字母加上 7 位數字";
+                }
+                if (!formData.room.trim()) newErrors.room = "請輸入房號";
 		if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
 			newErrors.email = "請輸入有效的電子郵件地址";
 		}
@@ -163,7 +164,7 @@ export default function Register() {
 			const result = await signUp(
 				formData.email,
 				formData.password,
-				{ name: formData.username, student_id: formData.student_id }
+                                { name: formData.username, student_id: formData.student_id, room: formData.room }
 			);
 
 			// 根據回傳結果決定下一步
@@ -206,7 +207,7 @@ export default function Register() {
 									Complexity,<br />Simplified.<br /> Potential,<br />Amplified.
 								</h2>
 								<p className="mt-6 text-lg text-slate-200">
-									新版彰師生輔組獎助學金平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為流暢的數位體驗，助您事半功倍 !
+                                                                        新版彰師十宿資訊平台，透過 AI 智慧解析與自動化流程，將繁瑣的公告發布流程轉化為流暢的數位體驗，助您事半功倍 !
 								</p>
 							</div>
 						</div>
@@ -232,7 +233,8 @@ export default function Register() {
 										</div>
 									)}
 									<InputField id="username" name="username" type="text" placeholder="姓名" value={formData.username} onChange={handleChange} error={errors.username} icon={User} />
-									<InputField id="student_id" name="student_id" type="text" placeholder="學號" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
+                                                                        <InputField id="student_id" name="student_id" type="text" placeholder="學號" value={formData.student_id} onChange={handleChange} error={errors.student_id} icon={GraduationCap} />
+                                                                        <InputField id="room" name="room" type="text" placeholder="房號" value={formData.room} onChange={handleChange} error={errors.room} icon={Home} />
 									<InputField id="email" name="email" type="email" placeholder="電子郵件 (請勿使用 gm 帳號)" value={formData.email} onChange={handleChange} error={errors.email} icon={Mail} />
 									<PasswordField id="password" name="password" placeholder="設定密碼" value={formData.password} onChange={handleChange} error={errors.password} passwordStrength={calculatePasswordStrength} />
 									<PasswordField id="confirmPassword" name="confirmPassword" placeholder="再次輸入密碼" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} isConfirmField={true} />
