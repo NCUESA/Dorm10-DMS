@@ -22,7 +22,6 @@ export default function DemeritPage() {
             </div>
         );
     }
-
     const demerit = user?.profile?.demerit ?? 0;
 
     return (
@@ -58,6 +57,7 @@ export default function DemeritPage() {
                     太好了！目前尚無違規記錄。
                 </div>
             </div>
+
         </div>
     );
 }
