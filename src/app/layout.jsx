@@ -12,8 +12,8 @@ const notoSans = Noto_Sans_TC({
 })
 
 export const metadata = {
-	title: '彰師生輔組獎助學金資訊平台',
-	description: '提供彰師學生校外獎助學金資訊的 AI 公告平台',
+        title: '彰師十宿資訊平台',
+        description: '提供彰師學生宿舍相關資訊的 AI 公告平台',
 	icons: {
 		icon: [
 			{ url: '/favicon.ico', sizes: '16x16 32x32', type: 'image/x-icon' },

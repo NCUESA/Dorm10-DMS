@@ -220,11 +220,11 @@ export default function TermsAndPrivacyPage() {
                             animate="visible"
                         >
                             <motion.h1 variants={itemVariants} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-                                生輔組 校外獎學金平台 服務條款暨隱私權政策
+                                彰師十宿資訊平台 服務條款暨隱私權政策
                             </motion.h1>
 
                             <motion.p variants={itemVariants} className="mt-8"><strong>最後更新日期：2025年7月31日</strong></motion.p>
-                            <motion.p variants={itemVariants} className="mt-4">歡迎您使用由<strong>彰化師範大學學生事務處生活輔導組</strong>（以下簡稱「本組」）委託 <strong>Tai Ming Chen</strong>（以下簡稱「開發者」）開發與維護之「校外獎學金平台」（以下簡稱「本平台」）。</motion.p>
+                            <motion.p variants={itemVariants} className="mt-4">歡迎您使用由<strong>彰化師範大學學生事務處生活輔導組</strong>（以下簡稱「本組」）委託 <strong>Tai Ming Chen</strong>（以下簡稱「開發者」）開發與維護之「彰師十宿資訊平台」（以下簡稱「本平台」）。</motion.p>
                             <motion.p variants={itemVariants} className="mt-4">為保障您的權益，請於註冊及使用本平台所有服務前，詳細閱讀以下條款。當您完成註冊程序或開始使用本平台服務時，即視為您已<strong>閱讀、理解並同意接受</strong>本服務條款暨隱私權政策（以下合稱「本條款」）之所有內容。</motion.p>
                             <hr className="my-10" />
 
