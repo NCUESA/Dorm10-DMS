@@ -115,7 +115,7 @@ const Header = forwardRef((props, ref) => {
 				className="font-bold text-base sm:text-lg whitespace-nowrap transition-colors duration-300"
 				style={{ color: isMenuOpen && isOverDark ? 'var(--primary-light)' : 'var(--primary)' }}
 			>
-				生輔組校外獎助學金資訊平台
+				十宿
 			</h1>
 		</Link>
 	);
