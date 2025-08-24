@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase/client';
 import CreateAnnouncementModal from '@/components/CreateAnnouncementModal';
 import UpdateAnnouncementModal from '@/components/UpdateAnnouncementModal';
 import DeleteAnnouncementModal from '@/components/DeleteAnnouncementModal';
@@ -62,14 +61,24 @@ export default function AnnouncementsTab() {
     const showToast = (message, type = 'success') => setToast({ show: true, message, type });
     const hideToast = () => setToast(prev => ({ ...prev, show: false }));
 
+    // 自後端 API 取得公告列表（需管理員權限）
     const fetchAnnouncements = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
-            if (error) throw error;
-            setAllAnnouncements(data || []);
-        } catch (error) { showToast('無法載入公告列表，請稍後再試', 'error'); }
-        finally { setLoading(false); }
+            const res = await authFetch('/api/announcements?admin=true');
+            const result = await res.json();
+            if (res.ok) {
+                setAllAnnouncements(Array.isArray(result.announcements) ? result.announcements : []);
+            } else {
+                showToast(result.error || '無法載入公告列表，請稍後再試', 'error');
+                setAllAnnouncements([]);
+            }
+        } catch (error) {
+            showToast('無法載入公告列表，請稍後再試', 'error');
+            setAllAnnouncements([]);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => { fetchAnnouncements(); }, [fetchAnnouncements]);

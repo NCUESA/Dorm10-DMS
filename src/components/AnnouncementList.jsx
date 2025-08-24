@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+// 透過後端 API 取得公告資料
 import { Loader2, Paperclip, Link as LinkIcon } from "lucide-react";
 
 // 解析 external_urls 欄位，支援 JSON 陣列或單一字串
@@ -37,22 +37,24 @@ export default function AnnouncementList() {
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // 自 Supabase 載入公告
+    // 由後端 API 載入公告資料
     useEffect(() => {
         const fetchData = async () => {
-            const { data, error } = await supabase
-                .from("announcements")
-                .select("id, title, external_urls, create_at, attachments(id, file_name, stored_file_path)")
-                .eq("is_active", true)
-                .order("create_at", { ascending: false });
-
-            if (error) {
-                console.error("載入公告時發生錯誤：", error);
+            try {
+                const res = await fetch('/api/announcements');
+                const result = await res.json();
+                if (res.ok) {
+                    setAnnouncements(Array.isArray(result.announcements) ? result.announcements : []);
+                } else {
+                    console.error('載入公告失敗：', result.error);
+                    setAnnouncements([]);
+                }
+            } catch (err) {
+                console.error('載入公告時發生錯誤：', err);
                 setAnnouncements([]);
-            } else {
-                setAnnouncements(data || []);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         fetchData();
     }, []);

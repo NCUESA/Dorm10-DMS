@@ -26,11 +26,12 @@ export async function GET(request) {
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select(`
-        id, 
-        student_id, 
-        username, 
-        role, 
-        created_at, 
+        id,
+        student_id,
+        username,
+        role,
+        demerit,
+        created_at,
         avatar_url
       `)
       .order('created_at', { ascending: false });
@@ -68,6 +69,7 @@ export async function GET(request) {
         email: email ? `${email.substring(0, 3)}***@${email.split('@')[1]}` : '',
         emailFull: email, // 保留完整電子信箱供編輯使用
         role: profile.role || 'user',
+        demerit: profile.demerit || 0,
         joinedAt: profile.created_at,
         avatarUrl: profile.avatar_url
       };
