@@ -5,8 +5,8 @@ const nextConfig = {
         '10.21.44.243',
         'localhost',
         '127.0.0.1',
-        'scholarship.ncuesa.org.tw',
-        'www.scholarship.ncuesa.org.tw'
+        'dorm10dms.ncuesa.org.tw',
+        'www.dorm10dms.ncuesa.org.tw'
     ],
 
     // 設置 CORS headers

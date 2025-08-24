@@ -86,7 +86,7 @@ const Header = forwardRef((props, ref) => {
 
         const navLinks = [
                 { href: '/', label: '首頁' },
-                { href: '/ai-assistant', label: 'AI 獎學金助理'},
+                { href: '/ai-assistant', label: 'AI 十宿助理'},
                 { href: '/resource', label: '相關資源' },
                 { href: '/demerit', label: '違規記點', auth: true },
                 { href: '/terms-and-privacy', label: '服務條款', auth: true },
@@ -116,7 +116,7 @@ const Header = forwardRef((props, ref) => {
 				className="font-bold text-base sm:text-lg whitespace-nowrap transition-colors duration-300"
 				style={{ color: isMenuOpen && isOverDark ? 'var(--primary-light)' : 'var(--primary)' }}
 			>
-				十宿
+				彰化師範大學 十宿資訊平台
 			</h1>
 		</Link>
 	);

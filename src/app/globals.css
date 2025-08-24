@@ -262,7 +262,7 @@ body {
 	height: 2px;
 	bottom: 0;
 	left: 0;
-	background-color: var(--accent);
+	background-color: var(--primary);
 	transition: width 0.3s ease-out;
 }
 

@@ -8,7 +8,7 @@ export async function middleware(request) {
 		'http://localhost:3000',
 		'http://localhost:3001',
 		'http://127.0.0.1:3000',
-		'https://scholarship.ncuesa.org.tw',
+		'https://dorm10dms.ncuesa.org.tw',
 		'https://ncuesa.org.tw'
 	];
 

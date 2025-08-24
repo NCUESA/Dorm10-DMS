@@ -2,8 +2,9 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image'; // 建議使用 Next.js 的 Image 組件以優化圖片
 
-// --- 動畫設定 ---
+// --- Animation Settings ---
 const containerVariants = {
     hidden: {},
     visible: {
@@ -22,7 +23,7 @@ const itemVariants = {
     }
 };
 
-// 目錄元件
+// Table of Contents Component
 const TableOfContents = ({ sections, activeId, onLinkClick }) => {
     const isSectionActive = (section) => {
         if (!activeId) return false;
@@ -90,7 +91,7 @@ const TableOfContents = ({ sections, activeId, onLinkClick }) => {
     );
 };
 
-// 帶有滾動高亮功能的內容區塊
+// Content Section with Scroll Highlighting
 const ContentSection = ({ id, activeId, title, titleAs: TitleComponent = 'h3', children }) => {
     const isActive = activeId === id;
 
@@ -116,7 +117,7 @@ const ContentSection = ({ id, activeId, title, titleAs: TitleComponent = 'h3', c
 };
 
 
-// --- 主頁面元件---
+// --- Main Page Component ---
 export default function TermsAndPrivacyPage() {
     const [activeId, setActiveId] = useState('tos_1');
     const isClickScrolling = useRef(false);
@@ -126,26 +127,34 @@ export default function TermsAndPrivacyPage() {
     const sections = [
         {
             id: 'tos', title: '第一部分：服務條款', articles: [
-                { id: 'tos_1', title: '第一條、認知與接受條款' }, { id: 'tos_2', title: '第二條、服務說明' },
-                { id: 'tos_3', title: '第三條、使用者註冊與帳戶安全' }, { id: 'tos_4', title: '第四條、使用者行為與義務' },
-                { id: 'tos_5', title: '第五條、智慧財產權' }, { id: 'tos_6', title: '第六條、服務之中斷或變更' },
+                { id: 'tos_1', title: '第一條、認知與接受條款' },
+                { id: 'tos_2', title: '第二條、服務說明' },
+                { id: 'tos_3', title: '第三條、使用者註冊與帳戶安全' },
+                { id: 'tos_4', title: '第四條、使用者行為與義務' },
+                { id: 'tos_5', title: '第五條、智慧財產權' },
+                { id: 'tos_6', title: '第六條、服務之中斷或變更' },
                 { id: 'tos_7', title: '第七條、責任限制與免責聲明' },
             ]
         },
         {
             id: 'privacy', title: '第二部分：隱私權政策', articles: [
-                { id: 'privacy_8', title: '第八條、個人資料之蒐集目的與類別' }, { id: 'privacy_9', title: '第九條、個人資料處理與利用之期間、地區、對象及方式' },
-                { id: 'privacy_10', title: '第十條、您對個人資料可行使之權利' }, { id: 'privacy_11', title: '第十一條、資料安全' },
-                { id: 'privacy_12', title: '第十二條、Cookie之使用' }, { id: 'privacy_13', title: '第十三條、隱私權政策之修正' },
+                { id: 'privacy_8', title: '第八條、個人資料之蒐集目的與類別' },
+                { id: 'privacy_9', title: '第九條、個人資料處理與利用之期間、地區、對象及方式' },
+                { id: 'privacy_10', title: '第十條、您對個人資料可行使之權利' },
+                { id: 'privacy_11', title: '第十一條、資料安全' },
+                { id: 'privacy_12', title: '第十二條、Cookie之使用' },
+                { id: 'privacy_13', title: '第十三條、隱私權政策之修正' },
             ]
         },
         {
             id: 'general', title: '第三部分：一般條款', articles: [
-                { id: 'general_14', title: '第十四條、準據法與管轄法院' }, { id: 'general_15', title: '第十五條、聯絡我們' },
+                { id: 'general_14', title: '第十四條、準據法與管轄法院' },
+                { id: 'general_15', title: '第十五條、聯絡我們' },
             ]
         },
     ];
 
+    // 處理目錄連結點擊事件 (Handle TOC link click)
     const handleLinkClick = (id) => {
         isClickScrolling.current = true;
         setActiveId(id);
@@ -160,6 +169,7 @@ export default function TermsAndPrivacyPage() {
         }, 1000);
     };
 
+    // 設定滾動監聽與 Intersection Observer
     useEffect(() => {
         const handleManualScroll = () => {
             if (isClickScrolling.current) {
@@ -223,8 +233,8 @@ export default function TermsAndPrivacyPage() {
                                 彰師十宿資訊平台 服務條款暨隱私權政策
                             </motion.h1>
 
-                            <motion.p variants={itemVariants} className="mt-8"><strong>最後更新日期：2025年7月31日</strong></motion.p>
-                            <motion.p variants={itemVariants} className="mt-4">歡迎您使用由<strong>彰化師範大學學生事務處生活輔導組</strong>（以下簡稱「本組」）委託 <strong>Tai Ming Chen</strong>（以下簡稱「開發者」）開發與維護之「彰師十宿資訊平台」（以下簡稱「本平台」）。</motion.p>
+                            <motion.p variants={itemVariants} className="mt-8"><strong>最後更新日期：2025年8月24日</strong></motion.p>
+                            <motion.p variants={itemVariants} className="mt-4">歡迎您使用由 <strong>Google Developer Group On Campus NCUE</strong>（以下簡稱「我們」）協助<strong>國立彰化師範大學第十宿舍</strong>（以下簡稱「十宿」）所建置與維護之「彰師十宿資訊平台」（以下簡稱「本平台」）。</motion.p>
                             <motion.p variants={itemVariants} className="mt-4">為保障您的權益，請於註冊及使用本平台所有服務前，詳細閱讀以下條款。當您完成註冊程序或開始使用本平台服務時，即視為您已<strong>閱讀、理解並同意接受</strong>本服務條款暨隱私權政策（以下合稱「本條款」）之所有內容。</motion.p>
                             <hr className="my-10" />
 
@@ -239,23 +249,25 @@ export default function TermsAndPrivacyPage() {
 
                             <ContentSection id="tos_2" activeId={activeId} title="第二條、服務說明">
                                 <ol className="list-decimal pl-5 space-y-3">
-                                    <li>本平台提供一站式獎學金資訊服務，主要功能包括：
+                                    <li>本平台提供一站式十宿相關資訊服務，主要功能包括：
                                         <ul className="list-disc pl-5 space-y-2 mt-2">
-                                            <li>彙整並展示校外公開之獎學金公告。</li>
-                                            <li>利用人工智慧（AI）技術，對本組管理員提供之資料（包括但不限於 PDF檔案、外部網址、純文字）進行自動化分析、生成內容摘要及提取結構化資訊。</li>
-                                            <li>提供註冊使用者AI聊天機器人問答服務。</li>
+                                            <li>彙整並展示十宿相關公告。</li>
+                                            <li>利用人工智慧（AI）技術，對本平台管理員提供之資料（包括但不限於 PDF檔案、外部網址、純文字）進行自動化分析、生成內容摘要及提取結構化資訊。</li>
+                                            <li>提供註冊使用者 AI 聊天機器人問答服務。</li>
+                                            <li>提供居民查詢違規記點之服務。</li>
+                                            <li>提供居民期末退宿申請之相關服務。</li>
                                         </ul>
                                     </li>
                                     <li className="mt-4">
                                         <strong>【AI生成內容免責聲明】</strong>
-                                        <p className='mt-2'>您認知並同意，本平台使用之 AI 模型（包括但不限於 Google Gemini 系列模型）所生成之摘要、提取之結構化資料及聊天機器人回覆，其內容<strong>可能存在錯誤、不完整或過時之情況</strong>。<strong>AI生成之內容僅供參考，不構成任何形式的建議、保證或法律意見。</strong> 您有最終責任詳閱原始公告內容，並自行向獎學金提供單位核實所有申請資訊的準確性與有效性。本組及開發者<strong>不對因信賴 AI 生成內容而導致的任何損失</strong>（包括但不限於錯過申請期限、申請資格不符等）<strong>承擔任何責任</strong>。</p>
+                                        <p className='mt-2'>您認知並同意，本平台使用之 AI 模型（包括但不限於 Google Gemini 系列模型）所生成之摘要、提取之結構化資料及聊天機器人回覆，其內容<strong>可能存在錯誤、不完整或過時之情況</strong>。<strong>AI生成之內容僅供參考，不構成任何形式的建議、保證或法律意見。</strong> 您有最終責任詳閱原始公告內容，並自行向十宿樓長核實所有資訊的準確性與有效性。我們<strong>不對因信賴 AI 生成內容而導致的任何損失</strong>（包括但不限於錯過申請期限）<strong>承擔任何責任</strong>。</p>
                                     </li>
                                 </ol>
                             </ContentSection>
 
                             <ContentSection id="tos_3" activeId={activeId} title="第三條、使用者註冊與帳戶安全">
                                 <ol className="list-decimal pl-5 space-y-3">
-                                    <li>您承諾以<strong>真實、正確、最新及完整</strong>的資料註冊帳號。若您提供任何錯誤或不實的資料，本組有權<strong>暫停或終止您的帳號</strong>。</li>
+                                    <li>您承諾以<strong>真實、正確、最新及完整</strong>的資料註冊帳號。若您提供任何錯誤或不實的資料，我們有權<strong>暫停或終止您的帳號</strong>。</li>
                                     <li>您有義務妥善保管您的帳戶與密碼，並為此組帳戶與密碼登入後所進行之一切活動負責。<strong>請勿將帳戶與密碼洩漏或提供予第三人</strong>。</li>
                                 </ol>
                             </ContentSection>
@@ -272,15 +284,15 @@ export default function TermsAndPrivacyPage() {
 
                             <ContentSection id="tos_5" activeId={activeId} title="第五條、智慧財產權">
                                 <ol className="list-decimal pl-5 space-y-3">
-                                    <li>本平台上所有內容，包括但不限於程式碼、介面設計、文字、圖片、資料等，均由本組或其他權利人依法擁有其<strong>智慧財產權</strong>。</li>
+                                    <li>本平台上所有內容，包括但不限於程式碼、介面設計、文字、圖片、資料等，均由我們、十宿或其他權利人依法擁有其<strong>智慧財產權</strong>。</li>
                                     <li>若您為管理員，您上傳或提供的資料，您保證絕無侵害他人智慧財產權，並同意授權本平台在服務範圍內進行必要之利用。此授權為<strong>非專屬、全球性、免權利金</strong>，並於您刪除該等內容時終止。</li>
                                 </ol>
                             </ContentSection>
 
                             <ContentSection id="tos_6" activeId={activeId} title="第六條、服務之中斷或變更">
                                 <ol className="list-decimal pl-5 space-y-3">
-                                    <li>本組保留隨時修改、暫時或永久停止提供本平台服務之權利，您同意本組對於任何服務之修改、暫停或終止，對您或任何第三方<strong>均不負任何責任</strong>。</li>
-                                    <li>在下列情形，本組將暫停或中斷本平台服務，且對使用者任何直接或間接之損害，<strong>均不負任何賠償責任</strong>：
+                                    <li>我們保留隨時修改、暫時或永久停止提供本平台服務之權利，您同意我們對於任何服務之修改、暫停或終止，對您或任何第三方<strong>均不負任何責任</strong>。</li>
+                                    <li>在下列情形，我們將暫停或中斷本平台服務，且對使用者任何直接或間接之損害，<strong>均不負任何賠償責任</strong>：
                                         <ul className="list-disc pl-5 space-y-2 mt-2">
                                             <li>對本平台相關軟硬體設備進行搬遷、更換、升級、保養或維修時。</li>
                                             <li>發生突發性之電子通信設備故障時。</li>
@@ -292,9 +304,9 @@ export default function TermsAndPrivacyPage() {
 
                             <ContentSection id="tos_7" activeId={activeId} title="第七條、責任限制與免責聲明">
                                 <ol className="list-decimal pl-5 space-y-3">
-                                    <li>本平台僅依「<strong>現況</strong>」及「<strong>現有</strong>」基礎提供服務，本組及開發者<strong>不提供任何明示或默示的擔保</strong>。</li>
+                                    <li>本平台僅依「<strong>現況</strong>」及「<strong>現有</strong>」基礎提供服務，我們<strong>不提供任何明示或默示的擔保</strong>。</li>
                                     <li>本平台<strong>不保證服務之穩定、安全、無誤、及不中斷</strong>。您應自行承擔使用本服務之所有風險及可能致生之任何損害。</li>
-                                    <li>對於您透過本平台連結至其他網站而下載的軟體或資料，本組及開發者<strong>不負任何擔保責任</strong>。您應自行考量風險。</li>
+                                    <li>對於您透過本平台連結至其他網站而下載的軟體或資料，我們<strong>不負任何擔保責任</strong>。您應自行考量風險。</li>
                                 </ol>
                             </ContentSection>
 
@@ -321,7 +333,7 @@ export default function TermsAndPrivacyPage() {
                                     <li><strong>地區</strong>：您的個人資料將儲存於<strong>彰化師範大學學生會伺服器</strong>。</li>
                                     <li><strong>對象及方式</strong>：
                                         <ul className="list-disc pl-5 space-y-2 mt-2">
-                                            <li>您的個人資料將僅供本組及開發者，於蒐集目的範圍內處理及利用。</li>
+                                            <li>您的個人資料將僅供我們，於蒐集目的範圍內處理及利用。</li>
                                             <li>為提供AI服務，管理員上傳的<strong>非個人資料</strong>內容將會傳送至第三方AI服務提供商（如 Google Gemini API）。</li>
                                             <li>除法律規定外，我們<strong>絕不會將您的個人資料提供、交換、出租或出售</strong>給任何其他個人、團體、私人企業或公務機關。</li>
                                         </ul>
@@ -365,9 +377,17 @@ export default function TermsAndPrivacyPage() {
                                 <p>若您對本條款有任何問題，歡迎隨時透過 <a href="mailto:3526ming@gmail.com">3526ming@gmail.com</a> 與我們聯繫。</p>
                             </ContentSection>
 
-                            <motion.div variants={itemVariants} className="border-t border-slate-200 mt-12 pt-6">
-                                <p className="text-right italic text-slate-400 text-sm">Developed & Maintained by Tai Ming Chen & Grason Yang.</p>
+                            <motion.div variants={itemVariants} className="border-t border-slate-200 mt-12 pt-6 flex justify-end items-center gap-x-4">
+                                <p className="italic text-slate-500 text-sm">
+                                    Developed & Maintained by Google Developer Group On Campus NCUE.
+                                </p>
+                                <img
+                                    src="/GDG.gif"
+                                    alt="Google Developer Group On Campus NCUE Logo"
+                                    className="h-14 w-auto"
+                                />
                             </motion.div>
+
                         </motion.div>
                     </main>
                 </div>
@@ -376,7 +396,7 @@ export default function TermsAndPrivacyPage() {
             <footer className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-slate-200 z-10">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20 max-w-4xl mx-auto lg:pl-80">
-                        <p className="text-sm text-slate-500">最新修訂：2025年7月31日</p>
+                        <p className="text-sm text-slate-500">最新修訂：2025年8月24日</p>
                         <a
                             href="/"
                             className="inline-flex items-center gap-2 rounded-md bg-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 transition-colors"

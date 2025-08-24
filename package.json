@@ -1,5 +1,5 @@
 {
-  "name": "ncue-scholarship",
+  "name": "dms",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,11 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "pm2:start": "pm2 start npm --name 'ncue-scholarship' -- run start",
-    "pm2:stop": "pm2 stop ncue-scholarship",
-    "pm2:restart": "pm2 restart ncue-scholarship",
-    "pm2:delete": "pm2 delete ncue-scholarship",
-    "pm2:logs": "pm2 logs ncue-scholarship"
+    "pm2:start": "pm2 start npm --name 'dms' -- run start",
+    "pm2:stop": "pm2 stop dms",
+    "pm2:restart": "pm2 restart dms",
+    "pm2:delete": "pm2 delete dms",
+    "pm2:logs": "pm2 logs dms"
   },
   "dependencies": {
     "@fontsource/noto-sans-tc": "^5.2.6",
