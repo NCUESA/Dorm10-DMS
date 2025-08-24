@@ -26,11 +26,11 @@ export async function GET(request) {
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select(`
-        id, 
-        student_id, 
-        username, 
-        role, 
-        created_at, 
+        id,
+        student_id,
+        username,
+        role,
+        created_at,
         avatar_url
       `)
       .order('created_at', { ascending: false });
@@ -42,8 +42,25 @@ export async function GET(request) {
 
     // 獲取對應的電子信箱資料
     const userIds = profiles.map(p => p.id);
+
+    // 取得違規記點數量
+    const { data: demerits, error: demeritError } = await supabase
+      .from('demerit')
+      .select('user_id, count:id', { head: false })
+      .in('user_id', userIds)
+      .group('user_id');
+    if (demeritError) {
+      console.error('Error fetching demerits:', demeritError);
+    }
+    const demeritMap = {};
+    if (Array.isArray(demerits)) {
+      demerits.forEach(item => {
+        demeritMap[item.user_id] = item.count;
+      });
+    }
+
     const { data: authUsers, error: emailFetchError } = await supabase.auth.admin.listUsers();
-    
+
     if (emailFetchError) {
       console.error('Error fetching auth users:', emailFetchError);
     }
@@ -59,7 +76,7 @@ export async function GET(request) {
     // 5. 格式化資料並進行脫敏處理
     const formattedUsers = profiles.map(profile => {
       const email = emailMap[profile.id] || '';
-      
+
       return {
         id: profile.id,
         studentId: profile.student_id || '',
@@ -68,6 +85,7 @@ export async function GET(request) {
         email: email ? `${email.substring(0, 3)}***@${email.split('@')[1]}` : '',
         emailFull: email, // 保留完整電子信箱供編輯使用
         role: profile.role || 'user',
+        demerit: demeritMap[profile.id] || 0,
         joinedAt: profile.created_at,
         avatarUrl: profile.avatar_url
       };
