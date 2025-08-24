@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Toast from '@/components/ui/Toast';
 import { authFetch } from '@/lib/authFetch';
-import { Search, Users, Shield, UserCheck, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Loader2 } from 'lucide-react';
+import { Search, Users, Shield, UserCheck, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Loader2, Ban } from 'lucide-react';
 import SendNotificationModal from './SendNotificationModal';
+import AddDemeritModal from './AddDemeritModal';
 
 const NotifyIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="16" height="16" viewBox="0 0 50 50" className="inline-block">
@@ -26,6 +27,11 @@ export default function UsersTab() {
     const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
     const [notificationUser, setNotificationUser] = useState(null); // 要寄送通知的目標使用者
     const [isSending, setIsSending] = useState(false); // 控制 Modal 中的寄送中狀態
+
+    // --- 違規記點 Modal 狀態 ---
+    const [isDemeritModalOpen, setIsDemeritModalOpen] = useState(false);
+    const [demeritUser, setDemeritUser] = useState(null);
+    const [isAddingDemerit, setIsAddingDemerit] = useState(false);
 
     const showToast = (message, type = 'success') => setToast({ show: true, message, type });
     const hideToast = () => setToast(prev => ({ ...prev, show: false }));
@@ -82,6 +88,11 @@ export default function UsersTab() {
         setIsNotificationModalOpen(true);
     };
 
+    const openDemeritModal = (user) => {
+        setDemeritUser(user);
+        setIsDemeritModalOpen(true);
+    };
+
     const handleSendNotification = async ({ subject, htmlContent }) => {
         if (!subject || !htmlContent) {
             showToast('標題和內文為必填欄位', 'error');
@@ -121,6 +132,37 @@ export default function UsersTab() {
         }
     };
 
+    const handleAddDemerit = async ({ reason }) => {
+        if (!reason) {
+            showToast('事由為必填欄位', 'error');
+            return;
+        }
+        if (!demeritUser) {
+            showToast('未指定使用者', 'error');
+            return;
+        }
+
+        setIsAddingDemerit(true);
+        try {
+            const response = await authFetch('/api/demerits', {
+                method: 'POST',
+                body: JSON.stringify({ userId: demeritUser.id, reason })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast('違規記點新增成功', 'success');
+                setIsDemeritModalOpen(false);
+                fetchUsers();
+            } else {
+                showToast(data.error || '新增失敗', 'error');
+            }
+        } catch (error) {
+            showToast('新增違規記點時發生錯誤', 'error');
+        } finally {
+            setIsAddingDemerit(false);
+        }
+    };
+
     const processedUsers = useMemo(() => {
         if (!Array.isArray(allUsers)) return [];
         let filtered = [...allUsers];
@@ -153,6 +195,7 @@ export default function UsersTab() {
         demote: `${ghostButtonBase} border-indigo-200 bg-transparent text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20 whitespace-nowrap`,
         promote: `${ghostButtonBase} border-rose-200 bg-transparent text-rose-600 hover:bg-rose-100 hover:text-rose-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-rose-500/20 whitespace-nowrap`,
         notify: `${ghostButtonBase} p-2 border-sky-200 bg-transparent text-sky-600 hover:bg-sky-100 hover:text-sky-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20`,
+        demerit: `${ghostButtonBase} p-2 border-red-200 bg-transparent text-red-600 hover:bg-red-100 hover:text-red-700 hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg hover:shadow-red-500/20`
     };
 
     return (
@@ -175,7 +218,7 @@ export default function UsersTab() {
                 <div className="hidden md:block">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50/70 text-left"><tr>
-                            <th className="p-4 px-6 font-semibold text-gray-500">學號</th><th className="p-4 px-6 font-semibold text-gray-500">姓名</th><th className="p-4 px-6 font-semibold text-gray-500">電子信箱</th><th className="p-4 px-6 font-semibold text-gray-500">權限</th><th className="p-4 px-6 font-semibold text-gray-500 text-center">操作</th>
+                            <th className="p-4 px-6 font-semibold text-gray-500">學號</th><th className="p-4 px-6 font-semibold text-gray-500">姓名</th><th className="p-4 px-6 font-semibold text-gray-500">電子信箱</th><th className="p-4 px-6 font-semibold text-gray-500">違規</th><th className="p-4 px-6 font-semibold text-gray-500">權限</th><th className="p-4 px-6 font-semibold text-gray-500 text-center">操作</th>
                         </tr></thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (<tr><td colSpan="5" className="text-center p-12"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></td></tr>) : paginatedUsers.length === 0 ? (<tr><td colSpan="5" className="text-center p-12 text-gray-500">找不到符合條件的使用者。</td></tr>) : (
@@ -184,11 +227,13 @@ export default function UsersTab() {
                                         <td className="p-4 px-6 font-mono">{user.studentId || '-'}</td>
                                         <td className="p-4 px-6 font-medium text-gray-800">{user.name || '-'}</td>
                                         <td className="p-4 px-6 text-gray-600" title={user.emailFull}>{user.email}</td>
+                                        <td className="p-4 px-6 text-center">{user.demerit}</td>
                                         <td className="p-4 px-6"><span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{user.role === 'admin' ? '管理員' : '使用者'}</span></td>
                                         <td className="p-4 px-6">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button onClick={() => handleRoleChange(user)} className={user.role === 'admin' ? buttonStyles.demote : buttonStyles.promote} disabled={currentUser?.id === user.id}>{user.role === 'admin' ? '設為使用者' : '設為管理員'}</button>
                                                 <button onClick={() => openNotificationModal(user)} className={buttonStyles.notify} title="寄送通知"><NotifyIcon /></button>
+                                                <button onClick={() => openDemeritModal(user)} className={buttonStyles.demerit} title="新增違規記點"><Ban size={16} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -208,10 +253,12 @@ export default function UsersTab() {
                                 <div className="text-sm space-y-2 text-gray-600 border-t pt-3">
                                     <p><strong className="font-semibold text-gray-800">學號: </strong>{user.studentId || '-'}</p>
                                     <p><strong className="font-semibold text-gray-800">信箱: </strong>{user.email}</p>
+                                    <p><strong className="font-semibold text-gray-800">違規: </strong>{user.demerit}</p>
                                 </div>
                                 <div className="flex items-center justify-end border-t pt-3 gap-2">
                                     <button onClick={() => handleRoleChange(user)} className={user.role === 'admin' ? buttonStyles.demote : buttonStyles.promote} disabled={currentUser?.id === user.id}>{user.role === 'admin' ? '設為使用者' : '設為管理員'}</button>
                                     <button onClick={() => openNotificationModal(user)} className={buttonStyles.notify} title="寄送通知"><NotifyIcon /></button>
+                                    <button onClick={() => openDemeritModal(user)} className={buttonStyles.demerit} title="新增違規記點"><Ban size={16} /></button>
                                 </div>
                             </div>
                         ))
@@ -241,6 +288,13 @@ export default function UsersTab() {
                 user={notificationUser}
                 onConfirm={handleSendNotification}
                 isSending={isSending}
+            />
+            <AddDemeritModal
+                isOpen={isDemeritModalOpen}
+                onClose={() => setIsDemeritModalOpen(false)}
+                user={demeritUser}
+                onConfirm={handleAddDemerit}
+                isSubmitting={isAddingDemerit}
             />
             <Toast show={toast.show} message={toast.message} type={toast.type} onClose={hideToast} />
         </div>

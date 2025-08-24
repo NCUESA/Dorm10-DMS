@@ -74,7 +74,7 @@ export async function PUT(request, { params }) {
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
-      .select('id, student_id, username, role, created_at, avatar_url')
+      .select('id, student_id, username, role, demerit, created_at, avatar_url')
       .single();
 
     if (error) {
@@ -97,6 +97,7 @@ export async function PUT(request, { params }) {
       name: data.username || '',
       email: email,
       role: data.role,
+      demerit: data.demerit || 0,
       createdAt: data.created_at,
       avatarUrl: data.avatar_url
     };
