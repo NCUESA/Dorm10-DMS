@@ -30,6 +30,7 @@ export async function GET(request) {
         student_id,
         username,
         role,
+        demerit,
         created_at,
         avatar_url
       `)

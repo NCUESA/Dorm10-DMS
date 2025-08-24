@@ -25,8 +25,8 @@ export async function GET(request) {
     const supabase = supabaseServer;
     let query = supabase
       .from('announcements')
-      .select('id, title, external_urls, created_at, is_active, updated_at, category, application_deadline, announcement_end_date, attachments(id, file_name, stored_file_path)')
-      .order('created_at', { ascending: false });
+      .select('id, title, external_urls, create_at, is_active, updated_at, category, application_end_date, attachments(id, file_name, stored_file_path)')
+      .order('create_at', { ascending: false });
 
     if (!isAdmin) {
       query = query.eq('is_active', true);

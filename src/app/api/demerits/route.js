@@ -77,12 +77,20 @@ export async function POST(request) {
       .eq('user_id', userId);
     if (countError) throw countError;
 
+    const newDemerit = (profile?.demerit || 0) + 1;
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ demerit: newDemerit })
+      .eq('id', userId);
+    if (updateError) throw updateError;
+
     logSuccessAction('ADD_DEMERIT', '/api/demerits', {
       adminId: auth.user.id,
       targetUserId: userId
     });
 
-    return NextResponse.json({ success: true, total: count ?? 0 });
+    return NextResponse.json({ success: true });
+
   } catch (error) {
     return handleApiError(error, '/api/demerits');
   }
