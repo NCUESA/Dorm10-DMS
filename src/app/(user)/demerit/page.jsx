@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { authFetch } from "@/lib/authFetch";
 
 export default function DemeritPage() {
     const { user, isAuthenticated, loading } = useAuth();
     const router = useRouter();
+    const [records, setRecords] = useState([]);
+    const [loadingRecords, setLoadingRecords] = useState(true);
 
     // 未登入者導向登入頁
     useEffect(() => {
@@ -15,6 +18,29 @@ export default function DemeritPage() {
         }
     }, [loading, isAuthenticated, router]);
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            const loadRecords = async () => {
+                try {
+                    const res = await authFetch('/api/demerits');
+                    const result = await res.json();
+                    if (res.ok) {
+                        setRecords(Array.isArray(result.records) ? result.records : []);
+                    } else {
+                        console.error('取得違規記點失敗：', result.error);
+                        setRecords([]);
+                    }
+                } catch (err) {
+                    console.error('載入違規記點時發生錯誤：', err);
+                    setRecords([]);
+                } finally {
+                    setLoadingRecords(false);
+                }
+            };
+            loadRecords();
+        }
+    }, [isAuthenticated]);
+
     if (loading || !isAuthenticated) {
         return (
             <div className="flex items-center justify-center p-4">
@@ -22,7 +48,7 @@ export default function DemeritPage() {
             </div>
         );
     }
-    const demerit = user?.profile?.demerit ?? 0;
+    const demerit = records.length;
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 my-16 space-y-8">
@@ -53,9 +79,34 @@ export default function DemeritPage() {
             {/* 記錄明細 */}
             <div>
                 <h2 className="text-xl font-semibold mb-4">記錄明細</h2>
-                <div className="border rounded-lg p-6 text-center bg-green-50 text-green-700">
-                    太好了！目前尚無違規記錄。
-                </div>
+                {loadingRecords ? (
+                    <div className="border rounded-lg p-6 text-center">載入中...</div>
+                ) : records.length === 0 ? (
+                    <div className="border rounded-lg p-6 text-center bg-green-50 text-green-700">
+                        太好了！目前尚無違規記錄。
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm text-left border">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th className="p-2 border">日期</th>
+                                    <th className="p-2 border">登記人</th>
+                                    <th className="p-2 border">事由</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {records.map((r) => (
+                                    <tr key={r.id} className="border-t">
+                                        <td className="p-2 border">{new Date(r.created_at).toLocaleDateString('en-CA')}</td>
+                                        <td className="p-2 border">{r.recorder}</td>
+                                        <td className="p-2 border">{r.reason}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
         </div>

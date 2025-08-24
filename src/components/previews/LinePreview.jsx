@@ -23,9 +23,8 @@ const LinePreview = ({ announcement }) => {
     }
 
     // --- 準備核心資訊 ---
-    const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
-    const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
-    const dateString = startDate ? `${startDate} ~ ${endDate}` : endDate;
+    const endDate = announcement.application_deadline ? new Date(announcement.application_deadline).toLocaleDateString('en-CA') : '無期限';
+    const dateString = endDate;
     
     const titleLine = `🎓【分類 ${announcement.category || '未分類'}】 ${announcement.title || '無標題'}`;
     const periodLine = `\n\n⚠️ 申請期間：\n${dateString}`;
