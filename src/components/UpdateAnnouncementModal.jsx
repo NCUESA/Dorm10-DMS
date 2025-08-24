@@ -132,7 +132,7 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
 
     const [formData, setFormData] = useState({
         title: '', summary: '', is_active: false, category: '',
-        application_start_date: '', application_end_date: '',
+        application_deadline: '', announcement_end_date: '',
         target_audience: '', application_limitations: '',
         submission_method: '', external_urls: [{ url: '' }]
     });
@@ -157,8 +157,8 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                 summary: announcement.summary || '',
                 is_active: announcement.is_active,
                 category: announcement.category || '',
-                application_start_date: announcement.application_start_date || '',
-                application_end_date: announcement.application_end_date || '',
+                application_deadline: announcement.application_deadline || '',
+                announcement_end_date: announcement.announcement_end_date || '',
                 target_audience: announcement.target_audience || '',
                 application_limitations: announcement.application_limitations || '',
                 submission_method: announcement.submission_method || '',
@@ -219,8 +219,8 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                 summary: formData.summary,
                 is_active: formData.is_active,
                 category: formData.category,
-                application_start_date: formData.application_start_date || null,
-                application_end_date: formData.application_end_date || null,
+                application_deadline: formData.application_deadline || null,
+                announcement_end_date: formData.announcement_end_date || null,
                 target_audience: formData.target_audience,
                 application_limitations: formData.application_limitations,
                 submission_method: formData.submission_method,
@@ -309,8 +309,8 @@ export default function UpdateAnnouncementModal({ isOpen, onClose, announcement,
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div><label htmlFor="is_active" className="block text-sm font-semibold text-gray-700 mb-1.5">公告狀態</label><select id="is_active" name="is_active" className={inputStyles} value={formData.is_active} onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}><option value={false}>下架</option><option value={true}>上架</option></select></div>
                                         <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎學金</option><option value="E">E：校外獎助學金得獎公告</option><option value="F">F：校內獎助學金</option></select></div>
-                                        <div><label htmlFor="application_start_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請開始日期</label><input type="date" id="application_start_date" name="application_start_date" className={inputStyles} value={formData.application_start_date} onChange={handleChange} /></div>
-                                        <div><label htmlFor="application_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請截止日期</label><input type="date" id="application_end_date" name="application_end_date" className={inputStyles} value={formData.application_end_date} onChange={handleChange} /></div>
+                                        <div><label htmlFor="application_deadline" className="block text-sm font-semibold text-gray-700 mb-1.5">申請截止日期</label><input type="date" id="application_deadline" name="application_deadline" className={inputStyles} value={formData.application_deadline} onChange={handleChange} /></div>
+                                        <div><label htmlFor="announcement_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">公告結束日期</label><input type="date" id="announcement_end_date" name="announcement_end_date" className={inputStyles} value={formData.announcement_end_date} onChange={handleChange} /></div>
                                         <div><label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-1.5">送件方式</label><input type="text" id="submission_method" name="submission_method" className={inputStyles} value={formData.submission_method} onChange={handleChange} /></div>
 
                                         <div>

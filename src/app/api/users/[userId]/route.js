@@ -91,6 +91,15 @@ export async function PUT(request, { params }) {
     }
 
     // 8. 格式化回傳資料
+    // 取得使用者違規記點數量
+    const { count, error: demeritError } = await supabase
+      .from('demerit')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (demeritError) {
+      console.error('Error fetching demerit count:', demeritError);
+    }
+
     const formattedUser = {
       id: data.id,
       studentId: data.student_id || '',

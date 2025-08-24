@@ -60,7 +60,7 @@ export async function POST(request) {
         // Fetch announcement from Supabase
         const { data: announcement, error: annError } = await supabaseServer
             .from('announcements')
-            .select('title, category, application_start_date, application_end_date, submission_method, target_audience')
+            .select('title, category, application_deadline, announcement_end_date, submission_method, target_audience')
             .eq('id', announcementId)
             .single();
             
@@ -70,9 +70,8 @@ export async function POST(request) {
         }
 
         // **MODIFIED**: Build the plain text message exactly like in the preview component.
-        const startDate = announcement.application_start_date ? new Date(announcement.application_start_date).toLocaleDateString('en-CA') : null;
-        const endDate = announcement.application_end_date ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
-        const dateString = startDate ? `${startDate} ~ ${endDate}` : endDate;
+        const endDate = announcement.application_deadline ? new Date(announcement.application_deadline).toLocaleDateString('en-CA') : '無期限';
+        const dateString = endDate;
         
         const titleLine = `🎓【分類 ${announcement.category || '未分類'}】 ${announcement.title || '無標題'}`;
         const periodLine = `\n\n⚠️ 申請期間：\n${dateString}`;

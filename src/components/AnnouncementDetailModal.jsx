@@ -55,21 +55,17 @@ export default function AnnouncementDetailModal({ isOpen, onClose, announcement 
         if (!announcement) return { displayString: '未指定', isOpen: false };
 
         const now = new Date();
-        const startDate = announcement.application_start_date ? new Date(announcement.application_start_date) : null;
-        const endDate = announcement.application_end_date ? new Date(announcement.application_end_date) : null;
+        const endDate = announcement.application_deadline ? new Date(announcement.application_deadline) : null;
 
         if (endDate) {
             endDate.setHours(23, 59, 59, 999);
         }
 
-        const isOpen = startDate && endDate ? (now >= startDate && now <= endDate) : false;
+        const isOpen = endDate ? now <= endDate : false;
 
-        const formattedStartDate = startDate ? startDate.toLocaleDateString('en-CA') : null;
-        const formattedEndDate = endDate ? new Date(announcement.application_end_date).toLocaleDateString('en-CA') : '無期限';
+        const formattedEndDate = endDate ? new Date(announcement.application_deadline).toLocaleDateString('en-CA') : '無期限';
 
-        const displayString = formattedStartDate
-            ? `${formattedStartDate} ~ ${formattedEndDate}`
-            : formattedEndDate || '未指定';
+        const displayString = formattedEndDate || '未指定';
 
         return { displayString, isOpen };
     }, [announcement]);

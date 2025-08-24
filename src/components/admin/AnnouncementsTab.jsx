@@ -54,7 +54,7 @@ export default function AnnouncementsTab() {
     const [preview, setPreview] = useState({ open: false, type: '', html: '', text: '', id: null });
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [sort, setSort] = useState({ column: 'application_end_date', direction: 'desc' });
+    const [sort, setSort] = useState({ column: 'application_deadline', direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -178,8 +178,8 @@ export default function AnnouncementsTab() {
                             <tr>
                                 <th className="p-4 px-6 font-semibold text-gray-500">標題</th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 w-24">分類</th>
-                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('application_end_date')}>
-                                    <div className="flex items-center">申請截止日 {renderSortIcon('application_end_date')}</div>
+                                <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('application_deadline')}>
+                                    <div className="flex items-center">申請截止日 {renderSortIcon('application_deadline')}</div>
                                 </th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 w-28">狀態</th>
                                 <th className="p-4 px-6 font-semibold text-gray-500 cursor-pointer w-36" onClick={() => handleSort('updated_at')}>
@@ -198,7 +198,7 @@ export default function AnnouncementsTab() {
                                     <tr key={ann.id} className="transform transition-all duration-300 hover:bg-violet-100/50 hover:shadow-xl z-0 hover:z-10 hover:scale-[1.02]">
                                         <td className="p-4 px-6 font-medium text-gray-800 break-words">{ann.title}</td>
                                         <td className="p-4 px-6 text-gray-600">{ann.category}</td>
-                                        <td className="p-4 px-6 text-gray-600 font-medium">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</td>
+                                        <td className="p-4 px-6 text-gray-600 font-medium">{ann.application_deadline ? new Date(ann.application_deadline).toLocaleDateString('en-CA') : '無期限'}</td>
                                         <td className="p-4 px-6">
                                             <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ann.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{ann.is_active ? '上架' : '下架'}</span>
                                         </td>
@@ -267,7 +267,7 @@ export default function AnnouncementsTab() {
                                                         <div className="text-gray-700">{ann.category || '-'}</div>
 
                                                         <div className="font-semibold text-gray-500">申請截止</div>
-                                                        <div className="text-gray-700">{ann.application_end_date ? new Date(ann.application_end_date).toLocaleDateString('en-CA') : '無期限'}</div>
+                                                        <div className="text-gray-700">{ann.application_deadline ? new Date(ann.application_deadline).toLocaleDateString('en-CA') : '無期限'}</div>
 
                                                         <div className="font-semibold text-gray-500">最後更新</div>
                                                         <div className="text-gray-700">{new Date(ann.updated_at).toLocaleDateString()}</div>

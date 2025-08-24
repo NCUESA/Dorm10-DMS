@@ -70,13 +70,12 @@ export async function POST(request) {
       });
     if (insertError) throw insertError;
 
-    // 更新使用者累計記點
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('demerit')
-      .eq('id', userId)
-      .single();
-    if (profileError) throw profileError;
+    // 重新計算使用者的累計記點
+    const { count, error: countError } = await supabase
+      .from('demerit')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (countError) throw countError;
 
     const newDemerit = (profile?.demerit || 0) + 1;
     const { error: updateError } = await supabase
@@ -91,6 +90,7 @@ export async function POST(request) {
     });
 
     return NextResponse.json({ success: true });
+
   } catch (error) {
     return handleApiError(error, '/api/demerits');
   }

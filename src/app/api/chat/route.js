@@ -143,7 +143,7 @@ export async function POST(request) {
 
         const { data: allAnnouncements, error: announcementsError } = await supabase
             .from('announcements')
-            .select('id, title, summary, target_audience, application_start_date, application_end_date, submission_method, application_limitations')
+            .select('id, title, summary, target_audience, application_deadline, announcement_end_date, submission_method, application_limitations')
             .eq('is_active', true);
 
         if (announcementsError) {
@@ -185,8 +185,8 @@ export async function POST(request) {
 ### 公告標題：《${doc.title}》
 - **摘要:** ${doc.summary.replace(/<[^>]+>/g, ' ')}
 - **適用對象:** ${doc.target_audience.replace(/<[^>]+>/g, ' ')}
-- **申請開始日期:** ${doc.application_start_date || '未指定'}
-- **公告結束日期 (申請截止):** ${doc.application_end_date || '未指定'}
+- **申請截止日期:** ${doc.application_deadline || '未指定'}
+- **公告結束日期:** ${doc.announcement_end_date || '未指定'}
 - **送件方式:** ${doc.submission_method || '未指定'}
 - **申請限制:** ${doc.application_limitations || '未指定'}
 ---`;

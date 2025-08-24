@@ -314,10 +314,11 @@ const AnnouncementPDF = ({ announcement }) => {
                     </View>
                     <View style={[styles.infoColumn, styles.infoColumnDivider]}>
                         <Text style={styles.sectionTitle}>公告日程</Text>
-                        <Text style={styles.infoTextLabel}>申請開始</Text>
-                        <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_start_date)}</Text>
-                        <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>申請截止</Text>
-                        <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_end_date)}</Text>
+                        <Text style={styles.infoTextLabel}>申請截止</Text>
+                        <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.application_deadline)}</Text>
+        
+                        <Text style={{ ...styles.infoTextLabel, marginTop: 8 }}>公告結束</Text>
+                        <Text style={{ ...styles.infoTextValue, color: colors.primary }}>{formatDate(announcement.announcement_end_date)}</Text>
                     </View>
                     <View style={[styles.infoColumn, styles.infoColumnDivider]}>
                         <Text style={styles.sectionTitle}>申請辦法</Text>

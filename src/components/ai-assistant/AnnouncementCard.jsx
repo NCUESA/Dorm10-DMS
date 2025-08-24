@@ -22,7 +22,7 @@ const AnnouncementCard = ({ id }) => {
 
             const { data, error: fetchError } = await supabase
                 .from('announcements')
-                .select('id, title, summary, application_end_date')
+                .select('id, title, summary, application_deadline')
                 .eq('id', id)
                 .single();
 
@@ -51,8 +51,8 @@ const AnnouncementCard = ({ id }) => {
         );
     }
 
-    const deadline = announcement.application_end_date
-        ? new Date(announcement.application_end_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    const deadline = announcement.application_deadline
+        ? new Date(announcement.application_deadline).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
         : null;
 
     const announcementUrl = `https://scholarship.ncuesa.org.tw/?announcement_id=${announcement.id}`;

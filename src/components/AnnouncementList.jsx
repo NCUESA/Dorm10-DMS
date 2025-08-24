@@ -78,7 +78,7 @@ export default function AnnouncementList() {
                 return (
                     <li key={ann.id} className="bg-white border rounded-lg p-6 shadow-sm">
                         <h3 className="text-lg font-semibold text-gray-800">{ann.title}</h3>
-                        <p className="text-sm text-gray-500 mt-1">發布日期：{new Date(ann.create_at).toLocaleDateString("en-CA")}</p>
+                        <p className="text-sm text-gray-500 mt-1">發布日期：{new Date(ann.created_at).toLocaleDateString("en-CA")}</p>
 
                         {links.length > 0 && (
                             <div className="mt-4 space-y-1">

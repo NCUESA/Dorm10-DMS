@@ -48,7 +48,7 @@ export default function DemeritPage() {
             </div>
         );
     }
-    const demerit = user?.profile?.demerit ?? 0;
+    const demerit = records.length;
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 my-16 space-y-8">

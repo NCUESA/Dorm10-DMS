@@ -203,8 +203,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
     const modelRef = useRef(null);
 
     const initialFormData = {
-        title: '', summary: '', category: '', application_start_date: '',
-        application_end_date: '', target_audience: '', application_limitations: '',
+        title: '', summary: '', category: '',
+        application_deadline: '', announcement_end_date: '', target_audience: '', application_limitations: '',
         submission_method: '', external_urls: [{ url: '' }],
         is_active: true,
     };
@@ -367,8 +367,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 - **欄位列表**：
     1.  \`title\` (string | null): 公告的**簡短**標題，必須包含**提供單位**和**獎學金名稱**。例如：「國際崇她社『崇她獎』獎學金」。
     2.  \`category\` (string | null): 根據下方的「代碼定義」從 'A'~'E' 中選擇一個。
-    3.  \`application_start_date\` (string | null): **申請開始日期**。
-    4.  \`application_end_date\` (string | null): **申請結止日期**，格式必須是 'YYYY-MM-DD' 。若只提及月份，以該月最後一天為準。若為區間，以**結束日期**為準，備註: 民國年 + 1911 即為西元年。
+    3.  \`application_deadline\` (string | null): **申請截止日期**，格式必須是 'YYYY-MM-DD' 。若只提及月份，以該月最後一天為準。若為區間，以**結束日期**為準，備註: 民國年 + 1911 即為西元年。
+    4.  \`announcement_end_date\` (string | null): **公告結束日期**，格式必須是 'YYYY-MM-DD' 。若為區間，以**結束日期**為準。
     5.  \`target_audience\` (string | null): **目標對象**。**此欄位必須是 HTML 格式**，並遵循下方的「視覺化與樣式指導」為關鍵字上色。
     6.  \`application_limitations\` (string | null): **兼領限制**。若明確提及**不行**兼領，回傳 'N'，否則一律回傳 'Y'。
     7.  \`submission_method\` (string | null): **送件方式**。簡要說明最終的送件管道。
@@ -405,8 +405,8 @@ export default function CreateAnnouncementModal({ isOpen, onClose, refreshAnnoun
 {
   "title": "國際蘭馨交流協會『讓夢想起飛』獎學金",
   "category": "C",
-  "application_start_date": null,
-  "application_end_date": "2025-07-23",
+  "application_deadline": "2025-07-23",
+  "announcement_end_date": null,
   "target_audience": "<ul><li>國內各大學日間部、進修學士班之<span style=\\"color: #F79420; font-weight: bold;\\">在學女學生</span>。</li><li>歷年學業平均成績達 <span style=\\"color: #F79420; font-weight: bold;\\">70分</span>。</li></ul>",
   "application_limitations": "N",
   "submission_method": "送件至生輔組或將申請資料寄送至承辦人員信箱: act5718@gmail.com",
@@ -525,8 +525,8 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                 title: formData.title,
                 summary: formData.summary,
                 category: formData.category,
-                application_start_date: formData.application_start_date || null,
-                application_end_date: formData.application_end_date || null,
+                application_deadline: formData.application_deadline || null,
+                announcement_end_date: formData.announcement_end_date || null,
                 target_audience: formData.target_audience,
                 application_limitations: formData.application_limitations,
                 submission_method: formData.submission_method,
@@ -607,8 +607,8 @@ ${selectedFiles.length > 0 ? `\n# 檔案資料來源` : ''}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div><label htmlFor="is_active" className="block text-sm font-semibold text-gray-700 mb-1.5">公告狀態</label><select id="is_active" name="is_active" className={inputStyles} value={formData.is_active} onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.value === 'true' }))}><option value={true}>上架</option><option value={false}>下架</option></select></div>
                         <div><label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-1.5">獎學金分類</label><select id="category" name="category" className={inputStyles} value={formData.category} onChange={handleChange}><option value="">請選擇</option><option value="A">A：各縣市政府獎學金</option><option value="B">B：縣市政府以外之各級公家機關及公營單位獎學金</option><option value="C">C：宗教及民間各項指定身分獎學金</option><option value="D">D：非公家機關或其他無法歸類的獎助學金</option><option value="E">E：校外獎助學金得獎公告</option><option value="F">F：校內獎助學金</option></select></div>
-                        <div><label htmlFor="application_start_date" className="block text-sm font-semibold text-gray-700 mb-1.5">申請開始日期</label><input type="date" id="application_start_date" name="application_start_date" className={inputStyles} value={formData.application_start_date} onChange={handleChange} /></div>
-                        <div><label htmlFor="application_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">公告結束日期</label><input type="date" id="application_end_date" name="application_end_date" className={inputStyles} value={formData.application_end_date} onChange={handleChange} /></div>
+                        <div><label htmlFor="application_deadline" className="block text-sm font-semibold text-gray-700 mb-1.5">申請截止日期</label><input type="date" id="application_deadline" name="application_deadline" className={inputStyles} value={formData.application_deadline} onChange={handleChange} /></div>
+                        <div><label htmlFor="announcement_end_date" className="block text-sm font-semibold text-gray-700 mb-1.5">公告結束日期</label><input type="date" id="announcement_end_date" name="announcement_end_date" className={inputStyles} value={formData.announcement_end_date} onChange={handleChange} /></div>
                         <div><label htmlFor="submission_method" className="block text-sm font-semibold text-gray-700 mb-1.5">送件方式</label><input type="text" id="submission_method" name="submission_method" className={inputStyles} value={formData.submission_method} onChange={handleChange} /></div>
                         <div>
                             <label htmlFor="application_limitations" className="block text-sm font-semibold text-gray-700 mb-1.5">兼領限制</label>
