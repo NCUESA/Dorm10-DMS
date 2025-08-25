@@ -1,48 +1,56 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
-import { verifyUserAuth, checkRateLimit, handleApiError, logSuccessAction } from '@/lib/apiMiddleware';
 
-// 取得公告列表
 export async function GET(request) {
   try {
-    // Rate limit 檢查
-    const rateCheck = checkRateLimit(request, 'announcements-get', 30, 60000);
-    if (!rateCheck.success) return rateCheck.error;
-
     const { searchParams } = new URL(request.url);
-    const isAdmin = searchParams.get('admin') === 'true';
-
-    // 如果為後台請求則需驗證管理員身份
-    if (isAdmin) {
-      const auth = await verifyUserAuth(request, {
-        requireAuth: true,
-        requireAdmin: true,
-        endpoint: '/api/announcements'
-      });
-      if (!auth.success) return auth.error;
-    }
+    
+    // 從 URL 參數獲取分頁和排序資訊
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const rowsPerPage = parseInt(searchParams.get('rowsPerPage') || '10', 10);
+    const search = searchParams.get('search') || '';
+    const sortBy = searchParams.get('sortBy') || 'created_at';
+    const ascending = searchParams.get('ascending') === 'true';
 
     const supabase = supabaseServer;
+
     let query = supabase
       .from('announcements')
-      .select('id, title, external_urls, create_at, is_active, updated_at, category, application_end_date, attachments(id, file_name, stored_file_path)')
-      .order('create_at', { ascending: false });
+      // 使用關聯查詢 `profiles(username)` 來獲取上傳者的姓名
+      .select('id, title, views, created_at, uploader, profiles(username)', { count: 'exact' })
+      .eq('is_active', true);
 
-    if (!isAdmin) {
-      query = query.eq('is_active', true);
+    // 如果有搜尋關鍵字，則查詢 title 和 summary
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,summary.ilike.%${search}%`);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    // 設定排序
+    query = query.order(sortBy, { ascending: ascending });
 
-    if (isAdmin) {
-      logSuccessAction('GET_ADMIN_ANNOUNCEMENTS', '/api/announcements', {
-        count: data?.length || 0
-      });
+    // 設定分頁
+    const from = (page - 1) * rowsPerPage;
+    const to = from + rowsPerPage - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching announcements:', error);
+      throw error;
     }
 
-    return NextResponse.json({ success: true, announcements: data || [] });
+    return NextResponse.json({ 
+      success: true, 
+      announcements: data || [],
+      totalCount: count || 0
+    });
+
   } catch (error) {
-    return handleApiError(error, '/api/announcements');
+    console.error('Get announcements API error:', error);
+    return NextResponse.json(
+      { error: '伺服器內部錯誤，無法獲取公告' },
+      { status: 500 }
+    );
   }
 }

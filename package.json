@@ -26,6 +26,7 @@
     "dompurify": "^3.2.6",
     "dotenv": "^17.2.1",
     "framer-motion": "^12.23.12",
+    "isomorphic-dompurify": "^2.26.0",
     "lucide-react": "^0.534.0",
     "mime": "^4.0.7",
     "mime-types": "^3.0.1",

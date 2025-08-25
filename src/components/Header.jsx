@@ -84,14 +84,14 @@ const Header = forwardRef((props, ref) => {
 	}, [isMenuOpen]);
 
 
-        const navLinks = [
-                { href: '/', label: '首頁' },
-                { href: '/ai-assistant', label: 'AI 十宿助理'},
-                { href: '/resource', label: '相關資源' },
-                { href: '/demerit', label: '違規記點', auth: true },
-                { href: '/terms-and-privacy', label: '服務條款', auth: true },
-                { href: '/manage', label: '管理後台', auth: true, admin: true },
-        ];
+    const navLinks = [
+            { href: '/', label: '首頁' },
+            { href: '/ai-assistant', label: 'AI 十宿助理'},
+            { href: '/resource', label: '相關資源' },
+            { href: '/demerit', label: '違規記點', auth: true },
+            { href: '/terms-and-privacy', label: '服務條款', auth: true },
+            { href: '/manage', label: '管理後台', auth: true, admin: true },
+    ];
 
 	const getFilteredLinks = () => {
 		if (!isAuthenticated) {
@@ -102,7 +102,10 @@ const Header = forwardRef((props, ref) => {
 				{ href: '/register', label: '註冊' },
 			];
 		}
-		return isAdmin
+		// 根據 user.profile.role 來判斷管理員身份
+		const isUserAdmin = user?.profile?.role === 'admin';
+		
+		return isUserAdmin
 			? navLinks.filter(l => l.auth || !l.hasOwnProperty('auth'))
 			: navLinks.filter(l => !l.admin);
 	};
@@ -136,10 +139,13 @@ const Header = forwardRef((props, ref) => {
 								{link.label}
 							</Link>
 						))}
-						{isAuthenticated && (
+						{isAuthenticated && user?.profile && (
 							<div className="relative group ml-4">
 								<button className="flex flex-row items-center space-x-2 nav-link navbar-link">
-									<span>Hi, {user?.user_metadata?.name || 'User'}</span>
+									{/* --- START: 核心修正區塊 1 --- */}
+									{/* 從 user.profile.username 讀取姓名 */}
+									<span>Hi, {user.profile.username || '使用者'}</span>
+									{/* --- END: 核心修正區塊 1 --- */}
 									<svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
 								</button>
 								<div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-2">
@@ -164,56 +170,39 @@ const Header = forwardRef((props, ref) => {
 					</div>
 				</div>
 
-				{/* --- 手機版下拉選單 --- */}
 				<div
 					ref={mobileMenuRef}
-					className={`lg:hidden absolute left-0 w-full 
-						bg-surface/85 backdrop-blur-lg shadow-lg 
-						transition-all duration-300 ease-in-out overflow-y-auto 
-						${isMenuOpen ? 'max-h-[570px] top-0' : 'max-h-0 top-full'}`
-					}
+					className={`lg:hidden absolute left-0 w-full bg-surface/85 backdrop-blur-lg shadow-lg transition-all duration-300 ease-in-out overflow-y-auto ${isMenuOpen ? 'max-h-[570px] top-0' : 'max-h-0 top-full'}`}
 				>
 					<div style={{ height: 'var(--header-height)' }} />
-
 					<div className="p-4 space-y-2">
 						{filteredNavLinks.map((link, index) => (
 							<Link
 								key={`mobile-${link.href}`}
 								href={link.href}
-								className={`block w-full text-left px-4 py-3 my-1 rounded-lg text-lg 
-									transition-all duration-300 ease-in-out
-									${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}
-									${pathname === link.href
-										? (isOverDark ? 'bg-white/25 text-white' : 'bg-[#00A6D6]/20 backdrop-blur-sm text-primary font-semibold')
-										: (isOverDark ? 'text-white' : 'text-text')
-									}`
-								}
+								className={`block w-full text-left px-4 py-3 my-1 rounded-lg text-lg transition-all duration-300 ease-in-out ${isMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'} ${pathname === link.href ? (isOverDark ? 'bg-white/25 text-white' : 'bg-[#00A6D6]/20 backdrop-blur-sm text-primary font-semibold') : (isOverDark ? 'text-white' : 'text-text')}`}
 								style={{ transitionDelay: isMenuOpen ? `${index * 50}ms` : '0ms' }}
 								onClick={closeMenu}
 							>
 								{link.label}
 							</Link>
 						))}
-						{isAuthenticated && (
+						{isAuthenticated && user?.profile && (
 							<div
 								className={`border-t pt-4 mt-4 transition-all duration-300 ease-in-out ${isOverDark ? 'border-white/20' : 'border-t-gray-200'} ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`}
 								style={{ transitionDelay: isMenuOpen ? `${filteredNavLinks.length * 50}ms` : '0ms' }}
 							>
 								<div className={`text-left px-4 py-2 transition-colors duration-200 ${isOverDark ? 'text-white' : 'text-text'}`}>
-									Hi, {user?.user_metadata?.name || 'User'}
+									{/* --- START: 核心修正區塊 2 --- */}
+									{/* 從 user.profile.username 讀取姓名 */}
+									Hi, {user.profile.username || '使用者'}
+									{/* --- END: 核心修正區塊 2 --- */}
 								</div>
-								<Link
-									href="/profile"
-									className={`block w-full text-left px-4 py-3 rounded-lg text-lg transition-colors duration-200 ${isOverDark ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
-									onClick={closeMenu}
-								>
+								<Link href="/profile" className={`block w-full text-left px-4 py-3 rounded-lg text-lg transition-colors duration-200 ${isOverDark ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`} onClick={closeMenu}>
 									個資管理
 								</Link>
 								<hr className={`my-1 ${isOverDark ? 'border-white/20' : 'border-t-gray-200'}`} />
-								<button
-									className={`block w-full text-left px-4 py-3 rounded-lg text-lg transition-colors duration-200 ${isOverDark ? 'text-red-400 hover:bg-white/10' : 'text-red-600 hover:bg-red-50'}`}
-									onClick={handleLogout}
-								>
+								<button className={`block w-full text-left px-4 py-3 rounded-lg text-lg transition-colors duration-200 ${isOverDark ? 'text-red-400 hover:bg-white/10' : 'text-red-600 hover:bg-red-50'}`} onClick={handleLogout}>
 									登出
 								</button>
 							</div>

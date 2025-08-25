@@ -1,97 +1,45 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
-import { verifyUserAuth, checkRateLimit, handleApiError, logSuccessAction, validateRequestData } from '@/lib/apiMiddleware';
+import { verifyUserAuth } from '@/lib/apiMiddleware'; // 假設您有這個中介軟體
 
-// 取得目前使用者的違規記點紀錄
 export async function GET(request) {
   try {
-    // Rate limit 檢查
-    const rateCheck = checkRateLimit(request, 'demerits-get', 20, 60000);
-    if (!rateCheck.success) return rateCheck.error;
-
     // 驗證使用者身份
-    const auth = await verifyUserAuth(request, {
-      requireAuth: true,
-      endpoint: '/api/demerits'
-    });
+    const auth = await verifyUserAuth(request, { requireAuth: true });
     if (!auth.success) return auth.error;
 
     const supabase = supabaseServer;
+
+    // --- START: 核心修正 ---
+    // 查詢 demerit 表，並透過關聯查詢 `profiles!recorder(username)` 獲取登記者的姓名
     const { data, error } = await supabase
       .from('demerit')
-      .select('id, recorder, reason, created_at')
-      .eq('user_id', auth.user.id)
+      .select(`
+        id,
+        reason,
+        created_at,
+        recorder,
+        profiles!recorder ( username )
+      `)
+      .eq('id', auth.user.id) // `id` 是被記點者的 user id
       .order('created_at', { ascending: false });
+    // --- END: 核心修正 ---
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching demerit records:", error);
+      throw error;
+    }
 
-    logSuccessAction('GET_DEMERITS', '/api/demerits', {
-      userId: auth.user.id,
-      count: data?.length || 0
-    });
+    // 格式化資料，將巢狀的 profiles.username 提取出來
+    const formattedRecords = data.map(record => ({
+        ...record,
+        recorder_name: record.profiles?.username || '系統管理員' // 如果找不到 profile，則顯示預設值
+    }));
 
-    return NextResponse.json({ success: true, records: data || [] });
-  } catch (error) {
-    return handleApiError(error, '/api/demerits');
-  }
-}
-
-// 管理員新增違規記點
-export async function POST(request) {
-  try {
-    // Rate limit 檢查
-    const rateCheck = checkRateLimit(request, 'demerits-post', 10, 60000);
-    if (!rateCheck.success) return rateCheck.error;
-
-    // 驗證管理員身份
-    const auth = await verifyUserAuth(request, {
-      requireAuth: true,
-      requireAdmin: true,
-      endpoint: '/api/demerits'
-    });
-    if (!auth.success) return auth.error;
-
-    // 驗證請求資料
-    const body = await request.json();
-    const validation = validateRequestData(body, ['userId', 'reason']);
-    if (!validation.success) return validation.error;
-
-    const { userId, reason } = validation.data;
-
-    const supabase = supabaseServer;
-
-    // 新增違規記點紀錄
-    const { error: insertError } = await supabase
-      .from('demerit')
-      .insert({
-        user_id: userId,
-        recorder: auth.profile.username,
-        reason: reason
-      });
-    if (insertError) throw insertError;
-
-    // 重新計算使用者的累計記點
-    const { count, error: countError } = await supabase
-      .from('demerit')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    if (countError) throw countError;
-
-    const newDemerit = (profile?.demerit || 0) + 1;
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ demerit: newDemerit })
-      .eq('id', userId);
-    if (updateError) throw updateError;
-
-    logSuccessAction('ADD_DEMERIT', '/api/demerits', {
-      adminId: auth.user.id,
-      targetUserId: userId
-    });
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, records: formattedRecords || [] });
 
   } catch (error) {
-    return handleApiError(error, '/api/demerits');
+    console.error("Get demerits API error:", error);
+    return NextResponse.json({ error: '伺服器內部錯誤' }, { status: 500 });
   }
 }

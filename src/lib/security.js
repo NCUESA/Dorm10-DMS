@@ -43,7 +43,7 @@ export function validateUserInput(data) {
   }
   
   if (data.role !== undefined) {
-    if (!['管理員', '一般使用者', 'admin', 'user', 'model'].includes(data.role)) {
+    if (!['admin', 'user', 'model'].includes(data.role)) {
       errors.push('無效的權限設定');
     }
   }

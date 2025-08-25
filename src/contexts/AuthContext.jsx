@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client'; // Direct access for profile creation
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 import { authService } from '@/lib/supabase/auth';
 
 const AuthContext = createContext({});
@@ -18,58 +19,31 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const router = useRouter();
 
     useEffect(() => {
-        // Fetches the user and their profile, setting the state.
-        const getAndSetUser = async () => {
+        // 初始載入時，立即獲取一次使用者狀態
+        const getInitialUser = async () => {
             const result = await authService.getCurrentUser();
             if (result.success && result.user) {
                 setUser(result.user);
             }
             setLoading(false);
         };
+        
+        getInitialUser();
 
-        getAndSetUser();
-
-        // The core logic for handling auth state changes.
+        // 監聽後續的認證狀態變化
         const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-                const currentUser = session.user;
-
-                // Check if a profile exists for this user.
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                // If no profile exists and the registration metadata is present, it's a first-time sign-in.
-                if (!profile && currentUser.raw_user_meta_data?.name) {
-                    // 1. Create the profile record.
-                    await supabase.from('profiles').insert({
-                        id: currentUser.id,
-                        username: currentUser.raw_user_meta_data.name,
-                        student_id: currentUser.raw_user_meta_data.student_id,
-                        room: currentUser.raw_user_meta_data.room,
-                        role: 'user',
-                    });
-
-                    // 2. Update the user's display_name in auth.users.
-                    await supabase.auth.updateUser({
-                        data: { display_name: currentUser.raw_user_meta_data.name },
-                    });
+            // 不論是 SIGNED_IN 還是 TOKEN_REFRESHED，都重新獲取使用者完整資料
+            if (session?.user) {
+                const result = await authService.getCurrentUser();
+                if (result.success && result.user) {
+                    setUser(result.user);
                 }
-
-                // After any potential updates, fetch the complete user data again to ensure UI is consistent.
-                await getAndSetUser();
-                setError(null);
-
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
-                setError(null);
             }
-
-            setLoading(false);
         });
 
         return () => {
@@ -79,7 +53,6 @@ export const AuthProvider = ({ children }) => {
 
     const signUp = async (email, password, userData = {}) => {
         setError(null);
-        // The signUp function is now simplified, as the onAuthStateChange handles the profile creation.
         const result = await authService.signUp(email, password, userData);
         if (!result.success) {
             setError(result.error);
@@ -93,22 +66,38 @@ export const AuthProvider = ({ children }) => {
         if (!result.success) {
             setError(result.error);
         }
-        // onAuthStateChange will handle setting the user state.
         return result;
     };
-
-
 
     const signOut = async () => {
         setError(null);
         const result = await authService.signOut();
         if (result.success) {
             setUser(null);
+            router.push('/login'); // 登出後跳轉到登入頁
         } else {
             setError(result.error);
         }
         return result;
     };
+    
+    const updateProfile = async (profileData) => {
+        setError(null);
+        const result = await authService.updateProfile(profileData);
+        if (result.success) {
+            // 更新成功後，重新獲取最新的 user 物件 (包含 profile)
+            const refreshed = await authService.getCurrentUser();
+            if (refreshed.success) {
+                setUser(refreshed.user);
+            }
+        } else {
+            setError(result.error);
+        }
+        return result;
+    };
+
+    // --- START: 核心修正區塊 ---
+    // 補全所有函式，確保它們呼叫 authService 並回傳結果
 
     const resetPassword = async (email) => {
         setError(null);
@@ -123,21 +112,6 @@ export const AuthProvider = ({ children }) => {
         setError(null);
         const result = await authService.updatePassword(password);
         if (!result.success) {
-            setError(result.error);
-        }
-        return result;
-    };
-
-    const updateProfile = async (profileData) => {
-        setError(null);
-        const { name, student_id, room } = profileData;
-        const result = await authService.updateProfile({ name, student_id, room });
-        if (result.success) {
-            const refreshed = await authService.getCurrentUser();
-            if (refreshed.success) {
-                setUser(refreshed.user);
-            }
-        } else {
             setError(result.error);
         }
         return result;
@@ -160,6 +134,8 @@ export const AuthProvider = ({ children }) => {
         }
         return result;
     };
+    // --- END: 核心修正區塊 ---
+
 
     const value = {
         user,
@@ -174,7 +150,11 @@ export const AuthProvider = ({ children }) => {
         verifyOtp,
         resendOtp,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin'
+        // isAdmin 的判斷應該來自合併後的 profile
+        isAdmin: user?.profile?.role === 'admin',
+        
+        // 將 supabase client 實例本身也加入到 context value 中
+        supabase,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

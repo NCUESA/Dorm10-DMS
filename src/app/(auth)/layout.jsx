@@ -1,4 +1,3 @@
-// src/app/(auth)/layout.jsx
 // AuthLayout: 為所有 (auth) 群組下的頁面提供共享的佈局容器。
 
 export default function AuthLayout({ children }) {
