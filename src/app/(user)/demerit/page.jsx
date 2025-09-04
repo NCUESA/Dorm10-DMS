@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// --- START: 核心修正區塊 ---
+// 從 'react' 中導入 useMemo
+import { useEffect, useState, useMemo } from "react";
+// --- END: 核心修正區塊 ---
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, AlertTriangle, List, CheckCircle, Ban } from "lucide-react";
-// --- START: 核心修正區塊 1 ---
-// 導入我們建立的 authFetch 函式
 import { authFetch } from "@/lib/authFetch";
-// --- END: 核心修正區塊 1 ---
 
 export default function DemeritPage() {
     const { user, isAuthenticated, loading } = useAuth();
@@ -26,17 +26,12 @@ export default function DemeritPage() {
             const loadRecords = async () => {
                 setLoadingRecords(true);
                 try {
-                    // --- START: 核心修正區塊 2 ---
-                    // 使用 authFetch 而不是原生的 fetch
                     const res = await authFetch('/api/demerits');
-                    // --- END: 核心修正區塊 2 ---
-                    
                     const result = await res.json();
                     if (res.ok && result.success) {
                         setRecords(Array.isArray(result.records) ? result.records : []);
                     } else {
-                        // 現在這裡的 result.error 會是後端 API 回傳的真實錯誤
-                        console.error('取得違規記點失敗：', result.error || '伺服器回傳錯誤');
+                        console.error('取得違規記點失敗：', result.error);
                         setRecords([]);
                     }
                 } catch (err) {
@@ -50,6 +45,15 @@ export default function DemeritPage() {
         }
     }, [isAuthenticated]);
 
+    // --- START: 核心修正區塊 ---
+    // 現在 useMemo 可以被正確使用
+    const demeritPoints = useMemo(() => {
+        if (!records) return 0;
+        // 計算所有紀錄的 points 總和
+        return records.reduce((sum, record) => sum + (record.points || 0), 0);
+    }, [records]);
+    // --- END: 核心修正區塊 ---
+
     if (loading || !user) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
@@ -57,14 +61,11 @@ export default function DemeritPage() {
             </div>
         );
     }
-    const demeritPoints = records.length;
-
+    
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 my-12 sm:my-16 space-y-10">
-            {/* --- 標題 (無變更) --- */}
             <h1 className="text-4xl font-bold text-center text-gray-800 tracking-tight">違規記點查詢</h1>
 
-            {/* --- 總記點提示 (無變更) --- */}
             <div className="bg-emerald-50 border-l-4 border-emerald-400 text-emerald-800 rounded-r-lg p-5 shadow-sm">
                 <div className="flex items-start gap-4">
                     <AlertTriangle className="h-6 w-6 text-emerald-500 flex-shrink-0 mt-0.5" />
@@ -75,7 +76,6 @@ export default function DemeritPage() {
                 </div>
             </div>
 
-            {/* --- 公約摘要 (無變更) --- */}
             <div>
                 <h2 className="text-2xl font-bold text-gray-700 mb-4">宿舍生活公約摘要</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -106,12 +106,10 @@ export default function DemeritPage() {
                 </div>
             </div>
 
-            {/* --- 其他重要規定 (無變更) --- */}
             <div className="bg-gray-100 border border-gray-200 text-gray-700 rounded-lg p-4 text-sm">
                 <p><span className="font-bold">其他重要規定：</span>違規行為若同時觸犯校規，將依學生獎懲辦法另行處理，嚴重者可撤銷在學期間住宿權。因個人因素中途退宿或未完成退宿手續者，亦將扣除全額保證金。</p>
             </div>
 
-            {/* --- 記錄明細 (無變更) --- */}
             <div>
                 <h2 className="text-2xl font-bold text-gray-700 mb-4 flex items-center gap-3"><List /> 記點明細</h2>
                 <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
@@ -130,9 +128,10 @@ export default function DemeritPage() {
                             <table className="min-w-full text-sm text-left">
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        <th className="p-3 px-4 font-semibold text-gray-600 w-1/4">記點日期</th>
-                                        <th className="p-3 px-4 font-semibold text-gray-600 w-1/4">登記人</th>
-                                        <th className="p-3 px-4 font-semibold text-gray-600 w-1/2">事由</th>
+                                        <th className="p-3 px-4 font-semibold text-gray-600 w-[20%]">記點日期</th>
+                                        <th className="p-3 px-4 font-semibold text-gray-600 w-[20%]">登記人</th>
+                                        <th className="p-3 px-4 font-semibold text-gray-600 w-auto">事由</th>
+                                        <th className="p-3 px-4 font-semibold text-gray-600 w-[10%] text-center">點數</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -141,6 +140,7 @@ export default function DemeritPage() {
                                             <td className="p-3 px-4 text-gray-700">{new Date(r.created_at).toLocaleDateString('zh-TW')}</td>
                                             <td className="p-3 px-4 text-gray-700">{r.recorder_name}</td>
                                             <td className="p-3 px-4 text-gray-700">{r.reason}</td>
+                                            <td className="p-3 px-4 text-gray-700 text-center font-medium">{r.points}</td>
                                         </tr>
                                     ))}
                                 </tbody>

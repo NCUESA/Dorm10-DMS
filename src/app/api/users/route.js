@@ -1,103 +1,95 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
-import { verifyUserAuth, checkRateLimit, handleApiError, logSuccessAction } from '@/lib/apiMiddleware';
+import { verifyUserAuth, handleApiError } from '@/lib/apiMiddleware';
 
 export async function GET(request) {
     try {
-        // 1. Rate limiting 檢查
-        const rateLimitCheck = checkRateLimit(request, 'users-get', 20, 60000);
-        if (!rateLimitCheck.success) {
-            return rateLimitCheck.error;
-        }
+        // 驗證管理員身份
+        const authCheck = await verifyUserAuth(request, { requireAuth: true, requireAdmin: true });
+        if (!authCheck.success) return authCheck.error;
 
-        // 2. 用戶身份驗證
-        const authCheck = await verifyUserAuth(request, {
-            requireAuth: true,
-            requireAdmin: true,
-            endpoint: '/api/users'
-        });
-
-        if (!authCheck.success) {
-            return authCheck.error;
-        }
-
-        // 3. 獲取所有 profiles 資料
         const supabase = supabaseServer;
-        const { data: profiles, error } = await supabase
+
+        // 1. 獲取所有 profiles 資料
+        const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
-            .select(`
-                id,
-                student_id,
-                username,
-                role,
-                room,
-                created_at
-            `)
+            .select(`id, student_id, username, role, room, created_at`)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('Error fetching profiles:', error);
+        if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
             throw new Error('獲取 profiles 資料失敗');
         }
 
-        // 4. 準備後續查詢
-        const userIds = profiles.map(p => p.id);
-        const demeritMap = {};
-        const emailMap = {};
-
-        // 5. 高效地獲取所有相關的 demerit 總數
-        // --- START: 修正區塊 2 ---
-        // 根據 Schema，demerit 表的 `id` 欄位關聯到 users，所以我們用 `id` 來 group 和 in
-        if (userIds.length > 0) {
-            const { data: demerits, error: demeritError } = await supabase
-                .from('demerit')
-                .select('id, count:id') // 選擇 id 並計算每個 id 的數量
-                .in('id', userIds)       // 篩選出我們需要的使用者
-                .group('id');            // 根據 id 分組
-
-            if (demeritError) {
-                console.error('Error fetching demerits:', demeritError);
-            } else if (Array.isArray(demerits)) {
-                demerits.forEach(item => {
-                    // 使用 item.id 來建立 map
-                    demeritMap[item.id] = item.count;
-                });
-            }
+        if (!profiles || profiles.length === 0) {
+            return NextResponse.json({ success: true, users: [] });
         }
-        // --- END: 修正區塊 2 ---
 
-        // 6. 獲取所有 auth.users 的資料來建立 email 對應表
+        const userIds = profiles.map(p => p.id);
+
+        // 2. 一次性獲取所有相關使用者的「所有」違規紀錄 (包含已撤銷的)
+        //    並透過關聯查詢獲取 recorder 和 remover 的姓名
+        const { data: demeritRecords, error: demeritError } = await supabase
+            .from('demerit')
+            .select(`
+        *,
+        recorder:profiles!recorder_id(username),
+        remover:profiles!removed_by(username)
+      `)
+            .in('user_id', userIds);
+
+        if (demeritError) {
+            console.error('Error fetching demerits:', demeritError);
+            throw new Error('獲取違規紀錄失敗');
+        }
+
+        // 3. 在 JavaScript 中處理資料，建立一個包含總點數和所有紀錄的 Map
+        const demeritDataMap = (demeritRecords || []).reduce((acc, record) => {
+            // 如果 map 中還沒有這個使用者，先初始化
+            if (!acc[record.user_id]) {
+                acc[record.user_id] = { totalPoints: 0, allRecords: [] };
+            }
+
+            // 只有在紀錄未被撤銷時，才加總點數
+            if (!record.removed_at) {
+                acc[record.user_id].totalPoints += record.points;
+            }
+
+            // 將所有紀錄 (不論是否撤銷) 都加入到列表中
+            acc[record.user_id].allRecords.push(record);
+
+            return acc;
+        }, {});
+
+        // 4. 獲取 email 資料
         const { data: authUsers, error: emailFetchError } = await supabase.auth.admin.listUsers();
         if (emailFetchError) {
+            // 這不是致命錯誤，我們可以繼續，只是 email 可能會是空的
             console.error('Error fetching auth users:', emailFetchError);
-        } else if (authUsers?.users) {
-            authUsers.users.forEach(user => {
-                emailMap[user.id] = user.email;
-            });
         }
 
-        // 7. 格式化最終回傳的資料
+        const emailMap = (authUsers?.users || []).reduce((acc, user) => {
+            acc[user.id] = user.email;
+            return acc;
+        }, {});
+
+        // 5. 格式化最終回傳的資料
         const formattedUsers = profiles.map(profile => {
             const email = emailMap[profile.id] || '';
+            const demeritInfo = demeritDataMap[profile.id] || { totalPoints: 0, allRecords: [] };
 
             return {
                 id: profile.id,
                 studentId: profile.student_id || '',
                 name: profile.username || '',
-                // 電子信箱脫敏處理邏輯保留
+                room: profile.room || '-',
                 email: email ? `${email.substring(0, 3)}***@${email.split('@')[1]}` : '',
                 emailFull: email,
                 role: profile.role || 'user',
-                room: profile.room || '',
-                demerit: demeritMap[profile.id] || 0, // demeritMap 的 key 是 profile.id
+                demerit: demeritInfo.totalPoints,       // 這是加總後的「有效」點數
+                demeritRecords: demeritInfo.allRecords, // 這是「所有」紀錄，包含已撤銷的
                 joinedAt: profile.created_at,
             };
-        });
-
-        // 記錄成功操作
-        logSuccessAction('GET_USERS', '/api/users', {
-            adminId: authCheck.user.id,
-            userCount: formattedUsers.length
         });
 
         return NextResponse.json({
